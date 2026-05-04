@@ -814,17 +814,41 @@ function setTab(t,el){S.tab=t;S.var=TABS[t].vars[0];document.querySelectorAll('.
 /* ═══════════════════════════════════════
    LOCATION
 ═══════════════════════════════════════ */
+const PLACES={
+  'tampa':    {lat:27.947,lon:-82.458,name:'Tampa, FL'},
+  'land o':   {lat:28.184,lon:-82.474,name:"Land O' Lakes, FL"},
+  'chicago':  {lat:41.881,lon:-87.623,name:'Chicago, IL'},
+  'new york': {lat:40.712,lon:-74.006,name:'New York, NY'},
+  'houston':  {lat:29.760,lon:-95.369,name:'Houston, TX'},
+  'miami':    {lat:25.775,lon:-80.208,name:'Miami, FL'},
+  'orlando':  {lat:28.538,lon:-81.379,name:'Orlando, FL'},
+};
+
 async function go(){
   const q=document.getElementById('loc').value.trim();
   if(!q)return;
   const sc=document.getElementById('scroll');
   showLoading(sc,'LOCATING...');
   try{
+    // lat,lon directly
     const m=q.match(/^(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)$/);
-    if(m){S.loc={lat:+m[1],lon:+m[2],name:`${(+m[1]).toFixed(3)}°N`};}
-    else{S.loc=await geocode(q);}
-    S.loaded=true;render();
-  }catch(e){showError(sc,e.message);}
+    if(m){
+      S.loc={lat:+m[1],lon:+m[2],name:`${(+m[1]).toFixed(3)}°N`};
+    } else {
+      // try hardcoded list first (instant, no API needed)
+      const key=Object.keys(PLACES).find(p=>q.toLowerCase().includes(p));
+      if(key){
+        S.loc=PLACES[key];
+      } else {
+        // try Open-Meteo geocoding
+        S.loc=await geocode(q);
+      }
+    }
+    S.loaded=true;
+    render();
+  }catch(e){
+    showError(sc,`Could not find "${q}".<br><br>Try: Tampa, Chicago, Houston, Miami<br>or use lat,lon like: 28.18, -82.47`);
+  }
 }
 document.getElementById('loc').addEventListener('keydown',e=>{if(e.key==='Enter')go();});
 
