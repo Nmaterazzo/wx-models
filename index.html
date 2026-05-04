@@ -639,38 +639,27 @@ async function fetchGrib(mkey, vkey, run, lat, lon) {
     body,
   });
 
+  const rawText = await res.text();
+  console.log(`[GribStream] ${mkey}/${vkey} status=${res.status}`, rawText.slice(0,400));
   if (!res.ok) throw new Error(`${mkey} ${vkey} HTTP ${res.status}`);
-
-  const json = await res.json();
-
-  // GribStream returns: {data:[{time, loc:{TMP,...}}, ...]}
-  const rows = json.data || json.results || json;
-  if (!Array.isArray(rows) || rows.length === 0) throw new Error(`${mkey} empty response`);
-
-  const times  = rows.map(r => new Date(r.time || r.validTime));
-  const values = rows.map(r => {
-    const loc = r.loc || r.locations?.loc || Object.values(r).find(v=>typeof v==='object'&&v!==null) || {};
-    let v = loc[gv.name] ?? loc[vkey] ?? null;
-    // convert Kelvin → °F for temp vars
-    if (v !== null && (gv.name==='TMP'||gv.name==='DPT'||gv.name==='APTMP') && v > 200) {
-      v = (v - 273.15) * 9/5 + 32;
-    }
-    // convert m/s → mph for wind
-    if (v !== null && (gv.name==='WIND'||gv.name==='GUST')) {
-      v = v * 2.23694;
-    }
-    // convert Pa → hPa for pressure
-    if (v !== null && gv.name==='PRES' && v > 2000) v = v / 100;
-    // convert kg/m²/s → in/hr for precip rate
-    if (v !== null && gv.name==='PRATE') v = v * 141.732;
-    // convert kg/m² → inches for accumulation
-    if (v !== null && (gv.name==='APCP'||gv.name==='ASNOW')) v = v * 0.0393701;
-    return v !== null ? +v.toFixed(3) : null;
+  let json; try{json=JSON.parse(rawText);}catch(e){throw new Error(`Bad JSON: ${rawText.slice(0,100)}`);}
+  const rows=Array.isArray(json)?json:(json.data||json.results||[]);
+  if(!rows.length) throw new Error(`${mkey} empty — keys: ${Object.keys(json).join(",")}`);
+  console.log(`[GribStream] first row:`,JSON.stringify(rows[0]).slice(0,300));
+  const times=rows.map(r=>new Date(r.time||r.validTime||r.datetime));
+  const values=rows.map(r=>{
+    const loc=r.loc||r.locations?.loc||r[Object.keys(r).find(k=>k!=="time"&&k!=="validTime"&&k!=="datetime"&&typeof r[k]==="object")]||r;
+    let v=loc[gv.name]??null;
+    if(v!==null&&(gv.name==="TMP"||gv.name==="DPT"||gv.name==="APTMP")&&v>200){v=(v-273.15)*9/5+32;}
+    if(v!==null&&(gv.name==="WIND"||gv.name==="GUST")){v=v*2.23694;}
+    if(v!==null&&gv.name==="PRATE"){v=v*141.732;}
+    if(v!==null&&(gv.name==="APCP"||gv.name==="ASNOW")){v=v*0.0393701;}
+    return v!==null?+v.toFixed(3):null;
   });
-
-  const result = {times, values};
-  CACHE[cacheKey] = result;
+  const result={times,values};
+  CACHE[cacheKey]=result;
   return result;
+}
 }
 
 // Fetch multiple variables at once for a single model (used by rSingle)
@@ -936,7 +925,7 @@ async function rSingle(sc){
       </div>
 
       <div class="hero-temp-row">
-        <div class="hero-temp" style="color:${tCol(nowT)}">${nowT}</div>
+        <div class="hero-temp" style="color:${tCol(nowT??82)}">${nowT??'--'}</div>
         <div class="hero-deg">°F</div>
         <div class="hero-aside">
           <div class="hero-lohi">
@@ -945,20 +934,18 @@ async function rSingle(sc){
             <span class="hero-hi">${Math.round(today.hi)}°↑</span>
           </div>
           <div class="hero-feels">
-            FEELS ${nowF}° · DEW ${nowD}°
+            FEELS ${nowF??'--'}° · DEW ${nowD??'--'}°
           </div>
-          <div class="hero-anom" style="color:${anom>=0?'#fb923c':'#38bdf8'}">
-            ${anom>=0?'+':''}${anom.toFixed(0)}° VS NORM
-          </div>
+          ${anom!=null?`<div class="hero-anom" style="color:${anom>=0?'#fb923c':'#38bdf8'}">${anom>=0?'+':''}${anom.toFixed(0)}° VS NORM</div>`:''}
         </div>
       </div>
 
       <div class="hero-stats">
         <div class="hstat"><div class="hstat-v" style="color:${tCol(today.hi)}">${Math.round(today.hi)}°</div><div class="hstat-l">HIGH</div></div>
         <div class="hstat"><div class="hstat-v" style="color:${tCol(today.lo)}">${Math.round(today.lo)}°</div><div class="hstat-l">LOW</div></div>
-        <div class="hstat"><div class="hstat-v">${nowW}</div><div class="hstat-l">WIND MPH</div></div>
+        <div class="hstat"><div class="hstat-v">${nowW??'--'}</div><div class="hstat-l">WIND MPH</div></div>
         <div class="hstat"><div class="hstat-v" style="color:#38bdf8">${pTot>.005?pTot.toFixed(2)+'"':'—'}</div><div class="hstat-l">PRECIP</div></div>
-        <div class="hstat"><div class="hstat-v">${nowD}°</div><div class="hstat-l">DEWPT</div></div>
+        <div class="hstat"><div class="hstat-v">${nowD??'--'}°</div><div class="hstat-l">DEWPT</div></div>
       </div>
     </div>
 
@@ -1100,10 +1087,10 @@ async function rSingle(sc){
         <div class="card-body">
           <div class="wind-grid">
             <div>
-              <div class="wind-big">${nowW}</div>
+              <div class="wind-big">${nowW??'--'}</div>
               <div class="wind-unit">MPH SUSTAINED</div>
               <div class="wind-dir">${dirLbl} · ${dirDeg}°</div>
-              <div class="wind-gust">GUSTING ${nowG} MPH</div>
+              <div class="wind-gust">GUSTING ${nowG??'--'} MPH</div>
             </div>
             <div class="compass">
               <span class="comp-d cN">N</span>
