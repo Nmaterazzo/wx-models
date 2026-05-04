@@ -660,7 +660,6 @@ async function fetchGrib(mkey, vkey, run, lat, lon) {
   CACHE[cacheKey]=result;
   return result;
 }
-}
 
 // Fetch multiple variables at once for a single model (used by rSingle)
 async function fetchBundle(mkey, vkeys, run, lat, lon) {
