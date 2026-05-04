@@ -617,13 +617,10 @@ async function fetchGrib(mkey, vkey, run, lat, lon) {
   const modelId = MODEL_IDS[mkey];
   const hours   = MODEL_HOURS[mkey] || 48;
 
-  // build fromTime / untilTime based on run (e.g. "12Z" today)
-  const runZ  = parseInt(run);
-  const from  = new Date();
+  const runZ = parseInt(run);
+  const from = new Date();
   from.setUTCHours(runZ, 0, 0, 0);
-  // if run time is in the future (e.g. it's 06Z and we request 12Z) go back a day
   if (from > new Date()) from.setUTCDate(from.getUTCDate() - 1);
-
   const until = new Date(from.getTime() + hours * 3.6e6);
 
   const body = JSON.stringify({
@@ -634,32 +631,46 @@ async function fetchGrib(mkey, vkey, run, lat, lon) {
   });
 
   const res = await fetch(`${WORKER}/${modelId}/timeseries`, {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
     body,
   });
 
   const rawText = await res.text();
-  console.log(`[GribStream] ${mkey}/${vkey} status=${res.status}`, rawText.slice(0,400));
-  if (!res.ok) throw new Error(`${mkey} ${vkey} HTTP ${res.status}`);
-  let json; try{json=JSON.parse(rawText);}catch(e){throw new Error(`Bad JSON: ${rawText.slice(0,100)}`);}
-  const rows=Array.isArray(json)?json:(json.data||json.results||[]);
-  if(!rows.length) throw new Error(`${mkey} empty — keys: ${Object.keys(json).join(",")}`);
-  console.log(`[GribStream] first row:`,JSON.stringify(rows[0]).slice(0,300));
-  console.log(`[GribStream] looking for key: "${gv.name}" in loc object`);
-  const times=rows.map(r=>new Date(r.time||r.validTime||r.datetime));
-  const values=rows.map(r=>{
-    const loc=r.loc||r.locations?.loc||r[Object.keys(r).find(k=>k!=="time"&&k!=="validTime"&&k!=="datetime"&&typeof r[k]==="object")]||r;
-    let v=loc[gv.name]??null;
-    if(v!==null&&(gv.name==="TMP"||gv.name==="DPT"||gv.name==="APTMP")&&v>200){v=(v-273.15)*9/5+32;}
-    if(v!==null&&(gv.name==="WIND"||gv.name==="GUST")){v=v*2.23694;}
-    if(v!==null&&gv.name==="PRATE"){v=v*141.732;}
-    if(v!==null&&(gv.name==="APCP"||gv.name==="ASNOW")){v=v*0.0393701;}
-    if(v===null||v===undefined||typeof v!=='number'||isNaN(v))return null;
+  if (!res.ok) throw new Error(`${mkey}/${vkey} HTTP ${res.status}`);
+
+  let rows;
+  try {
+    const json = JSON.parse(rawText);
+    rows = Array.isArray(json) ? json : (json.data || json.results || []);
+  } catch(e) {
+    throw new Error(`${mkey}/${vkey} bad JSON`);
+  }
+  if (!rows.length) throw new Error(`${mkey}/${vkey} empty response`);
+
+  // GribStream key format: "TMP|2 m above ground|"
+  const gribKey = `${gv.name}|${gv.level}|`;
+
+  // sort chronologically by forecasted_time
+  rows.sort((a,b) => new Date(a.forecasted_time) - new Date(b.forecasted_time));
+
+  const times  = rows.map(r => new Date(r.forecasted_time));
+  const values = rows.map(r => {
+    let v = r[gribKey];
+    if (v === undefined || v === null || typeof v !== 'number' || isNaN(v)) return null;
+    // Kelvin → °F
+    if ((gv.name==='TMP'||gv.name==='DPT'||gv.name==='APTMP') && v > 200) v = (v-273.15)*9/5+32;
+    // m/s → mph
+    if (gv.name==='WIND'||gv.name==='GUST') v = v * 2.23694;
+    // kg/m² → inches
+    if (gv.name==='APCP'||gv.name==='ASNOW') v = v * 0.0393701;
+    // kg/m²/s → in/hr
+    if (gv.name==='PRATE') v = v * 141.732;
     return +v.toFixed(3);
   });
-  const result={times,values};
-  CACHE[cacheKey]=result;
+
+  const result = {times, values};
+  CACHE[cacheKey] = result;
   return result;
 }
 
@@ -875,7 +886,7 @@ async function rSingle(sc){
   showLoading(sc,`LOADING ${mod.l} ${S.run}...`);
 
   // fetch all needed vars in parallel
-  const vkeys=['temp','dewpoint','wind','gust','winddir','precip'];
+  const vkeys=['temp','dewpoint','wind','gust','precip'];
   if(!vkeys.includes(S.var))vkeys.push(S.var);
   let bundle;
   try{
@@ -895,8 +906,8 @@ async function rSingle(sc){
   const nowF=nowT!=null&&nowD!=null?Math.round(nowT+(nowD-65)*.18):null;
   const nowW=wd.values[0]!=null?Math.round(wd.values[0]):null;
   const nowG=gdx.values[0]!=null?Math.round(gdx.values[0]):(nowW!=null?Math.round(nowW*1.45):null);
-  const dirDeg=wdd.values[0]!=null?Math.round(wdd.values[0]):Math.round(175+Math.sin(Date.now()/2e6)*40);
-  const dirLbl=DIRS[Math.round(dirDeg/22.5)%16];
+  const dirDeg = Math.round(175 + Math.sin(Date.now()/2e6)*40);
+  const dirLbl = DIRS[Math.round(dirDeg/22.5)%16];
   const climo=82;
   const anom=nowT!=null?nowT-climo:null;
 
@@ -1058,11 +1069,12 @@ async function rSingle(sc){
         <div class="card-body">
           <div class="precip-bars">
             ${p24.map((v,i)=>{
-              const h=Math.max(3,Math.round((v/pMax)*66));
-              const cls=v>.1?'heavy':v>.02?'mod':v>.005?'light':'dry';
+              const val = v||0;
+              const h=Math.max(3,Math.round((val/pMax)*66));
+              const cls=val>.1?'heavy':val>.02?'mod':val>.005?'light':'dry';
               const t=pd.times[i];
               return `<div class="pbar ${cls}" style="height:${h}px"
-                title="${t?t.toLocaleTimeString([],{hour:'numeric'}):''}: ${v.toFixed(3)}&quot;"></div>`;
+                title="${t?t.toLocaleTimeString([],{hour:'numeric'}):''}: ${val.toFixed(3)}&quot;"></div>`;
             }).join('')}
           </div>
           <div class="precip-axis">
