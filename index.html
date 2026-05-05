@@ -741,41 +741,37 @@ const MODEL_HOURS = {
   hrrr:48, gfs:168, nbm:168, rap:51, ecmwf:168, graphcast:168, rrfs:84,
 };
 
-// cache: key = "model|var|run|lat|lon"
+// cache: key = "model|var|run|lat|lon|endpoint"
 const CACHE = {};
 
-async function fetchGrib(mkey, vkey, run, lat, lon) {
-  const cacheKey = `${mkey}|${vkey}|${run}|${lat}|${lon}`;
-  if (CACHE[cacheKey]) return CACHE[cacheKey];
+function isoNoMs(d){ return d.toISOString().replace('.000',''); }
+function validNum(v){ return v !== null && v !== undefined && typeof v === 'number' && !Number.isNaN(v); }
+function valueKey(gv){ return `${gv.name}|${gv.level}|`; }
 
-  const gv = GRIB_VARS[vkey];
-  if (!gv) throw new Error(`No GRIB mapping for ${vkey}`);
+function latestCycleTime(run){
+  const runZ = parseInt(run, 10);
+  const d = new Date();
+  d.setUTCMinutes(0,0,0);
+  d.setUTCHours(runZ,0,0,0);
+  // Pick the most recent occurrence of that Z-cycle that is not in the future.
+  if (d.getTime() > Date.now()) d.setUTCDate(d.getUTCDate() - 1);
+  return d;
+}
 
-  const modelId = MODEL_IDS[mkey];
-  const hours   = MODEL_HOURS[mkey] || 48;
+function normalizeValue(gv, v){
+  if (!validNum(v)) return null;
+  // Kelvin → °F
+  if ((gv.name==='TMP'||gv.name==='DPT'||gv.name==='APTMP') && v > 200) v = (v-273.15)*9/5+32;
+  // m/s → mph
+  if (gv.name==='WIND'||gv.name==='GUST') v = v * 2.23694;
+  // kg/m² → inches
+  if (gv.name==='APCP'||gv.name==='ASNOW') v = v * 0.0393701;
+  // kg/m²/s → in/hr
+  if (gv.name==='PRATE') v = v * 141.732;
+  return +v.toFixed(3);
+}
 
-  const runZ = parseInt(run);
-  const from = new Date();
-  from.setUTCHours(runZ, 0, 0, 0);
-  if (from > new Date()) from.setUTCDate(from.getUTCDate() - 1);
-  const until = new Date(from.getTime() + hours * 3.6e6);
-
-  const body = JSON.stringify({
-    fromTime:  from.toISOString().replace('.000',''),
-    untilTime: until.toISOString().replace('.000',''),
-    coordinates: [{lat, lon, name:'loc'}],
-    variables: [{name:gv.name, level:gv.level, info:''}],
-  });
-
-  const res = await fetch(`${WORKER}/${modelId}/timeseries`, {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body,
-  });
-
-  const rawText = await res.text();
-  if (!res.ok) throw new Error(`${mkey}/${vkey} HTTP ${res.status}`);
-
+function parseRows(rawText, mkey, vkey){
   let rows;
   try {
     const json = JSON.parse(rawText);
@@ -784,31 +780,90 @@ async function fetchGrib(mkey, vkey, run, lat, lon) {
     throw new Error(`${mkey}/${vkey} bad JSON`);
   }
   if (!rows.length) throw new Error(`${mkey}/${vkey} empty response`);
+  return rows;
+}
 
-  // GribStream key format: "TMP|2 m above ground|"
-  const gribKey = `${gv.name}|${gv.level}|`;
+async function postGrib(modelId, endpoint, body){
+  const res = await fetch(`${WORKER}/${modelId}/${endpoint}`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json','Accept':'application/json'},
+    body: JSON.stringify(body),
+  });
+  const rawText = await res.text();
+  if (!res.ok) throw new Error(`${modelId}/${endpoint} HTTP ${res.status}: ${rawText.slice(0,120)}`);
+  return rawText;
+}
 
-  // sort chronologically by forecasted_time
+// Fetch one exact model cycle. This is what makes Compare Runs real.
+async function fetchRunCycleGrib(mkey, vkey, run, lat, lon) {
+  const cycle = latestCycleTime(run);
+  const cycleISO = isoNoMs(cycle);
+  const cacheKey = `${mkey}|${vkey}|${run}|${cycleISO}|${lat}|${lon}|runs`;
+  if (CACHE[cacheKey]) return CACHE[cacheKey];
+
+  const gv = GRIB_VARS[vkey];
+  if (!gv) throw new Error(`No GRIB mapping for ${vkey}`);
+
+  const modelId = MODEL_IDS[mkey];
+  const hours = MODEL_HOURS[mkey] || 48;
+  const body = {
+    forecastedFrom: cycleISO,
+    forecastedUntil: cycleISO,
+    minLeadTime: '0h',
+    maxLeadTime: `${hours}h`,
+    coordinates: [{lat, lon, name:'loc'}],
+    variables: [{name:gv.name, level:gv.level, info:''}],
+  };
+
+  const rawText = await postGrib(modelId, 'runs', body);
+  const rows = parseRows(rawText, mkey, vkey);
+  const gribKey = valueKey(gv);
   rows.sort((a,b) => new Date(a.forecasted_time) - new Date(b.forecasted_time));
 
-  const times  = rows.map(r => new Date(r.forecasted_time));
-  const values = rows.map(r => {
-    let v = r[gribKey];
-    if (v === undefined || v === null || typeof v !== 'number' || isNaN(v)) return null;
-    // Kelvin → °F
-    if ((gv.name==='TMP'||gv.name==='DPT'||gv.name==='APTMP') && v > 200) v = (v-273.15)*9/5+32;
-    // m/s → mph
-    if (gv.name==='WIND'||gv.name==='GUST') v = v * 2.23694;
-    // kg/m² → inches
-    if (gv.name==='APCP'||gv.name==='ASNOW') v = v * 0.0393701;
-    // kg/m²/s → in/hr
-    if (gv.name==='PRATE') v = v * 141.732;
-    return +v.toFixed(3);
+  const byTime = new Map();
+  rows.forEach(r => {
+    const t = new Date(r.forecasted_time);
+    const v = normalizeValue(gv, r[gribKey]);
+    if (!Number.isNaN(t.getTime()) && v !== null) byTime.set(t.getTime(), {t, v});
   });
 
-  const result = {times, values};
+  const items = [...byTime.values()].sort((a,b)=>a.t-b.t);
+  const result = {run, cycle, times:items.map(x=>x.t), values:items.map(x=>x.v)};
   CACHE[cacheKey] = result;
   return result;
+}
+
+// Standard single forecast path: use the selected run's exact cycle.
+async function fetchGrib(mkey, vkey, run, lat, lon) {
+  return fetchRunCycleGrib(mkey, vkey, run, lat, lon);
+}
+
+function nearestIndex(times, target=new Date()){
+  if (!times || !times.length) return -1;
+  let best = 0, bestDist = Infinity;
+  times.forEach((t,i)=>{
+    const d = Math.abs(new Date(t).getTime() - target.getTime());
+    if (d < bestDist) { best = i; bestDist = d; }
+  });
+  return best;
+}
+function firstAtOrAfterIndex(times, target=new Date()){
+  if (!times || !times.length) return -1;
+  const ts = target.getTime();
+  const i = times.findIndex(t => new Date(t).getTime() >= ts);
+  return i >= 0 ? i : times.length - 1;
+}
+function currentValue(data){
+  const i = nearestIndex(data?.times || [], new Date());
+  return i >= 0 ? data.values[i] : null;
+}
+function fromNowData(data){
+  const i = firstAtOrAfterIndex(data?.times || [], new Date());
+  if (i <= 0) return data;
+  return {times:data.times.slice(i), values:data.values.slice(i)};
+}
+function fmtVal(v, digits=1){
+  return v===null || v===undefined || Number.isNaN(v) ? '--' : Number(v).toFixed(digits);
 }
 
 // Fetch multiple variables at once for a single model (used by rSingle)
@@ -917,12 +972,16 @@ function mkChart(id, labels, datasets, unit='', h=220, bar=false) {
           document.getElementById('tip-t').textContent =
             t instanceof Date ? t.toLocaleString([],{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : String(t);
           document.getElementById('tip-v').innerHTML =
-            ctx.tooltip.dataPoints.map(p =>
-              `<div style="color:${p.dataset.borderColor||p.dataset.backgroundColor}">
-                <span style="opacity:.4">${p.dataset.label}</span>
-                &nbsp;<b style="color:#e8f2fc">${p.formattedValue}</b>
+            ctx.tooltip.dataPoints.map(p => {
+              const raw = p.parsed && p.parsed.y !== undefined ? p.parsed.y : p.raw;
+              const val = raw === null || raw === undefined || Number.isNaN(raw) ? '--' : Number(raw).toFixed(unit==='in'?3:1).replace(/\.0$/,'');
+              const col = Array.isArray(p.dataset.borderColor) ? p.dataset.borderColor[p.dataIndex] : (p.dataset.borderColor || p.dataset.backgroundColor || '#e8f2fc');
+              return `<div style="color:${col}">
+                <span style="opacity:.4">${p.dataset.label || ''}</span>
+                &nbsp;<b style="color:#e8f2fc">${val}</b>
                 <span style="opacity:.3"> ${unit}</span>
-              </div>`).join('');
+              </div>`;
+            }).join('');
           tip.style.display = 'block';
           const r = ctx.chart.canvas.getBoundingClientRect();
           let x = r.left + ctx.tooltip.caretX + 14, y = r.top + ctx.tooltip.caretY - 14;
@@ -1148,11 +1207,11 @@ async function tabForecast(sc){
   const wd=b.wind||{times:[],values:[]}, gd=b.gust||{times:[],values:[]};
   const pd=b.precip||{times:[],values:[]};
   const now=new Date();
-  const nowT=td.values[0]!=null?Math.round(td.values[0]):null;
-  const nowD=dwd.values[0]!=null?Math.round(dwd.values[0]):null;
+  const nowT=currentValue(td)!=null?Math.round(currentValue(td)):null;
+  const nowD=currentValue(dwd)!=null?Math.round(currentValue(dwd)):null;
   const nowF=nowT!=null&&nowD!=null?Math.round(nowT+(nowD-65)*.18):null;
-  const nowW=wd.values[0]!=null?Math.round(wd.values[0]):null;
-  const nowG=gd.values[0]!=null?Math.round(gd.values[0]):nowW!=null?Math.round(nowW*1.45):null;
+  const nowW=currentValue(wd)!=null?Math.round(currentValue(wd)):null;
+  const nowG=currentValue(gd)!=null?Math.round(currentValue(gd)):nowW!=null?Math.round(nowW*1.45):null;
   const days7=td.values.length?dailyStats(td.times,td.values):[];
   const absLo=days7.length?Math.min(...days7.map(d=>d.lo)):70;
   const absHi=days7.length?Math.max(...days7.map(d=>d.hi)):95;
@@ -1254,7 +1313,7 @@ async function tabTemp(sc){
   const absHi=days7.length?Math.max(...days7.map(d=>d.hi)):95;
   const today=days7[0]||{hi:90,lo:72};
   const fullR=absHi-absLo||1;
-  const nowT=td.values[0]!=null?Math.round(td.values[0]):null;
+  const nowT=currentValue(td)!=null?Math.round(currentValue(td)):null;
   const anom=nowT!=null?nowT-climo:null;
 
   sc.innerHTML=`
@@ -1490,8 +1549,8 @@ async function tabWind(sc){
 
   const wd=b.wind||{times:[],values:[]};
   const gd=b.gust||{times:[],values:[]};
-  const nowW=wd.values[0]!=null?Math.round(wd.values[0]):null;
-  const nowG=gd.values[0]!=null?Math.round(gd.values[0]):null;
+  const nowW=currentValue(wd)!=null?Math.round(currentValue(wd)):null;
+  const nowG=currentValue(gd)!=null?Math.round(currentValue(gd)):null;
   const maxW=Math.round(Math.max(...wd.values.filter(v=>v!=null)));
   const maxG=Math.round(Math.max(...gd.values.filter(v=>v!=null)));
   const avgW=wd.values.filter(v=>v!=null).length?
@@ -1596,9 +1655,9 @@ async function tabUpper(sc){
   const h5=b.h500||{times:[],values:[]};
   const rh7=b.rh700||{times:[],values:[]};
   const t85=b.t850||{times:[],values:[]};
-  const now500=h5.values[0]?.toFixed(0)??'--';
-  const now700=rh7.values[0]?.toFixed(0)??'--';
-  const now850=t85.values[0]?.toFixed(1)??'--';
+  const now500=fmtVal(currentValue(h5),0);
+  const now700=fmtVal(currentValue(rh7),0);
+  const now850=fmtVal(currentValue(t85),1);
 
   sc.innerHTML=`
     ${modelRunHTML(mod,runs)}
