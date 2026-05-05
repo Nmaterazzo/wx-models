@@ -152,6 +152,14 @@ body::after {
 }
 .sbox input::placeholder { color: var(--ink1); }
 
+.locbtn {
+  height: 36px; width: 36px; border: none; cursor: pointer; flex-shrink: 0;
+  background: rgba(255,255,255,.07); border: 1px solid var(--rim2);
+  font-size: 16px; border-radius: 100px; transition: all .15s;
+  display: flex; align-items: center; justify-content: center;
+}
+.locbtn:hover { background: rgba(255,255,255,.12); }
+.locbtn:active { transform: scale(.9); }
 .gobtn {
   height: 36px; padding: 0 16px; border: none; cursor: pointer; flex-shrink: 0;
   background: var(--sky); color: #000;
@@ -590,8 +598,9 @@ body::after {
     <div class="logo">WX<b>MDL</b><span class="logo-dot">.</span></div>
     <div class="sbox">
       <div class="sbox-ico">◎</div>
-      <input id="loc" type="text" placeholder="city or lat, lon" autocomplete="off" spellcheck="false">
+      <input id="loc" type="text" placeholder="city or lat, lon" autocomplete="off" spellcheck="false" value="Land O' Lakes, FL">
     </div>
+    <button class="locbtn" onclick="useMyLoc()" title="Use my location">📍</button>
     <button class="gobtn" onclick="go()">GO</button>
   </header>
 
@@ -1042,6 +1051,21 @@ const PLACES={
   'miami':    {lat:25.775,lon:-80.208,name:'Miami, FL'},
   'orlando':  {lat:28.538,lon:-81.379,name:'Orlando, FL'},
 };
+
+async function useMyLoc(){
+  const sc=document.getElementById('scroll');
+  showLoading(sc,'GETTING YOUR LOCATION...');
+  if(!navigator.geolocation){showError(sc,'Geolocation not supported');return;}
+  navigator.geolocation.getCurrentPosition(
+    pos=>{
+      const {latitude:lat,longitude:lon}=pos.coords;
+      S.loc={lat,lon,name:`${lat.toFixed(3)}°N, ${Math.abs(lon).toFixed(3)}°W`};
+      document.getElementById('loc').value=S.loc.name;
+      S.loaded=true; render();
+    },
+    ()=>showError(sc,'Location access denied')
+  );
+}
 
 async function go(){
   const q=document.getElementById('loc').value.trim();
@@ -1601,6 +1625,7 @@ async function tabUpper(sc){
     }
   });
 }
+async function geocode(q){
   const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1&language=en&format=json`);
   const d=await r.json();
   if(!d.results?.length)throw new Error('Location not found');
@@ -1966,18 +1991,8 @@ async function rRuns(sc){
 /* ═══════════════════════════════════════
    INIT
 ═══════════════════════════════════════ */
-async function geocode(q){
-  const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1&language=en&format=json`);
-  const d=await r.json();
-  if(!d.results?.length)throw new Error('Location not found');
-  return{lat:d.results[0].latitude,lon:d.results[0].longitude,
-    name:d.results[0].name+(d.results[0].admin1?', '+d.results[0].admin1:'')};
-}
-
-/* ═══════════════════════════════════════
-   INIT
-═══════════════════════════════════════ */
-document.getElementById('loc').value="Land O' Lakes, FL";
+S.loc = PLACES["land o"];
+S.loaded = true;
 render();
 </script>
 </body>
