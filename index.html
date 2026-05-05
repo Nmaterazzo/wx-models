@@ -4,474 +4,590 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#080c14">
+<meta name="theme-color" content="#0d1829">
 <title>WXMODELS</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;500;600&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 :root {
-  --bg:   #080c14;
-  --s1:   #0c1220;
-  --s2:   #101828;
-  --s3:   #141e30;
-  --s4:   #1a2540;
+  /* deep navy — matches boat app quality */
+  --navy0: #080f1e;
+  --navy1: #0d1829;
+  --navy2: #111f35;
+  --navy3: #162640;
+  --navy4: #1c2f4e;
+  --navy5: #243558;
 
-  --border: rgba(255,255,255,.06);
-  --border2: rgba(255,255,255,.10);
+  --glass: rgba(255,255,255,.04);
+  --glass2: rgba(255,255,255,.07);
+  --rim:   rgba(255,255,255,.08);
+  --rim2:  rgba(255,255,255,.14);
 
-  --dim:    #2d4060;
-  --muted:  #4a6080;
-  --base:   #7090b0;
-  --mid:    #98b4cc;
-  --lit:    #c0d4e8;
-  --white:  #e4eef8;
+  --ink0:  #1e3050;
+  --ink1:  #2e4870;
+  --ink2:  #4a6a90;
+  --ink3:  #7090b8;
+  --ink4:  #9ab4d0;
+  --ink5:  #c4d8ec;
+  --white: #e8f2fc;
 
-  /* accent — electric blue */
-  --accent:  #38bdf8;
-  --accent2: #818cf8;   /* violet */
-  --accent3: #34d399;   /* emerald */
-  --accent4: #f472b6;   /* pink */
-  --accent5: #fb923c;   /* orange — for heat */
+  /* temperature color scale — rich, not garish */
+  --t-freeze: #7cb9e8;
+  --t-cold:   #5bcefa;
+  --t-cool:   #4ade9a;
+  --t-mild:   #a8e040;
+  --t-warm:   #f5c030;
+  --t-hot:    #f07020;
+  --t-vhot:   #e83030;
+
+  /* accent */
+  --sky:    #38bdf8;
+  --sky2:   #0ea5e9;
+  --gold:   #f5c030;
+  --ember:  #f07020;
+  --jade:   #34d399;
+  --violet: #a78bfa;
+  --rose:   #f472b6;
+  --teal:   #2dd4bf;
 
   /* model colors */
-  --hrrr:  #38bdf8;
-  --gfs:   #fb923c;
-  --nbm:   #34d399;
-  --rap:   #a78bfa;
-  --ecmwf: #f472b6;
-  --gcast: #fbbf24;
-  --rrfs:  #2dd4bf;
+  --c-hrrr:  #38bdf8;
+  --c-gfs:   #f07020;
+  --c-nbm:   #34d399;
+  --c-rap:   #a78bfa;
+  --c-ecmwf: #f472b6;
+  --c-gcast: #f5c030;
+  --c-rrfs:  #2dd4bf;
 
   --r0: #38bdf8;
-  --r1: #fb923c;
+  --r1: #f07020;
   --r2: #34d399;
   --r3: #a78bfa;
 
-  --HDR: 52px;
-  --BOT: 58px;
-  --R: 12px;
-  --Rsm: 8px;
+  --HDR: 56px;
+  --CTRL: 68px;
+  --BOT: 60px;
+  --R: 16px;
+  --Rsm: 10px;
 }
 
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 html { height:100%; }
-body { min-height:100%; background:var(--bg); color:var(--mid); font-family:'Barlow Condensed',sans-serif; font-size:14px; }
 
-/* noise grain */
+body {
+  min-height:100%; height:100%;
+  background: var(--navy0);
+  color: var(--ink4);
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  overflow: hidden;
+}
+
+/* deep atmospheric background */
 body::before {
-  content:''; position:fixed; inset:0; pointer-events:none; z-index:999;
-  opacity:.35;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.028'/%3E%3C/svg%3E");
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(56,189,248,.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(167,139,250,.05) 0%, transparent 50%),
+    linear-gradient(180deg, var(--navy1) 0%, var(--navy0) 100%);
 }
 
-/* nebula glow */
+/* subtle star-field noise */
 body::after {
-  content:''; position:fixed; top:-100px; left:50%; transform:translateX(-50%);
-  width:500px; height:280px; border-radius:50%;
-  background:radial-gradient(ellipse, rgba(56,189,248,.05) 0%, transparent 65%);
-  pointer-events:none; z-index:0;
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  opacity: .25;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='.03'/%3E%3C/svg%3E");
 }
 
-/* ── APP SHELL ──────────────────────────────── */
-#shell { display:flex; flex-direction:column; height:100dvh; height:100vh; }
+/* ── SHELL ──────────────────────────────────── */
+#shell {
+  display: flex; flex-direction: column;
+  height: 100dvh; height: 100vh;
+  position: relative; z-index: 1;
+}
 
 /* ── HEADER ─────────────────────────────────── */
 .hdr {
-  height:var(--HDR); flex-shrink:0;
-  background:rgba(12,18,32,.95);
-  backdrop-filter:blur(10px);
-  border-bottom:1px solid var(--border);
-  display:flex; align-items:center; gap:8px; padding:0 12px;
-  position:relative; z-index:20;
+  height: var(--HDR); flex-shrink: 0;
+  background: rgba(13,24,41,.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--rim);
+  display: flex; align-items: center; gap: 10px; padding: 0 14px;
+  position: relative; z-index: 20;
 }
 .hdr::after {
-  content:''; position:absolute; bottom:0; left:0; right:0; height:1px;
-  background:linear-gradient(90deg,transparent,rgba(56,189,248,.4),transparent);
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(56,189,248,.5) 50%, transparent 100%);
 }
+
 .logo {
-  font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:4px;
-  color:var(--white); flex-shrink:0; line-height:1;
-  text-shadow:0 0 20px rgba(56,189,248,.5);
+  font-family: 'Outfit', sans-serif;
+  font-size: 18px; font-weight: 800; letter-spacing: -0.5px;
+  color: var(--white); flex-shrink: 0; line-height: 1;
 }
-.logo b { color:var(--accent); font-weight:400; }
+.logo b { color: var(--sky); font-weight: 800; }
+.logo-dot { color: var(--sky); }
 
 .sbox {
-  flex:1; display:flex; align-items:center;
-  background:rgba(255,255,255,.04); border:1px solid var(--border2);
-  border-radius:var(--Rsm); height:34px; overflow:hidden;
-  transition:border-color .2s;
+  flex: 1; display: flex; align-items: center;
+  background: rgba(255,255,255,.05);
+  border: 1px solid var(--rim2);
+  border-radius: 100px;
+  height: 36px; overflow: hidden;
+  transition: border-color .2s, background .2s;
 }
-.sbox:focus-within { border-color:rgba(56,189,248,.4); }
-.sbox-ico { width:32px; display:flex; align-items:center; justify-content:center; color:var(--dim); font-size:12px; flex-shrink:0; }
+.sbox:focus-within {
+  border-color: rgba(56,189,248,.5);
+  background: rgba(56,189,248,.06);
+}
+.sbox-ico { width: 34px; display: flex; align-items: center; justify-content: center; color: var(--ink2); font-size: 13px; flex-shrink: 0; }
 .sbox input {
-  flex:1; background:none; border:none; outline:none;
-  font-family:'DM Mono',monospace; font-size:11px; color:var(--lit); padding-right:8px;
+  flex: 1; background: none; border: none; outline: none;
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  color: var(--white); padding-right: 10px;
+  letter-spacing: .3px;
 }
-.sbox input::placeholder { color:var(--dim); }
+.sbox input::placeholder { color: var(--ink1); }
+
 .gobtn {
-  height:34px; padding:0 14px; border:none; cursor:pointer; flex-shrink:0;
-  background:var(--accent); color:#000;
-  font-family:'Bebas Neue',sans-serif; font-size:14px; letter-spacing:2px;
-  border-radius:0 var(--Rsm) var(--Rsm) 0;
-  transition:filter .15s;
+  height: 36px; padding: 0 16px; border: none; cursor: pointer; flex-shrink: 0;
+  background: var(--sky); color: #000;
+  font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: .5px;
+  border-radius: 100px;
+  transition: all .15s;
+  box-shadow: 0 0 20px rgba(56,189,248,.3);
 }
-.gobtn:active { filter:brightness(.8); }
+.gobtn:hover { background: #7dd3fc; box-shadow: 0 0 28px rgba(56,189,248,.5); }
+.gobtn:active { transform: scale(.95); }
 
 /* ── CONTROLS ───────────────────────────────── */
 .ctrl {
-  flex-shrink:0;
-  background:rgba(10,16,28,.95);
-  backdrop-filter:blur(10px);
-  border-bottom:1px solid var(--border);
+  flex-shrink: 0;
+  background: rgba(11,20,34,.9);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--rim);
 }
-.mtabs { display:flex; overflow-x:auto; scrollbar-width:none; border-bottom:1px solid var(--border); }
-.mtabs::-webkit-scrollbar { display:none; }
+.mtabs {
+  display: flex; overflow-x: auto; scrollbar-width: none;
+  border-bottom: 1px solid var(--rim);
+  padding: 0 6px;
+}
+.mtabs::-webkit-scrollbar { display: none; }
 .mt {
-  font-family:'Bebas Neue',sans-serif; font-size:11px; letter-spacing:2px;
-  color:var(--dim); padding:9px 14px; cursor:pointer; white-space:nowrap; flex-shrink:0;
-  border:none; background:none; border-bottom:2px solid transparent; transition:all .2s;
+  font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: .5px;
+  color: var(--ink2); padding: 10px 14px; cursor: pointer; white-space: nowrap; flex-shrink: 0;
+  border: none; background: none; border-bottom: 2px solid transparent; transition: all .2s;
 }
-.mt:hover { color:var(--base); }
-.mt.on { color:var(--accent); border-bottom-color:var(--accent); }
-.vtabs { display:flex; overflow-x:auto; scrollbar-width:none; padding:2px 6px 0; }
-.vtabs::-webkit-scrollbar { display:none; }
-.vt {
-  font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:500;
-  color:var(--dim); padding:6px 10px; cursor:pointer; white-space:nowrap; flex-shrink:0;
-  border:none; background:none; border-bottom:2px solid transparent; transition:all .15s;
-}
-.vt:hover { color:var(--base); }
-.vt.on { color:var(--white); border-bottom-color:rgba(255,255,255,.2); }
+.mt:hover { color: var(--ink4); }
+.mt.on { color: var(--sky); border-bottom-color: var(--sky); }
 
-/* ── SCROLL ─────────────────────────────────── */
-.scroll { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; background:var(--bg); }
-.scroll::-webkit-scrollbar { width:3px; }
-.scroll::-webkit-scrollbar-thumb { background:var(--s4); border-radius:2px; }
+.vtabs { display: flex; overflow-x: auto; scrollbar-width: none; padding: 3px 8px 0; }
+.vtabs::-webkit-scrollbar { display: none; }
+.vt {
+  font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 500;
+  color: var(--ink2); padding: 6px 10px; cursor: pointer; white-space: nowrap; flex-shrink: 0;
+  border: none; background: none; border-bottom: 2px solid transparent; transition: all .15s;
+}
+.vt:hover { color: var(--ink4); }
+.vt.on { color: var(--white); border-bottom-color: rgba(255,255,255,.25); }
+
+/* ── SCROLL AREA ────────────────────────────── */
+.scroll {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+.scroll::-webkit-scrollbar { width: 3px; }
+.scroll::-webkit-scrollbar-thumb { background: var(--navy5); border-radius: 2px; }
 
 /* ── BOTTOM NAV ─────────────────────────────── */
 .bot {
-  height:var(--BOT); flex-shrink:0;
-  background:rgba(10,16,28,.98);
-  backdrop-filter:blur(10px);
-  border-top:1px solid var(--border);
-  display:flex;
+  height: var(--BOT); flex-shrink: 0;
+  background: rgba(11,20,34,.95);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--rim);
+  display: flex;
 }
 .nb {
-  flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
-  gap:3px; cursor:pointer; color:var(--dim); transition:color .15s; background:none; border:none;
-  position:relative;
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px; cursor: pointer; color: var(--ink2); transition: color .15s;
+  background: none; border: none; position: relative;
 }
-.nb.on { color:var(--accent); }
+.nb.on { color: var(--sky); }
 .nb.on::before {
-  content:''; position:absolute; top:0; left:50%; transform:translateX(-50%);
-  width:20px; height:2px; background:var(--accent); border-radius:0 0 2px 2px;
-  box-shadow:0 0 8px var(--accent);
+  content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 24px; height: 2px; border-radius: 0 0 3px 3px;
+  background: var(--sky); box-shadow: 0 0 10px var(--sky);
 }
-.ni { font-size:15px; } .nl { font-family:'Bebas Neue',sans-serif; font-size:9px; letter-spacing:1.5px; }
+.ni { font-size: 16px; line-height: 1; }
+.nl { font-family: 'Outfit', sans-serif; font-size: 9px; font-weight: 600; letter-spacing: 1px; }
 
-/* ── CARD ───────────────────────────────────── */
-.pad { padding:10px; display:flex; flex-direction:column; gap:10px; }
+/* ── GLASS CARD ─────────────────────────────── */
+.pad { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
 
 .card {
-  background:var(--s2);
-  border:1px solid var(--border);
-  border-radius:var(--R);
-  overflow:hidden;
-  position:relative;
+  background: linear-gradient(145deg, rgba(22,38,64,.9) 0%, rgba(17,31,53,.9) 100%);
+  border: 1px solid var(--rim);
+  border-radius: var(--R);
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 4px 24px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.06);
 }
-/* frosted top sheen */
 .card::before {
-  content:''; position:absolute; top:0; left:0; right:0; height:1px;
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent);
-  pointer-events:none;
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.12), transparent);
+  pointer-events: none;
 }
-.card-hd { padding:12px 14px 0; display:flex; align-items:flex-start; justify-content:space-between; }
-.card-title { font-family:'Bebas Neue',sans-serif; font-size:14px; letter-spacing:2px; color:var(--white); }
-.card-sub { font-family:'DM Mono',monospace; font-size:8px; color:var(--dim); margin-top:2px; letter-spacing:.5px; }
-.card-badge {
-  font-family:'DM Mono',monospace; font-size:9px;
-  background:rgba(255,255,255,.05); border:1px solid var(--border2);
-  color:var(--base); padding:3px 8px; border-radius:20px; white-space:nowrap;
-}
-.card-body { padding:10px 14px 14px; }
 
-/* chart wrapper — explicit height via JS */
-.ch-wrap { position:relative; }
-.ch-wrap canvas { display:block; width:100%!important; }
+.card-hd { padding: 14px 16px 0; display: flex; align-items: flex-start; justify-content: space-between; }
+.card-title {
+  font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 13px;
+  letter-spacing: .3px; color: var(--white); text-transform: uppercase;
+}
+.card-sub { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--ink2); margin-top: 3px; letter-spacing: .3px; }
+.card-badge {
+  font-family: 'DM Mono', monospace; font-size: 9px;
+  background: rgba(56,189,248,.1); border: 1px solid rgba(56,189,248,.25);
+  color: var(--sky); padding: 3px 9px; border-radius: 100px; white-space: nowrap;
+}
+.card-body { padding: 12px 16px 16px; }
+
+/* chart canvas — explicit height via JS */
+.ch-wrap { position: relative; }
+.ch-wrap canvas { display: block; width: 100% !important; }
 
 /* ── SECTION LABEL ──────────────────────────── */
 .slbl {
-  font-family:'DM Mono',monospace; font-size:8px; letter-spacing:2.5px;
-  color:var(--dim); display:flex; align-items:center; gap:8px; text-transform:uppercase;
+  font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 600;
+  letter-spacing: 1.5px; color: var(--ink2); text-transform: uppercase;
+  display: flex; align-items: center; gap: 8px;
 }
-.slbl::after { content:''; flex:1; height:1px; background:rgba(255,255,255,.05); }
+.slbl::after { content: ''; flex: 1; height: 1px; background: var(--rim); }
 
 /* ── HERO ───────────────────────────────────── */
 .hero {
-  background:linear-gradient(165deg, var(--s3) 0%, var(--s1) 100%);
-  border-bottom:1px solid var(--border);
-  padding:16px 14px 0;
-  position:relative; overflow:hidden;
+  background: linear-gradient(165deg, rgba(22,38,64,.95) 0%, rgba(13,24,41,.98) 100%);
+  border-bottom: 1px solid var(--rim);
+  padding: 18px 16px 0;
+  position: relative; overflow: hidden;
 }
+/* radial glow top right */
 .hero::after {
-  content:''; position:absolute; top:-50px; right:-50px;
-  width:180px; height:180px; border-radius:50%;
-  background:radial-gradient(ellipse,rgba(56,189,248,.07),transparent 65%);
-  pointer-events:none;
+  content: ''; position: absolute; top: -60px; right: -40px;
+  width: 220px; height: 220px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(56,189,248,.08) 0%, transparent 65%);
+  pointer-events: none;
 }
-.hero-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; }
-.hero-loc { font-family:'DM Mono',monospace; font-size:10px; color:var(--base); letter-spacing:.5px; }
-.hero-date { font-family:'DM Mono',monospace; font-size:8px; color:var(--dim); margin-top:3px; }
+
+.hero-top {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 14px;
+}
+.hero-loc {
+  font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: .8px;
+  color: var(--sky); font-weight: 400;
+}
+.hero-date { font-family: 'Outfit', sans-serif; font-size: 12px; color: var(--ink3); margin-top: 3px; font-weight: 400; }
 .model-badge {
-  font-family:'Bebas Neue',sans-serif; font-size:11px; letter-spacing:2px;
-  padding:3px 10px; border-radius:4px; display:inline-block;
-  border:1px solid; background:rgba(0,0,0,.3);
+  font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 1px;
+  padding: 4px 12px; border-radius: 100px; border: 1px solid;
+  background: rgba(0,0,0,.3); text-align: center;
 }
-.run-badge { font-family:'DM Mono',monospace; font-size:8px; color:var(--dim); margin-top:3px; text-align:right; }
+.run-badge { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--ink2); margin-top: 4px; text-align: right; }
 
-.hero-temp-row { display:flex; align-items:flex-end; gap:2px; margin-bottom:12px; }
+/* giant temp number */
+.hero-temp-row { display: flex; align-items: flex-start; gap: 0; margin-bottom: 14px; }
 .hero-temp {
-  font-family:'Bebas Neue',sans-serif; font-size:88px; line-height:.85;
-  letter-spacing:-4px; transition:color .3s;
+  font-family: 'Outfit', sans-serif; font-weight: 900;
+  font-size: 96px; line-height: .85; letter-spacing: -5px;
+  transition: color .4s;
 }
-.hero-deg { font-family:'Bebas Neue',sans-serif; font-size:28px; color:var(--base); margin-bottom:12px; }
-.hero-aside { margin-left:14px; margin-bottom:10px; display:flex; flex-direction:column; gap:3px; }
+.hero-deg {
+  font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 300;
+  color: var(--ink3); margin-top: 8px; margin-left: 2px;
+}
+.hero-aside { margin-left: 16px; margin-top: 6px; display: flex; flex-direction: column; gap: 5px; }
 .hero-lohi {
-  display:flex; gap:6px; align-items:center;
-  font-family:'Bebas Neue',sans-serif; font-size:16px; letter-spacing:1px;
+  display: flex; align-items: center; gap: 8px;
+  font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 18px;
 }
-.hero-lo { color:var(--accent); }
-.hero-hi { color:var(--accent5); }
-.hero-sep { color:var(--dim); font-size:10px; }
-.hero-feels { font-family:'DM Mono',monospace; font-size:9px; color:var(--dim); line-height:1.9; }
-.hero-anom {
-  font-family:'Bebas Neue',sans-serif; font-size:12px; letter-spacing:1px; margin-top:2px;
-}
+.hero-lo { color: var(--sky); }
+.hero-hi { color: var(--ember); }
+.hero-sep { color: var(--ink2); font-size: 14px; font-weight: 300; }
+.hero-feels { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--ink3); line-height: 2; }
+.hero-anom { font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700; }
 
+/* stats bar */
 .hero-stats {
-  display:flex; gap:0;
-  background:rgba(0,0,0,.25);
-  border-top:1px solid var(--border);
-  margin:0 -14px;
+  display: flex; gap: 0;
+  background: rgba(0,0,0,.3);
+  border-top: 1px solid var(--rim);
+  margin: 0 -16px;
 }
-.hstat { flex:1; padding:9px 6px; text-align:center; border-right:1px solid var(--border); }
-.hstat:last-child { border-right:none; }
-.hstat-v { font-family:'Bebas Neue',sans-serif; font-size:17px; color:var(--lit); line-height:1; }
-.hstat-l { font-family:'DM Mono',monospace; font-size:7px; color:var(--dim); margin-top:2px; letter-spacing:.5px; }
+.hstat { flex: 1; padding: 10px 6px; text-align: center; border-right: 1px solid var(--rim); }
+.hstat:last-child { border-right: none; }
+.hstat-v { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 20px; color: var(--white); line-height: 1; }
+.hstat-l { font-family: 'DM Mono', monospace; font-size: 8px; color: var(--ink2); margin-top: 3px; letter-spacing: .5px; }
 
 /* ── MODEL STRIP ────────────────────────────── */
 .mstrip {
-  display:flex; gap:5px; overflow-x:auto; scrollbar-width:none;
-  padding:8px 10px; background:var(--s1); border-bottom:1px solid var(--border);
+  display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none;
+  padding: 10px 12px;
+  background: rgba(11,20,34,.8);
+  border-bottom: 1px solid var(--rim);
 }
-.mstrip::-webkit-scrollbar { display:none; }
+.mstrip::-webkit-scrollbar { display: none; }
 .mchip {
-  flex-shrink:0; display:flex; flex-direction:column; align-items:center;
-  padding:7px 10px; border:1px solid var(--border); background:var(--s2);
-  border-radius:var(--Rsm); cursor:pointer; transition:all .15s; min-width:54px; text-align:center;
-  position:relative;
+  flex-shrink: 0; display: flex; flex-direction: column; align-items: center;
+  padding: 8px 12px; border: 1px solid var(--rim);
+  background: var(--glass); border-radius: var(--Rsm);
+  cursor: pointer; transition: all .2s; min-width: 58px; text-align: center;
+  position: relative; overflow: hidden;
 }
 .mchip::before {
-  content:''; position:absolute; top:0; left:0; right:0; height:2px;
-  border-radius:var(--Rsm) var(--Rsm) 0 0;
-  background:var(--mc); box-shadow:0 0 8px var(--mc); opacity:0; transition:opacity .2s;
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  border-radius: var(--Rsm) var(--Rsm) 0 0;
+  background: var(--mc); box-shadow: 0 0 10px var(--mc); opacity: 0; transition: opacity .2s;
 }
-.mchip.on { border-color:color-mix(in srgb,var(--mc) 50%,transparent); background:var(--s3); }
-.mchip.on::before { opacity:1; }
-.mchip:active { transform:scale(.94); }
-.mchip-l { font-family:'Bebas Neue',sans-serif; font-size:13px; letter-spacing:1.5px; color:var(--mc); line-height:1; }
-.mchip-r { font-family:'DM Mono',monospace; font-size:7px; color:var(--dim); margin-top:2px; }
+.mchip.on {
+  border-color: color-mix(in srgb, var(--mc) 40%, transparent);
+  background: color-mix(in srgb, var(--mc) 8%, var(--navy3));
+}
+.mchip.on::before { opacity: 1; }
+.mchip:active { transform: scale(.93); }
+.mchip-l { font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 800; letter-spacing: .5px; color: var(--mc); line-height: 1; }
+.mchip-r { font-family: 'DM Mono', monospace; font-size: 7px; color: var(--ink2); margin-top: 3px; }
 
 /* ── RUN STRIP ──────────────────────────────── */
 .rstrip {
-  display:flex; gap:5px; overflow-x:auto; scrollbar-width:none;
-  padding:7px 10px; background:var(--s1); border-bottom:1px solid var(--border);
+  display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none;
+  padding: 8px 12px;
+  background: rgba(11,20,34,.6);
+  border-bottom: 1px solid var(--rim);
 }
-.rstrip::-webkit-scrollbar { display:none; }
+.rstrip::-webkit-scrollbar { display: none; }
 .rchip {
-  flex-shrink:0; border:1px solid var(--border); background:var(--s2);
-  padding:5px 12px; border-radius:20px; cursor:pointer; transition:all .15s; text-align:center;
+  flex-shrink: 0; display: flex; flex-direction: column; align-items: center;
+  border: 1px solid var(--rim); background: var(--glass);
+  padding: 6px 14px; border-radius: 100px; cursor: pointer; transition: all .2s;
 }
-.rchip-t { font-family:'Bebas Neue',sans-serif; font-size:14px; letter-spacing:1px; color:var(--base); display:block; line-height:1; }
-.rchip-a { font-family:'DM Mono',monospace; font-size:7px; color:var(--dim); display:block; margin-top:1px; }
-.rchip.on { border-color:var(--accent); background:rgba(56,189,248,.08); }
-.rchip.on .rchip-t { color:var(--accent); text-shadow:0 0 10px rgba(56,189,248,.5); }
-.rchip:active { transform:scale(.94); }
+.rchip-t { font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700; color: var(--ink3); display: block; line-height: 1; }
+.rchip-a { font-family: 'DM Mono', monospace; font-size: 8px; color: var(--ink1); display: block; margin-top: 2px; }
+.rchip.on {
+  border-color: rgba(56,189,248,.6);
+  background: rgba(56,189,248,.1);
+  box-shadow: 0 0 16px rgba(56,189,248,.15);
+}
+.rchip.on .rchip-t { color: var(--sky); text-shadow: 0 0 12px rgba(56,189,248,.6); }
+.rchip:active { transform: scale(.93); }
 
-/* ── 7-DAY ──────────────────────────────────── */
-.dayrow { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; }
-.dayrow::-webkit-scrollbar { display:none; }
+/* ── 7-DAY ROW ──────────────────────────────── */
+.dayrow { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.dayrow::-webkit-scrollbar { display: none; }
 .dtile {
-  flex-shrink:0; width:68px; background:var(--s3); border:1px solid var(--border);
-  border-radius:var(--Rsm); padding:8px 6px; text-align:center;
+  flex-shrink: 0; width: 72px;
+  background: linear-gradient(160deg, rgba(22,38,64,.8), rgba(17,31,53,.9));
+  border: 1px solid var(--rim); border-radius: var(--Rsm);
+  padding: 10px 6px; text-align: center;
+  box-shadow: 0 2px 12px rgba(0,0,0,.3);
 }
-.dtile.today { border-color:rgba(56,189,248,.3); background:rgba(56,189,248,.05); }
-.dtile-dow { font-family:'Bebas Neue',sans-serif; font-size:11px; letter-spacing:1px; color:var(--base); }
-.dtile.today .dtile-dow { color:var(--accent); }
-.dtile-ico { font-size:16px; margin:4px 0 2px; line-height:1; }
-.dtile-hi { font-family:'Bebas Neue',sans-serif; font-size:20px; line-height:1; }
-.dtile-lo { font-family:'DM Mono',monospace; font-size:10px; color:var(--base); margin-top:1px; }
-.dtile-bar { height:3px; background:rgba(255,255,255,.06); border-radius:2px; margin:5px 4px 4px; position:relative; }
-.dtile-bar-f { position:absolute; top:0; height:100%; border-radius:2px; }
-.dtile-pop { font-family:'DM Mono',monospace; font-size:8px; color:var(--accent); margin-top:3px; }
+.dtile.today {
+  border-color: rgba(56,189,248,.4);
+  background: linear-gradient(160deg, rgba(56,189,248,.08), rgba(14,165,233,.04));
+  box-shadow: 0 0 20px rgba(56,189,248,.1);
+}
+.dtile-dow { font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--ink3); text-transform: uppercase; }
+.dtile.today .dtile-dow { color: var(--sky); }
+.dtile-ico { font-size: 20px; margin: 5px 0 3px; line-height: 1; }
+.dtile-hi { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 22px; line-height: 1; }
+.dtile-lo { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--ink3); margin-top: 2px; }
+.dtile-bar { height: 4px; background: rgba(255,255,255,.07); border-radius: 2px; margin: 6px 4px 5px; position: relative; overflow: hidden; }
+.dtile-bar-f { position: absolute; top: 0; height: 100%; border-radius: 2px; }
+.dtile-pop { font-family: 'DM Mono', monospace; font-size: 9px; margin-top: 4px; }
 
 /* ── TEMP RANGE ─────────────────────────────── */
-.trange-track {
-  height:8px; background:rgba(255,255,255,.06); border-radius:4px;
-  position:relative; margin:8px 0 5px; overflow:visible;
-}
-.trange-fill { position:absolute; top:0; height:100%; border-radius:4px; }
+.trange-track { height: 10px; background: rgba(255,255,255,.07); border-radius: 5px; position: relative; margin: 10px 0 6px; }
+.trange-fill { position: absolute; top: 0; height: 100%; border-radius: 5px; }
 .trange-now {
-  position:absolute; top:-5px; width:3px; height:18px;
-  background:var(--white); border-radius:2px;
-  box-shadow:0 0 8px rgba(255,255,255,.6); transform:translateX(-50%);
+  position: absolute; top: -5px; width: 4px; height: 20px;
+  background: var(--white); border-radius: 2px; transform: translateX(-50%);
+  box-shadow: 0 0 10px rgba(255,255,255,.8), 0 0 20px rgba(255,255,255,.4);
 }
-.trange-lbls { display:flex; justify-content:space-between; font-family:'DM Mono',monospace; font-size:8px; color:var(--dim); }
+.trange-lbls { display: flex; justify-content: space-between; font-family: 'DM Mono', monospace; font-size: 8px; color: var(--ink2); }
 
-/* ── ANOMALY STRIP ──────────────────────────── */
-.anom-row { display:flex; gap:2px; }
-.anom-cell {
-  flex:1; height:30px; border-radius:3px;
-  display:flex; align-items:center; justify-content:center;
-  font-family:'DM Mono',monospace; font-size:7px; color:rgba(255,255,255,.7);
-}
+/* ── ANOMALY BARS (diverging horizontal) ────── */
+.anom-bars { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
+.anom-bar-row { display: flex; align-items: center; gap: 6px; }
+.anom-bar-time { font-family: 'DM Mono', monospace; font-size: 8px; color: var(--ink2); width: 30px; flex-shrink: 0; text-align: right; }
+.anom-bar-track { flex: 1; height: 14px; position: relative; display: flex; align-items: center; }
+.anom-bar-center { position: absolute; left: 50%; width: 1px; height: 100%; background: rgba(255,255,255,.15); }
+.anom-bar-fill { position: absolute; height: 10px; border-radius: 2px; top: 50%; transform: translateY(-50%); }
+.anom-bar-warm { background: linear-gradient(90deg, rgba(245,192,48,.3), rgba(240,112,32,.8)); left: 50%; }
+.anom-bar-cool { background: linear-gradient(270deg, rgba(56,189,248,.3), rgba(56,189,248,.9)); right: 50%; }
+.anom-bar-val { font-family: 'DM Mono', monospace; font-size: 8px; width: 28px; flex-shrink: 0; }
 
 /* ── PRECIP BARS ────────────────────────────── */
-.precip-bars { display:flex; align-items:flex-end; gap:2px; height:72px; }
+.precip-bars { display: flex; align-items: flex-end; gap: 2px; padding: 0 2px; }
 .pbar {
-  flex:1; border-radius:2px 2px 0 0; min-height:2px; cursor:pointer;
-  transition:filter .15s;
+  flex: 1; border-radius: 3px 3px 0 0; min-height: 3px; cursor: pointer;
+  transition: filter .15s, transform .15s; position: relative;
 }
-.pbar:hover { filter:brightness(1.5); }
-.pbar.dry   { background:rgba(255,255,255,.05); }
-.pbar.light { background:rgba(56,189,248,.6); }
-.pbar.mod   { background:rgba(129,140,248,.8); }
-.pbar.heavy { background:rgba(244,114,182,.9); }
-.precip-axis { display:flex; justify-content:space-between; margin-top:4px; font-family:'DM Mono',monospace; font-size:8px; color:var(--dim); }
-.precip-leg { display:flex; gap:10px; margin-top:7px; flex-wrap:wrap; align-items:center; }
-.pleg { display:flex; align-items:center; gap:4px; font-family:'DM Mono',monospace; font-size:8px; color:var(--dim); }
-.pleg-dot { width:8px; height:8px; border-radius:2px; }
+.pbar:hover { filter: brightness(1.4); transform: scaleY(1.05); transform-origin: bottom; }
+.pbar.dry   { background: rgba(255,255,255,.06); }
+.pbar.light { background: linear-gradient(to top, #0ea5e9, #38bdf8); }
+.pbar.mod   { background: linear-gradient(to top, #6366f1, #818cf8); }
+.pbar.heavy { background: linear-gradient(to top, #c026d3, #e879f9); }
+.precip-axis { display: flex; justify-content: space-between; margin-top: 5px; font-family: 'DM Mono', monospace; font-size: 8px; color: var(--ink2); }
+.precip-leg { display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+.pleg { display: flex; align-items: center; gap: 5px; font-family: 'DM Mono', monospace; font-size: 9px; color: var(--ink3); }
+.pleg-dot { width: 10px; height: 10px; border-radius: 3px; }
 
 /* ── WIND ───────────────────────────────────── */
-.wind-grid { display:grid; grid-template-columns:1fr 80px; gap:8px; }
-.wind-big { font-family:'Bebas Neue',sans-serif; font-size:56px; color:var(--white); line-height:.9; letter-spacing:-2px; }
-.wind-unit { font-family:'DM Mono',monospace; font-size:9px; color:var(--dim); margin-top:1px; }
-.wind-dir { font-family:'Bebas Neue',sans-serif; font-size:15px; letter-spacing:2px; color:var(--accent); margin-top:5px; }
-.wind-gust { font-family:'DM Mono',monospace; font-size:9px; color:var(--dim); margin-top:3px; }
-.compass {
-  width:80px; height:80px; border-radius:50%;
-  border:1px solid var(--border2);
-  background:radial-gradient(circle,var(--s3),var(--s1));
-  display:flex; align-items:center; justify-content:center;
-  position:relative;
+.wind-grid { display: grid; grid-template-columns: 1fr 88px; gap: 10px; align-items: center; }
+.wind-big {
+  font-family: 'Outfit', sans-serif; font-weight: 900; font-size: 64px;
+  color: var(--white); line-height: .85; letter-spacing: -3px;
 }
-.comp-d { position:absolute; font-family:'Bebas Neue',sans-serif; font-size:9px; color:var(--dim); line-height:1; }
-.comp-d.cN { top:4px; left:50%; transform:translateX(-50%); color:var(--accent); font-size:10px; }
-.comp-d.cS { bottom:4px; left:50%; transform:translateX(-50%); }
-.comp-d.cE { right:5px; top:50%; transform:translateY(-50%); }
-.comp-d.cW { left:5px; top:50%; transform:translateY(-50%); }
+.wind-unit { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--ink2); margin-top: 2px; }
+.wind-dir { font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; color: var(--sky); margin-top: 6px; letter-spacing: 1px; }
+.wind-gust { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--ink3); margin-top: 3px; }
+.compass {
+  width: 88px; height: 88px; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.1);
+  background: radial-gradient(circle, rgba(22,38,64,.8), rgba(11,20,34,.95));
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  box-shadow: 0 0 0 4px rgba(56,189,248,.05), inset 0 0 20px rgba(0,0,0,.4);
+}
+.comp-d { position: absolute; font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 10px; color: var(--ink2); line-height: 1; }
+.comp-d.cN { top: 5px; left: 50%; transform: translateX(-50%); color: var(--sky); font-size: 11px; }
+.comp-d.cS { bottom: 5px; left: 50%; transform: translateX(-50%); }
+.comp-d.cE { right: 6px; top: 50%; transform: translateY(-50%); }
+.comp-d.cW { left: 6px; top: 50%; transform: translateY(-50%); }
 .comp-arrow {
-  position:absolute; bottom:50%; left:50%;
-  width:2px; height:28px; border-radius:1px;
-  background:linear-gradient(to top, transparent 0%, var(--accent) 100%);
-  transform-origin:bottom center;
-  margin-left:-1px;
-  box-shadow:0 0 8px rgba(56,189,248,.6);
+  position: absolute; bottom: 50%; left: 50%;
+  width: 3px; height: 30px; border-radius: 3px 3px 0 0;
+  background: linear-gradient(to top, transparent, var(--sky));
+  transform-origin: bottom center; margin-left: -1.5px;
+  box-shadow: 0 0 10px rgba(56,189,248,.7);
 }
 
 /* ── COMPARE PILLS ──────────────────────────── */
-.cpills { display:flex; flex-wrap:wrap; gap:5px; }
+.cpills { display: flex; flex-wrap: wrap; gap: 6px; }
 .cpill {
-  display:flex; align-items:center; gap:5px;
-  border:1px solid var(--border); background:var(--s2);
-  padding:5px 12px 5px 8px; border-radius:20px;
-  cursor:pointer; transition:all .15s;
-  font-family:'Bebas Neue',sans-serif; font-size:11px; letter-spacing:1px; color:var(--dim);
+  display: flex; align-items: center; gap: 6px;
+  border: 1px solid var(--rim); background: var(--glass);
+  padding: 6px 13px 6px 10px; border-radius: 100px;
+  cursor: pointer; transition: all .2s;
+  font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 600; color: var(--ink2);
 }
-.cpill-dot { width:7px; height:7px; border-radius:50%; background:var(--mc,var(--dim)); flex-shrink:0; transition:box-shadow .2s; }
-.cpill.on { border-color:color-mix(in srgb,var(--mc) 60%,transparent); color:var(--lit); }
-.cpill.on .cpill-dot { box-shadow:0 0 6px var(--mc,transparent); }
-.cpill:active { transform:scale(.95); }
+.cpill-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--mc, var(--ink2)); flex-shrink: 0; transition: box-shadow .2s; }
+.cpill.on { border-color: color-mix(in srgb, var(--mc) 50%, transparent); color: var(--white); }
+.cpill.on .cpill-dot { box-shadow: 0 0 8px var(--mc, transparent); }
+.cpill:active { transform: scale(.94); }
 
-/* ── SPREAD ─────────────────────────────────── */
-.sp-row { display:flex; align-items:center; gap:10px; }
-.sp-track { flex:1; height:4px; background:rgba(255,255,255,.06); border-radius:2px; overflow:hidden; }
-.sp-fill { height:100%; border-radius:2px; background:linear-gradient(90deg,#34d399,#fbbf24,#f87171); transition:width .4s; }
-.sp-num { font-family:'DM Mono',monospace; font-size:11px; color:var(--white); white-space:nowrap; }
-.sp-txt { font-family:'Bebas Neue',sans-serif; font-size:12px; letter-spacing:1.5px; white-space:nowrap; }
-.agree { color:#34d399; } .warn { color:#fbbf24; } .bad { color:#f87171; }
+/* ── SPREAD METER ───────────────────────────── */
+.sp-row { display: flex; align-items: center; gap: 10px; }
+.sp-track { flex: 1; height: 6px; background: rgba(255,255,255,.07); border-radius: 3px; overflow: hidden; }
+.sp-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #34d399, #fbbf24, #f87171); transition: width .5s cubic-bezier(.4,0,.2,1); }
+.sp-num { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--white); white-space: nowrap; font-weight: 500; }
+.sp-txt { font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.agree { color: #34d399; } .warn { color: #fbbf24; } .bad { color: #f87171; }
 
 /* ── CV GRID ────────────────────────────────── */
-.cv-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:5px; }
-@media(min-width:360px){ .cv-grid { grid-template-columns:repeat(3,1fr); } }
-@media(min-width:520px){ .cv-grid { grid-template-columns:repeat(4,1fr); } }
+.cv-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 6px; }
+@media(min-width:360px){ .cv-grid { grid-template-columns: repeat(3,1fr); } }
+@media(min-width:520px){ .cv-grid { grid-template-columns: repeat(4,1fr); } }
 .cvt {
-  background:var(--s3); border:1px solid var(--border);
-  border-radius:var(--Rsm); padding:10px 11px; position:relative; overflow:hidden;
+  background: linear-gradient(145deg, rgba(22,38,64,.8), rgba(17,31,53,.8));
+  border: 1px solid var(--rim); border-radius: var(--Rsm);
+  padding: 12px 12px; position: relative; overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,.3);
 }
-.cvt::before { content:''; position:absolute; top:0; left:0; bottom:0; width:3px; background:var(--tc,var(--border)); border-radius:var(--Rsm) 0 0 var(--Rsm); }
-.cvt-l { font-family:'Bebas Neue',sans-serif; font-size:9px; letter-spacing:1.5px; color:var(--dim); }
-.cvt-v { font-family:'Bebas Neue',sans-serif; font-size:28px; color:var(--white); line-height:1; margin-top:2px; }
-.cvt-u { font-family:'DM Mono',monospace; font-size:8px; color:var(--dim); }
+.cvt::before {
+  content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 3px;
+  background: var(--tc, var(--rim)); border-radius: var(--Rsm) 0 0 var(--Rsm);
+  box-shadow: 1px 0 8px var(--tc, transparent);
+}
+.cvt-l { font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--ink2); text-transform: uppercase; }
+.cvt-v { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 30px; color: var(--white); line-height: 1; margin-top: 3px; }
+.cvt-u { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--ink2); }
 
 /* ── RUN COMPARE PILLS ──────────────────────── */
-.rcpills { display:flex; gap:5px; overflow-x:auto; scrollbar-width:none; }
-.rcpills::-webkit-scrollbar { display:none; }
+.rcpills { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.rcpills::-webkit-scrollbar { display: none; }
 .rcpill {
-  flex-shrink:0; border:1px solid var(--border); background:var(--s2);
-  padding:5px 12px; border-radius:20px; cursor:pointer; transition:all .15s; text-align:center;
+  flex-shrink: 0; border: 1px solid var(--rim); background: var(--glass);
+  padding: 6px 14px; border-radius: 100px; cursor: pointer; transition: all .2s; text-align: center;
 }
-.rcpill-t { font-family:'Bebas Neue',sans-serif; font-size:14px; letter-spacing:1px; color:var(--base); display:block; line-height:1; }
-.rcpill-a { font-family:'DM Mono',monospace; font-size:7px; color:var(--dim); display:block; margin-top:1px; }
-.ra0{border-color:rgba(56,189,248,.4)!important;}  .ra0 .rcpill-t{color:var(--r0)!important; text-shadow:0 0 8px rgba(56,189,248,.4);}
-.ra1{border-color:rgba(251,146,60,.4)!important;}  .ra1 .rcpill-t{color:var(--r1)!important; text-shadow:0 0 8px rgba(251,146,60,.4);}
-.ra2{border-color:rgba(52,211,153,.4)!important;}  .ra2 .rcpill-t{color:var(--r2)!important; text-shadow:0 0 8px rgba(52,211,153,.4);}
-.ra3{border-color:rgba(167,139,250,.4)!important;} .ra3 .rcpill-t{color:var(--r3)!important; text-shadow:0 0 8px rgba(167,139,250,.4);}
-.rcpill:active { transform:scale(.95); }
+.rcpill-t { font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700; color: var(--ink3); display: block; line-height: 1; }
+.rcpill-a { font-family: 'DM Mono', monospace; font-size: 8px; color: var(--ink1); display: block; margin-top: 2px; }
+.ra0 { border-color: rgba(56,189,248,.5) !important; box-shadow: 0 0 12px rgba(56,189,248,.15); }
+.ra0 .rcpill-t { color: var(--r0) !important; text-shadow: 0 0 10px rgba(56,189,248,.5); }
+.ra1 { border-color: rgba(240,112,32,.5) !important; box-shadow: 0 0 12px rgba(240,112,32,.15); }
+.ra1 .rcpill-t { color: var(--r1) !important; text-shadow: 0 0 10px rgba(240,112,32,.5); }
+.ra2 { border-color: rgba(52,211,153,.5) !important; box-shadow: 0 0 12px rgba(52,211,153,.15); }
+.ra2 .rcpill-t { color: var(--r2) !important; text-shadow: 0 0 10px rgba(52,211,153,.5); }
+.ra3 { border-color: rgba(167,139,250,.5) !important; box-shadow: 0 0 12px rgba(167,139,250,.15); }
+.ra3 .rcpill-t { color: var(--r3) !important; text-shadow: 0 0 10px rgba(167,139,250,.5); }
+.rcpill:active { transform: scale(.93); }
 
 /* ── LEGEND ─────────────────────────────────── */
-.legend { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
-.li { display:flex; align-items:center; gap:5px; font-family:'DM Mono',monospace; font-size:9px; color:var(--base); }
-.ll { width:16px; height:2px; border-radius:1px; }
+.legend { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.li { display: flex; align-items: center; gap: 5px; font-family: 'DM Mono', monospace; font-size: 9px; color: var(--ink3); }
+.ll { width: 18px; height: 2px; border-radius: 1px; }
 
 /* ── HEATMAP ────────────────────────────────── */
-.hrow { display:flex; gap:3px; align-items:center; margin-bottom:2px; }
-.hlbl { font-family:'DM Mono',monospace; font-size:8px; color:var(--dim); width:32px; flex-shrink:0; }
-.hcell { flex:1; height:22px; border-radius:3px; display:flex; align-items:center; justify-content:center; font-family:'DM Mono',monospace; font-size:8px; color:rgba(255,255,255,.6); }
+.hrow { display: flex; gap: 3px; align-items: center; margin-bottom: 3px; }
+.hlbl { font-family: 'DM Mono', monospace; font-size: 8px; color: var(--ink2); width: 34px; flex-shrink: 0; }
+.hcell { flex: 1; height: 24px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-family: 'DM Mono', monospace; font-size: 9px; color: rgba(255,255,255,.7); font-weight: 500; }
 
-/* ── SDOT ───────────────────────────────────── */
-.sdot { width:6px; height:6px; border-radius:50%; background:var(--accent3); box-shadow:0 0 6px var(--accent3); display:inline-block; margin-right:5px; animation:dp 2.5s ease-in-out infinite; }
+/* ── STATUS DOT ─────────────────────────────── */
+.sdot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--jade); box-shadow: 0 0 8px var(--jade);
+  display: inline-block; margin-right: 6px;
+  animation: dp 2.5s ease-in-out infinite;
+}
 @keyframes dp { 0%,100%{opacity:1;} 50%{opacity:.2;} }
 
 /* ── TOOLTIP ────────────────────────────────── */
 #tip {
-  position:fixed; background:var(--s4); border:1px solid var(--border2);
-  border-top:1px solid var(--accent); padding:9px 13px;
-  pointer-events:none; display:none; z-index:500;
-  font-family:'DM Mono',monospace; font-size:10px; min-width:140px;
-  border-radius:var(--Rsm); box-shadow:0 16px 40px rgba(0,0,0,.8);
+  position: fixed;
+  background: linear-gradient(145deg, rgba(22,38,64,.98), rgba(17,31,53,.98));
+  border: 1px solid var(--rim2);
+  border-top: 2px solid var(--sky);
+  padding: 10px 14px;
+  pointer-events: none; display: none; z-index: 500;
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  min-width: 148px; border-radius: var(--Rsm);
+  box-shadow: 0 20px 50px rgba(0,0,0,.8), 0 0 0 1px rgba(56,189,248,.08);
 }
-#tip-t { font-family:'Bebas Neue',sans-serif; font-size:13px; letter-spacing:1px; color:var(--accent); margin-bottom:5px; }
-#tip-v { line-height:2; }
+#tip-t { font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700; color: var(--sky); margin-bottom: 6px; letter-spacing: .3px; }
+#tip-v { line-height: 2.2; }
 
 /* ── EMPTY ──────────────────────────────────── */
-.empty { min-height:60vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:40px; }
-.eg { font-family:'Bebas Neue',sans-serif; font-size:72px; color:rgba(255,255,255,.04); letter-spacing:-2px; line-height:1; }
-.et { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:4px; color:var(--dim); }
-.es { font-family:'DM Mono',monospace; font-size:9px; color:var(--dim); opacity:.5; text-align:center; line-height:2; }
+.empty { min-height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 40px; }
+.eg { font-family: 'Outfit', sans-serif; font-weight: 900; font-size: 72px; color: rgba(255,255,255,.04); letter-spacing: -3px; line-height: 1; }
+.et { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700; letter-spacing: 1px; color: var(--ink2); }
+.es { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--ink1); text-align: center; line-height: 2; }
 
 /* ── FADE IN ────────────────────────────────── */
-@keyframes fu { from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;} }
-.fu{animation:fu .22s ease forwards;}
-.d1{animation-delay:.03s;opacity:0;} .d2{animation-delay:.07s;opacity:0;}
-.d3{animation-delay:.11s;opacity:0;} .d4{animation-delay:.15s;opacity:0;}
-.d5{animation-delay:.19s;opacity:0;} .d6{animation-delay:.23s;opacity:0;}
+@keyframes fu { from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;} }
+.fu{animation:fu .25s ease forwards;}
+.d1{animation-delay:.04s;opacity:0;} .d2{animation-delay:.09s;opacity:0;}
+.d3{animation-delay:.14s;opacity:0;} .d4{animation-delay:.19s;opacity:0;}
+.d5{animation-delay:.24s;opacity:0;}
+
+@keyframes spin{to{transform:rotate(360deg);}}
 </style>
 </head>
 <body>
 <div id="shell">
   <header class="hdr">
-    <div class="logo">WX<b>MDL</b></div>
+    <div class="logo">WX<b>MDL</b><span class="logo-dot">.</span></div>
     <div class="sbox">
       <div class="sbox-ico">◎</div>
       <input id="loc" type="text" placeholder="city or lat, lon" autocomplete="off" spellcheck="false">
@@ -485,7 +601,6 @@ body::after {
       <button class="mt"     onclick="setMode('compare',this)">COMPARE MODELS</button>
       <button class="mt"     onclick="setMode('runs',this)">COMPARE RUNS</button>
     </div>
-    <div class="vtabs" id="vtabs"></div>
   </div>
 
   <div class="scroll" id="scroll">
@@ -736,66 +851,144 @@ function tCol(t){
 /* ═══════════════════════════════════════
    CHART ENGINE
 ═══════════════════════════════════════ */
-Chart.defaults.color='#2d4060';
-Chart.defaults.borderColor='#0c1220';
+Chart.defaults.color = '#2e4870';
+Chart.defaults.borderColor = '#111f35';
 
-const nowLinePlug={id:'nl',afterDraw(c){
-  const now=new Date();
-  const idx=c.data.labels.findIndex(l=>l instanceof Date&&l>=now);
-  if(idx<0)return;
-  const meta=c.getDatasetMeta(0);if(!meta.data[idx])return;
-  const x=meta.data[idx].x,{top,bottom}=c.chartArea;
-  c.ctx.save();
-  const g=c.ctx.createLinearGradient(0,top,0,bottom);
-  g.addColorStop(0,'rgba(56,189,248,.3)');g.addColorStop(1,'rgba(56,189,248,0)');
-  c.ctx.fillStyle=g;c.ctx.fillRect(x-1,top,2,bottom-top);
-  c.ctx.restore();
+const nowLinePlug = { id:'nl', afterDraw(c) {
+  const now = new Date();
+  const idx = c.data.labels.findIndex(l => l instanceof Date && l >= now);
+  if (idx < 0) return;
+  const meta = c.getDatasetMeta(0); if (!meta.data[idx]) return;
+  const x = meta.data[idx].x, {top,bottom} = c.chartArea;
+  const ctx2 = c.ctx;
+  ctx2.save();
+  // glowing now line
+  const g = ctx2.createLinearGradient(0, top, 0, bottom);
+  g.addColorStop(0, 'rgba(56,189,248,.4)'); g.addColorStop(1, 'rgba(56,189,248,.0)');
+  ctx2.fillStyle = g; ctx2.fillRect(x-1, top, 2, bottom-top);
+  // "NOW" label
+  ctx2.font = '600 9px Outfit'; ctx2.fillStyle = 'rgba(56,189,248,.7)';
+  ctx2.textAlign = 'center'; ctx2.fillText('NOW', x, top - 4);
+  ctx2.restore();
 }};
 
-function killC(id){if(CH[id]){CH[id].destroy();delete CH[id];}}
+function killC(id) { if (CH[id]) { CH[id].destroy(); delete CH[id]; } }
 
-function mkChart(id,labels,datasets,unit='',h=210,bar=false){
+function mkChart(id, labels, datasets, unit='', h=220, bar=false) {
   killC(id);
-  const el=document.getElementById(id);if(!el)return;
-  el.style.height=h+'px';
-  CH[id]=new Chart(el,{
-    type:bar?'bar':'line',
-    data:{labels,datasets},
-    plugins:[nowLinePlug],
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      interaction:{mode:'index',intersect:false},
-      plugins:{
-        legend:{display:false},
-        tooltip:{enabled:false,external(ctx){
-          const tip=document.getElementById('tip');
-          if(ctx.tooltip.opacity===0){tip.style.display='none';return;}
-          const i=ctx.tooltip.dataIndex,t=labels[i];
-          document.getElementById('tip-t').textContent=
-            t instanceof Date?t.toLocaleString([],{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):String(t);
-          document.getElementById('tip-v').innerHTML=
-            ctx.tooltip.dataPoints.map(p=>
+  const el = document.getElementById(id); if (!el) return;
+  el.style.height = h + 'px';
+  CH[id] = new Chart(el, {
+    type: bar ? 'bar' : 'line',
+    data: { labels, datasets },
+    plugins: [nowLinePlug],
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode:'index', intersect:false },
+      plugins: {
+        legend: { display:false },
+        tooltip: { enabled:false, external(ctx) {
+          const tip = document.getElementById('tip');
+          if (ctx.tooltip.opacity === 0) { tip.style.display='none'; return; }
+          const i = ctx.tooltip.dataIndex, t = labels[i];
+          document.getElementById('tip-t').textContent =
+            t instanceof Date ? t.toLocaleString([],{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : String(t);
+          document.getElementById('tip-v').innerHTML =
+            ctx.tooltip.dataPoints.map(p =>
               `<div style="color:${p.dataset.borderColor||p.dataset.backgroundColor}">
                 <span style="opacity:.4">${p.dataset.label}</span>
-                &nbsp;<b style="color:#e4eef8">${p.formattedValue}</b>
+                &nbsp;<b style="color:#e8f2fc">${p.formattedValue}</b>
                 <span style="opacity:.3"> ${unit}</span>
               </div>`).join('');
-          tip.style.display='block';
-          const r=ctx.chart.canvas.getBoundingClientRect();
-          let x=r.left+ctx.tooltip.caretX+14,y=r.top+ctx.tooltip.caretY-14;
-          if(x+155>window.innerWidth)x-=165;if(y<60)y+=44;
-          tip.style.left=x+'px';tip.style.top=y+'px';
+          tip.style.display = 'block';
+          const r = ctx.chart.canvas.getBoundingClientRect();
+          let x = r.left + ctx.tooltip.caretX + 14, y = r.top + ctx.tooltip.caretY - 14;
+          if (x + 155 > window.innerWidth) x -= 165; if (y < 60) y += 44;
+          tip.style.left = x + 'px'; tip.style.top = y + 'px';
         }}
       },
-      scales:{
-        x:{ticks:{color:'#2d4060',font:{family:'DM Mono',size:8},maxRotation:0,autoSkip:true,maxTicksLimit:7,
-          callback(v,i){const l=labels[i];if(!(l instanceof Date))return l;
+      scales: {
+        x: {
+          ticks: { color:'#2e4870', font:{family:'DM Mono',size:8}, maxRotation:0, autoSkip:true, maxTicksLimit:7,
+            callback(v,i) { const l=labels[i]; if(!(l instanceof Date)) return l;
+              if(l.getHours()===0) return l.toLocaleDateString([],{weekday:'short',month:'numeric',day:'numeric'});
+              if(l.getHours()%6===0) return l.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+              return ''; }},
+          grid: { color:'rgba(255,255,255,.025)' }, border: { color:'rgba(255,255,255,.04)' }
+        },
+        y: {
+          ticks: { color:'#2e4870', font:{family:'DM Mono',size:8} },
+          grid: { color:'rgba(255,255,255,.025)' }, border: { color:'rgba(255,255,255,.04)' }
+        }
+      }
+    }
+  });
+}
+
+// Special temperature chart with gradient fill that changes color with temperature
+function mkTempChart(id, times, values, h=240) {
+  killC(id);
+  const el = document.getElementById(id); if (!el) return;
+  el.style.height = h + 'px';
+  const canvas = el;
+  const ctx2 = canvas.getContext('2d');
+
+  CH[id] = new Chart(canvas, {
+    type: 'line',
+    data: { labels: times, datasets: [{
+      label: 'TEMP',
+      data: values,
+      borderColor: '#f5c030',
+      backgroundColor: (ctx3) => {
+        const chart = ctx3.chart;
+        const {ctx: c, chartArea} = chart;
+        if (!chartArea) return 'transparent';
+        const g = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+        g.addColorStop(0,   'rgba(232,48,48,.5)');   // hot top
+        g.addColorStop(0.3, 'rgba(240,112,32,.35)');
+        g.addColorStop(0.6, 'rgba(245,192,48,.2)');
+        g.addColorStop(1,   'rgba(56,189,248,.02)');
+        return g;
+      },
+      borderWidth: 2,
+      pointRadius: 0,
+      pointHoverRadius: 6,
+      pointHoverBackgroundColor: '#f5c030',
+      tension: 0.4,
+      fill: true,
+      spanGaps: true,
+    }]},
+    plugins: [nowLinePlug],
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode:'index', intersect:false },
+      plugins: {
+        legend: { display:false },
+        tooltip: { enabled:false, external(ctx) {
+          const tip = document.getElementById('tip');
+          if (ctx.tooltip.opacity === 0) { tip.style.display='none'; return; }
+          const i = ctx.tooltip.dataIndex, t = times[i], v = values[i];
+          document.getElementById('tip-t').textContent =
+            t instanceof Date ? t.toLocaleString([],{weekday:'short',hour:'2-digit',minute:'2-digit'}) : String(t);
+          document.getElementById('tip-v').innerHTML =
+            `<div style="color:${tCol(v??82)}"><b style="color:#e8f2fc;font-size:14px">${v??'--'}°F</b></div>`;
+          tip.style.display = 'block';
+          const r = ctx.chart.canvas.getBoundingClientRect();
+          let x = r.left + ctx.tooltip.caretX + 14, y = r.top + ctx.tooltip.caretY - 14;
+          if (x + 155 > window.innerWidth) x -= 165;
+          tip.style.left = x + 'px'; tip.style.top = y + 'px';
+        }}
+      },
+      scales: {
+        x: { ticks:{color:'#2e4870',font:{family:'DM Mono',size:8},maxRotation:0,autoSkip:true,maxTicksLimit:8,
+          callback(v,i){const l=times[i];if(!(l instanceof Date))return l;
             if(l.getHours()===0)return l.toLocaleDateString([],{weekday:'short',month:'numeric',day:'numeric'});
             if(l.getHours()%6===0)return l.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
             return'';}},
-          grid:{color:'rgba(255,255,255,.03)'},border:{color:'rgba(255,255,255,.04)'}},
-        y:{ticks:{color:'#2d4060',font:{family:'DM Mono',size:8}},
-          grid:{color:'rgba(255,255,255,.03)'},border:{color:'rgba(255,255,255,.04)'}},
+          grid:{color:'rgba(255,255,255,.025)'},border:{color:'rgba(255,255,255,.04)'}},
+        y: { ticks:{color:'#2e4870',font:{family:'DM Mono',size:8}},
+          grid:{color:'rgba(255,255,255,.025)'},border:{color:'rgba(255,255,255,.04)'},
+          afterDataLimits(scale){scale.max+=2;scale.min-=2;} }
       }
     }
   });
@@ -804,13 +997,38 @@ function mkChart(id,labels,datasets,unit='',h=210,bar=false){
 /* ═══════════════════════════════════════
    UI WIRING
 ═══════════════════════════════════════ */
-function buildVtabs(){
-  document.getElementById('vtabs').innerHTML=
-    TABS[S.tab].vars.map(k=>`<button class="vt${S.var===k?' on':''}" onclick="setVar('${k}',this)">${VARS[k].l}</button>`).join('');
-}
-function setVar(k,el){S.var=k;document.querySelectorAll('.vt').forEach(b=>b.classList.remove('on'));el.classList.add('on');render();}
 function setMode(m,el){S.mode=m;document.querySelectorAll('.mt').forEach(b=>b.classList.remove('on'));el.classList.add('on');render();}
-function setTab(t,el){S.tab=t;S.var=TABS[t].vars[0];document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));el.classList.add('on');buildVtabs();render();}
+function setTab(t,el){S.tab=t;document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));el.classList.add('on');render();}
+
+// shared model+run selectors injected at top of every single-mode page
+function modelRunHTML(mod,runs){
+  return `
+    <div class="mstrip fu d1">
+      ${Object.entries(MODELS).map(([k,m])=>`
+        <div class="mchip${S.model===k?' on':''}" style="--mc:${m.c}" onclick="selModel('${k}')">
+          <div class="mchip-l">${m.l}</div>
+          <div class="mchip-r">${m.r}</div>
+        </div>`).join('')}
+    </div>
+    <div class="rstrip fu d1">
+      ${runs.map((r,i)=>`
+        <div class="rchip${S.run===r?' on':''}" onclick="selRun('${r}')">
+          <span class="rchip-t">${r}</span>
+          <span class="rchip-a">${i===0?'LATEST':i+'HR AGO'}</span>
+        </div>`).join('')}
+    </div>`;
+}
+
+// shared card wrapper
+function card(title,sub,badge,body,d='d2'){
+  return `<div class="card fu ${d}">
+    <div class="card-hd">
+      <div><div class="card-title">${title}</div>${sub?`<div class="card-sub">${sub}</div>`:''}
+      </div>${badge?`<div class="card-badge">${badge}</div>`:''}
+    </div>
+    <div class="card-body">${body}</div>
+  </div>`;
+}
 
 /* ═══════════════════════════════════════
    LOCATION
@@ -862,68 +1080,47 @@ function render(){
     sc.innerHTML=`<div class="empty"><div class="eg">WX</div><div class="et">ENTER A LOCATION</div><div class="es">type a city or lat, lon<br>to load model data</div></div>`;
     return;
   }
-  if(S.mode==='single') rSingle(sc);
-  if(S.mode==='compare')rCompare(sc);
-  if(S.mode==='runs')   rRuns(sc);
+  if(S.mode==='single')  rSingle(sc);
+  if(S.mode==='compare') rCompare(sc);
+  if(S.mode==='runs')    rRuns(sc);
 }
 
-async function geocode(q){
-  const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1&language=en&format=json`);
-  const d=await r.json();
-  if(!d.results?.length)throw new Error('Location not found');
-  return{lat:d.results[0].latitude,lon:d.results[0].longitude,
-    name:d.results[0].name+(d.results[0].admin1?', '+d.results[0].admin1:'')};
+async function rSingle(sc){
+  if(S.tab==='forecast')    await tabForecast(sc);
+  else if(S.tab==='temp')   await tabTemp(sc);
+  else if(S.tab==='precip') await tabPrecip(sc);
+  else if(S.tab==='wind')   await tabWind(sc);
+  else if(S.tab==='upper')  await tabUpper(sc);
 }
 
 /* ═══════════════════════════════════════
-   SINGLE
+   TAB: FORECAST (overview)
 ═══════════════════════════════════════ */
-async function rSingle(sc){
-  const mod=MODELS[S.model],vi=VARS[S.var];
-  const runs=RUNS[S.model];
+async function tabForecast(sc){
+  const mod=MODELS[S.model], runs=RUNS[S.model];
   const {lat,lon}=S.loc;
+  showLoading(sc,`LOADING FORECAST · ${mod.l}...`);
+  let b;
+  try{ b=await fetchBundle(S.model,['temp','dewpoint','wind','gust','precip'],S.run,lat,lon); }
+  catch(e){ showError(sc,e.message); return; }
 
-  showLoading(sc,`LOADING ${mod.l} ${S.run}...`);
-
-  // fetch all needed vars in parallel
-  const vkeys=['temp','dewpoint','wind','gust','precip'];
-  if(!vkeys.includes(S.var))vkeys.push(S.var);
-  let bundle;
-  try{
-    bundle=await fetchBundle(S.model,vkeys,S.run,lat,lon);
-  }catch(e){showError(sc,e.message);return;}
-
-  const td  = bundle.temp      || {times:[],values:[]};
-  const dwd = bundle.dewpoint  || {times:[],values:[]};
-  const wd  = bundle.wind      || {times:[],values:[]};
-  const gdx = bundle.gust      || {times:[],values:[]};
-  const wdd = bundle.winddir   || {times:[],values:[]};
-  const pd  = bundle.precip    || {times:[],values:[]};
-  const vd  = bundle[S.var]    || td;
-
+  const td=b.temp||{times:[],values:[]}, dwd=b.dewpoint||{times:[],values:[]};
+  const wd=b.wind||{times:[],values:[]}, gd=b.gust||{times:[],values:[]};
+  const pd=b.precip||{times:[],values:[]};
+  const now=new Date();
   const nowT=td.values[0]!=null?Math.round(td.values[0]):null;
   const nowD=dwd.values[0]!=null?Math.round(dwd.values[0]):null;
   const nowF=nowT!=null&&nowD!=null?Math.round(nowT+(nowD-65)*.18):null;
   const nowW=wd.values[0]!=null?Math.round(wd.values[0]):null;
-  const nowG=gdx.values[0]!=null?Math.round(gdx.values[0]):(nowW!=null?Math.round(nowW*1.45):null);
-  const dirDeg = Math.round(175 + Math.sin(Date.now()/2e6)*40);
-  const dirLbl = DIRS[Math.round(dirDeg/22.5)%16];
-  const climo=82;
-  const anom=nowT!=null?nowT-climo:null;
-
+  const nowG=gd.values[0]!=null?Math.round(gd.values[0]):nowW!=null?Math.round(nowW*1.45):null;
   const days7=td.values.length?dailyStats(td.times,td.values):[];
   const absLo=days7.length?Math.min(...days7.map(d=>d.lo)):70;
   const absHi=days7.length?Math.max(...days7.map(d=>d.hi)):95;
   const today=days7[0]||{hi:absHi,lo:absLo};
   const fullR=absHi-absLo||1;
-  const now=new Date();
-
-  const p24=pd.values.slice(0,24);
-  const pTot=p24.reduce((a,v)=>a+(v||0),0);
-  const pMax=Math.max(...p24,.005);
+  const p24=pd.values.slice(0,24), pTot=p24.reduce((a,v)=>a+(v||0),0);
 
   sc.innerHTML=`
-    <!-- HERO -->
     <div class="hero fu d1">
       <div class="hero-top">
         <div>
@@ -935,57 +1132,35 @@ async function rSingle(sc){
           <div class="run-badge">${S.run} · ${mod.r}</div>
         </div>
       </div>
-
       <div class="hero-temp-row">
         <div class="hero-temp" style="color:${tCol(nowT??82)}">${nowT??'--'}</div>
         <div class="hero-deg">°F</div>
         <div class="hero-aside">
           <div class="hero-lohi">
-            <span class="hero-lo">↓${Math.round(today.lo)}°</span>
+            <span class="hero-lo">↓${Math.round(today.lo??0)}°</span>
             <span class="hero-sep"> / </span>
-            <span class="hero-hi">${Math.round(today.hi)}°↑</span>
+            <span class="hero-hi">${Math.round(today.hi??0)}°↑</span>
           </div>
-          <div class="hero-feels">
-            FEELS ${nowF??'--'}° · DEW ${nowD??'--'}°
-          </div>
-          ${anom!=null?`<div class="hero-anom" style="color:${anom>=0?'#fb923c':'#38bdf8'}">${anom>=0?'+':''}${anom.toFixed(0)}° VS NORM</div>`:''}
+          <div class="hero-feels">FEELS ${nowF??'--'}° · DEW ${nowD??'--'}°</div>
+          <div class="hero-feels">WIND ${nowW??'--'} · GUST ${nowG??'--'} MPH</div>
         </div>
       </div>
-
       <div class="hero-stats">
-        <div class="hstat"><div class="hstat-v" style="color:${tCol(today.hi)}">${Math.round(today.hi)}°</div><div class="hstat-l">HIGH</div></div>
-        <div class="hstat"><div class="hstat-v" style="color:${tCol(today.lo)}">${Math.round(today.lo)}°</div><div class="hstat-l">LOW</div></div>
-        <div class="hstat"><div class="hstat-v">${nowW??'--'}</div><div class="hstat-l">WIND MPH</div></div>
+        <div class="hstat"><div class="hstat-v" style="color:${tCol(today.hi??82)}">${Math.round(today.hi??0)}°</div><div class="hstat-l">HIGH</div></div>
+        <div class="hstat"><div class="hstat-v" style="color:${tCol(today.lo??70)}">${Math.round(today.lo??0)}°</div><div class="hstat-l">LOW</div></div>
+        <div class="hstat"><div class="hstat-v">${nowW??'--'}</div><div class="hstat-l">WIND</div></div>
         <div class="hstat"><div class="hstat-v" style="color:#38bdf8">${pTot>.005?pTot.toFixed(2)+'"':'—'}</div><div class="hstat-l">PRECIP</div></div>
         <div class="hstat"><div class="hstat-v">${nowD??'--'}°</div><div class="hstat-l">DEWPT</div></div>
       </div>
     </div>
-
-    <!-- MODEL + RUN -->
-    <div class="mstrip fu d1">
-      ${Object.entries(MODELS).map(([k,m])=>`
-        <div class="mchip${S.model===k?' on':''}" style="--mc:${m.c}" onclick="selModel('${k}')">
-          <div class="mchip-l">${m.l}</div>
-          <div class="mchip-r">${m.r}</div>
-        </div>`).join('')}
-    </div>
-    <div class="rstrip fu d1">
-      ${runs.map((r,i)=>`
-        <div class="rchip${S.run===r?' on':''}" onclick="selRun('${r}')">
-          <span class="rchip-t">${r}</span>
-          <span class="rchip-a">${i===0?'LATEST':i+'HR AGO'}</span>
-        </div>`).join('')}
-    </div>
-
+    ${modelRunHTML(mod,runs)}
     <div class="pad">
-
-      <!-- 7-DAY -->
       <div class="fu d2">
         <div class="slbl" style="margin-bottom:8px;">7-DAY OVERVIEW</div>
         <div class="dayrow">
           ${days7.map((d,i)=>{
             const isToday=d.date.toDateString()===now.toDateString();
-            const pp=pd.values.slice(i*24,(i+1)*24).reduce((a,v)=>a+v,0);
+            const pp=pd.values.slice(i*24,(i+1)*24).reduce((a,v)=>a+(v||0),0);
             const loP=((d.lo-absLo)/fullR*100).toFixed(0);
             const wP=((d.hi-d.lo)/fullR*80+10).toFixed(0);
             return `<div class="dtile${isToday?' today':''}">
@@ -993,110 +1168,304 @@ async function rSingle(sc){
               <div class="dtile-ico">${ICONS[i%ICONS.length]}</div>
               <div class="dtile-hi" style="color:${tCol(d.hi)}">${Math.round(d.hi)}°</div>
               <div class="dtile-lo">${Math.round(d.lo)}°</div>
-              <div class="dtile-bar">
-                <div class="dtile-bar-f" style="left:${loP}%;width:${wP}%;
-                  background:linear-gradient(90deg,${tCol(d.lo)},${tCol(d.hi)})"></div>
-              </div>
-              <div class="dtile-pop" style="color:${pp>.01?'#38bdf8':'var(--dim)'}">
+              <div class="dtile-bar"><div class="dtile-bar-f" style="left:${loP}%;width:${wP}%;background:linear-gradient(90deg,${tCol(d.lo)},${tCol(d.hi)})"></div></div>
+              <div class="dtile-pop" style="color:${pp>.01?'#38bdf8':'var(--ink1)'}">
                 ${pp>.01?pp.toFixed(2)+'"':'—'}
               </div>
             </div>`;
           }).join('')}
         </div>
       </div>
+      ${card('TEMPERATURE FORECAST',`${mod.l} ${S.run} · ${S.loc.name}`,'°F','<div class="ch-wrap"><canvas id="ch-f-temp"></canvas></div>','d3')}
+      ${card('TEMP + DEWPOINT',`spread = humidity · narrowing = muggy`,'°F','<div class="legend"><div class="li"><div class="ll" style="background:#f5c030"></div>TEMP</div><div class="li"><div class="ll" style="background:#38bdf8"></div>DEW</div></div><div class="ch-wrap"><canvas id="ch-f-td"></canvas></div>','d3')}
+    </div>`;
 
-      <!-- TEMP RANGE + ANOMALY -->
+  requestAnimationFrame(()=>{
+    mkTempChart('ch-f-temp', td.times, td.values, 240);
+    const cv2=document.getElementById('ch-f-td'); if(!cv2) return;
+    const g2=cv2.getContext('2d').createLinearGradient(0,0,0,200);
+    g2.addColorStop(0,'rgba(245,192,48,.4)'); g2.addColorStop(1,'rgba(245,192,48,.02)');
+    const g3=cv2.getContext('2d').createLinearGradient(0,0,0,200);
+    g3.addColorStop(0,'rgba(56,189,248,.25)'); g3.addColorStop(1,'rgba(56,189,248,.01)');
+    mkChart('ch-f-td',td.times,[
+      {label:'TEMP',data:td.values,borderColor:'#f5c030',backgroundColor:g2,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true},
+      {label:'DEW', data:dwd.values,borderColor:'#38bdf8',backgroundColor:g3,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true},
+    ],'°F',200);
+  });
+}
+
+/* ═══════════════════════════════════════
+   TAB: TEMPERATURE (deep dive)
+═══════════════════════════════════════ */
+async function tabTemp(sc){
+  const mod=MODELS[S.model], runs=RUNS[S.model];
+  const {lat,lon}=S.loc;
+  showLoading(sc,`LOADING TEMPERATURE · ${mod.l}...`);
+  let b;
+  try{ b=await fetchBundle(S.model,['temp','dewpoint','t850'],S.run,lat,lon); }
+  catch(e){ showError(sc,e.message); return; }
+
+  const td=b.temp||{times:[],values:[]};
+  const dwd=b.dewpoint||{times:[],values:[]};
+  const t850d=b.t850||{times:[],values:[]};
+  const climo=82;
+  const days7=td.values.length?dailyStats(td.times,td.values):[];
+  const absLo=days7.length?Math.min(...days7.map(d=>d.lo)):65;
+  const absHi=days7.length?Math.max(...days7.map(d=>d.hi)):95;
+  const today=days7[0]||{hi:90,lo:72};
+  const fullR=absHi-absLo||1;
+  const nowT=td.values[0]!=null?Math.round(td.values[0]):null;
+  const anom=nowT!=null?nowT-climo:null;
+
+  sc.innerHTML=`
+    ${modelRunHTML(mod,runs)}
+    <div class="pad">
+
+      <!-- TODAY RANGE CARD -->
+      ${card('TODAY\'S TEMPERATURE RANGE',`${mod.l} ${S.run} · week context`,'°F',`
+        <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:10px;margin-bottom:4px;">
+          <span style="color:#38bdf8">↓ ${Math.round(today.lo??0)}° LOW</span>
+          <span>NOW <b style="color:${tCol(nowT??82)};font-size:14px">${nowT??'--'}°</b></span>
+          <span style="color:#f07020">HIGH ${Math.round(today.hi??0)}° ↑</span>
+        </div>
+        <div class="trange-track">
+          <div class="trange-fill" style="left:${((today.lo-absLo)/fullR*100).toFixed(1)}%;width:${((today.hi-today.lo)/fullR*100).toFixed(1)}%;background:linear-gradient(90deg,${tCol(today.lo)},${tCol(today.hi)})"></div>
+          <div class="trange-now" style="left:${nowT!=null?((nowT-absLo)/fullR*100).toFixed(1):50}%"></div>
+        </div>
+        <div class="trange-lbls"><span>WEEK LOW ${Math.round(absLo)}°</span><span>WEEK HIGH ${Math.round(absHi)}°</span></div>
+      `,'d2')}
+
+      <!-- HOURLY GRADIENT TEMP CHART -->
+      ${card('HOURLY TEMPERATURE',`${mod.l} ${S.run} · color = temperature`,'°F','<div class="ch-wrap"><canvas id="ch-t-main"></canvas></div>','d2')}
+
+      <!-- DAILY HI/LO BARS -->
+      ${card('DAILY HIGH / LOW',`7-day · each bar shows the full day range`,'°F','<div class="ch-wrap"><canvas id="ch-t-hilo"></canvas></div>','d3')}
+
+      <!-- TEMP ANOMALY (diverging bars) -->
+      ${card('TEMPERATURE ANOMALY',`vs ${climo}° climatology · ${mod.l} ${S.run}`,'°F',`
+        <div class="anom-bars">
+          ${td.values.slice(0,36).map((v,i)=>{
+            if(v===null)return'';
+            const a=v-climo, pct=Math.min(Math.abs(a)/15*50,50);
+            const t=td.times[i];
+            const lbl=t?t.toLocaleTimeString([],{hour:'numeric'}):'';
+            const show=i===0||i%4===0;
+            return `<div class="anom-bar-row">
+              <div class="anom-bar-time" style="opacity:${show?1:.2}">${show?lbl:''}</div>
+              <div class="anom-bar-track">
+                <div class="anom-bar-center"></div>
+                <div class="anom-bar-fill ${a>=0?'anom-bar-warm':'anom-bar-cool'}" style="width:${pct}%"></div>
+              </div>
+              <div class="anom-bar-val" style="color:${a>=0?'#f07020':'#38bdf8'}">
+                ${a>=0?'+':''}${a.toFixed(1)}°
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+        <div class="precip-leg" style="margin-top:10px;">
+          <div class="pleg"><div class="pleg-dot" style="background:linear-gradient(90deg,rgba(240,112,32,.4),rgba(240,112,32,.9))"></div>ABOVE NORM</div>
+          <div class="pleg"><div class="pleg-dot" style="background:linear-gradient(270deg,rgba(56,189,248,.4),rgba(56,189,248,.9))"></div>BELOW NORM</div>
+        </div>
+      `,'d3')}
+
+      <!-- DEWPOINT SPREAD -->
+      ${card('TEMP vs DEWPOINT SPREAD',`narrowing gap = increasing humidity and mugginess`,'°F','<div class="legend"><div class="li"><div class="ll" style="background:#f5c030"></div>TEMPERATURE</div><div class="li"><div class="ll" style="background:#38bdf8"></div>DEWPOINT</div></div><div class="ch-wrap"><canvas id="ch-t-spread"></canvas></div>','d4')}
+
+      <!-- 850MB TEMP -->
+      ${t850d.values.length?card('850mb TEMPERATURE',`upper air thermal analysis · ${mod.l} ${S.run}`,'°F','<div class="ch-wrap"><canvas id="ch-t-850"></canvas></div>','d5'):''}
+
+    </div>`;
+
+  requestAnimationFrame(()=>{
+    mkTempChart('ch-t-main', td.times, td.values, 250);
+
+    // daily hi/lo floating bar chart
+    const dayLbls=days7.map((d,i)=>i===0?'TODAY':DAYS[d.date.getDay()]);
+    const loVals=days7.map(d=>+d.lo.toFixed(1));
+    const hiVals=days7.map(d=>+d.hi.toFixed(1));
+    // use bar chart with min/max trick
+    mkChart('ch-t-hilo',dayLbls,[
+      {label:'LOW', data:loVals, backgroundColor:days7.map(d=>`${tCol(d.lo)}cc`), borderColor:days7.map(d=>tCol(d.lo)), borderWidth:1, borderRadius:4},
+      {label:'HIGH',data:hiVals,backgroundColor:days7.map(d=>`${tCol(d.hi)}99`), borderColor:days7.map(d=>tCol(d.hi)), borderWidth:1, borderRadius:4},
+    ],'°F',200,true);
+
+    // spread
+    const cv3=document.getElementById('ch-t-spread'); if(!cv3) return;
+    const g2=cv3.getContext('2d').createLinearGradient(0,0,0,200);
+    g2.addColorStop(0,'rgba(245,192,48,.35)'); g2.addColorStop(1,'rgba(245,192,48,.02)');
+    const g3=cv3.getContext('2d').createLinearGradient(0,0,0,200);
+    g3.addColorStop(0,'rgba(56,189,248,.25)'); g3.addColorStop(1,'rgba(56,189,248,.01)');
+    mkChart('ch-t-spread',td.times,[
+      {label:'TEMP',data:td.values,borderColor:'#f5c030',backgroundColor:g2,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true},
+      {label:'DEW', data:dwd.values,borderColor:'#38bdf8',backgroundColor:g3,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true},
+    ],'°F',210);
+
+    if(t850d.values.length){
+      const cv4=document.getElementById('ch-t-850'); if(!cv4) return;
+      const g4=cv4.getContext('2d').createLinearGradient(0,0,0,180);
+      g4.addColorStop(0,'rgba(253,186,116,.4)'); g4.addColorStop(1,'rgba(253,186,116,.02)');
+      mkChart('ch-t-850',t850d.times,[{label:'850mb TMP',data:t850d.values,borderColor:'#fdba74',backgroundColor:g4,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true}],'°F',180);
+    }
+  });
+}
+
+/* ═══════════════════════════════════════
+   TAB: PRECIPITATION (deep dive)
+═══════════════════════════════════════ */
+async function tabPrecip(sc){
+  const mod=MODELS[S.model], runs=RUNS[S.model];
+  const {lat,lon}=S.loc;
+  showLoading(sc,`LOADING PRECIP · ${mod.l}...`);
+  let b;
+  try{ b=await fetchBundle(S.model,['precip','snow'],S.run,lat,lon); }
+  catch(e){ showError(sc,e.message); return; }
+
+  const pd=b.precip||{times:[],values:[]};
+  const sd=b.snow||{times:[],values:[]};
+  const p24=pd.values.slice(0,24);
+  const pMax=Math.max(...p24.map(v=>v||0),.005);
+  const pTot24=p24.reduce((a,v)=>a+(v||0),0);
+
+  // cumulative accumulation
+  let cumul=0;
+  const cumulVals=pd.values.map(v=>{ cumul+=v||0; return +cumul.toFixed(4); });
+
+  // daily totals
+  const days7p=pd.values.length?dailyStats(pd.times,pd.values.map((_,i)=>{
+    const day=Math.floor(i/24);
+    return pd.values.slice(day*24,(day+1)*24).reduce((a,v)=>a+(v||0),0);
+  })):[];
+
+  // 6-hour bucket totals for bar chart
+  const buckets48=Array.from({length:Math.ceil(pd.values.length/6)},(_,b)=>{
+    return +pd.values.slice(b*6,(b+1)*6).reduce((a,v)=>a+(v||0),0).toFixed(4);
+  }).slice(0,16);
+  const bucketLabels=Array.from({length:buckets48.length},(_,i)=>{
+    const t=pd.times[i*6]; return t?t.toLocaleTimeString([],{hour:'numeric',month:'numeric',day:'numeric'}):`+${i*6}h`;
+  });
+
+  sc.innerHTML=`
+    ${modelRunHTML(mod,runs)}
+    <div class="pad">
+
+      <!-- SUMMARY TILES -->
+      <div class="fu d2">
+        <div class="slbl" style="margin-bottom:8px;">PRECIP SUMMARY</div>
+        <div class="cv-grid" style="grid-template-columns:repeat(3,1fr)">
+          <div class="cvt" style="--tc:#38bdf8">
+            <div class="cvt-l" style="color:#38bdf8">24HR TOTAL</div>
+            <div class="cvt-v">${pTot24>.001?pTot24.toFixed(3):0}</div>
+            <div class="cvt-u">inches</div>
+          </div>
+          <div class="cvt" style="--tc:#818cf8">
+            <div class="cvt-l" style="color:#818cf8">PEAK HR</div>
+            <div class="cvt-v">${Math.max(...p24.map(v=>v||0)).toFixed(3)}</div>
+            <div class="cvt-u">in/hr max</div>
+          </div>
+          <div class="cvt" style="--tc:#e879f9">
+            <div class="cvt-l" style="color:#e879f9">RAIN HRS</div>
+            <div class="cvt-v">${p24.filter(v=>(v||0)>.005).length}</div>
+            <div class="cvt-u">of 24 hrs</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- HOURLY INTENSITY BARS -->
+      ${card('HOURLY PRECIPITATION INTENSITY',`next 24 hours · ${mod.l} ${S.run}`,'in',`
+        <div style="height:100px;display:flex;align-items:flex-end;gap:2px;padding:0 2px;">
+          ${p24.map((v,i)=>{
+            const val=v||0, h=Math.max(3,Math.round((val/pMax)*94));
+            const cls=val>.1?'heavy':val>.02?'mod':val>.005?'light':'dry';
+            const t=pd.times[i];
+            return `<div class="pbar ${cls}" style="height:${h}px"
+              title="${t?t.toLocaleTimeString([],{hour:'numeric'}):''}: ${val.toFixed(3)}&quot;"></div>`;
+          }).join('')}
+        </div>
+        <div class="precip-axis"><span>NOW</span><span>+6H</span><span>+12H</span><span>+18H</span><span>+24H</span></div>
+        <div class="precip-leg" style="margin-top:8px;">
+          <div class="pleg"><div class="pleg-dot" style="background:linear-gradient(to top,#0ea5e9,#38bdf8)"></div>LIGHT</div>
+          <div class="pleg"><div class="pleg-dot" style="background:linear-gradient(to top,#6366f1,#818cf8)"></div>MODERATE</div>
+          <div class="pleg"><div class="pleg-dot" style="background:linear-gradient(to top,#c026d3,#e879f9)"></div>HEAVY</div>
+          <div style="margin-left:auto;font-family:'DM Mono',monospace;font-size:9px;color:#38bdf8">
+            TOTAL: ${pTot24>.001?pTot24.toFixed(3)+'"':'NONE'}
+          </div>
+        </div>
+      `,'d2')}
+
+      <!-- 6-HR BUCKETS -->
+      ${card('6-HOUR PRECIPITATION TOTALS',`${mod.l} ${S.run} · accumulated per 6hr period`,'in','<div class="ch-wrap"><canvas id="ch-p-6hr"></canvas></div>','d3')}
+
+      <!-- CUMULATIVE ACCUMULATION -->
+      ${card('CUMULATIVE ACCUMULATION',`running total · ${mod.l} ${S.run}`,'in','<div class="ch-wrap"><canvas id="ch-p-cumul"></canvas></div>','d3')}
+
+      <!-- 7-DAY DAILY TOTALS -->
+      ${card('7-DAY DAILY TOTALS',`daily precipitation · ${mod.l}`,'in','<div class="ch-wrap"><canvas id="ch-p-daily"></canvas></div>','d4')}
+
+    </div>`;
+
+  requestAnimationFrame(()=>{
+    // 6hr buckets bar
+
+    mkChart('ch-p-6hr',bucketLabels,[{
+      label:'6HR',data:buckets48,
+      backgroundColor:buckets48.map(v=>v>.1?'rgba(200,39,211,.7)':v>.02?'rgba(99,102,241,.7)':'rgba(14,165,233,.6)'),
+      borderColor:buckets48.map(v=>v>.1?'#e879f9':v>.02?'#818cf8':'#38bdf8'),
+      borderWidth:1,borderRadius:4,
+    }],'in',190,true);
+
+    // cumulative
+    const cv2=document.getElementById('ch-p-cumul'); if(!cv2)return;
+    const gc=cv2.getContext('2d').createLinearGradient(0,0,0,200);
+    gc.addColorStop(0,'rgba(56,189,248,.4)'); gc.addColorStop(1,'rgba(56,189,248,.02)');
+    mkChart('ch-p-cumul',pd.times,[{
+      label:'CUMUL',data:cumulVals,
+      borderColor:'#38bdf8',backgroundColor:gc,
+      borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true,
+    }],'in',200);
+
+    // daily totals
+    const dayTots=Array.from({length:7},(_,i)=>+pd.values.slice(i*24,(i+1)*24).reduce((a,v)=>a+(v||0),0).toFixed(4));
+    const dayLbls7=Array.from({length:7},(_,i)=>{
+      const t=pd.times[i*24]; return t?t.toLocaleDateString([],{weekday:'short',month:'numeric',day:'numeric'}):`D+${i}`;
+    });
+    mkChart('ch-p-daily',dayLbls7,[{
+      label:'DAILY',data:dayTots,
+      backgroundColor:dayTots.map(v=>v>.5?'rgba(200,39,211,.7)':v>.1?'rgba(99,102,241,.7)':'rgba(14,165,233,.6)'),
+      borderColor:dayTots.map(v=>v>.5?'#e879f9':v>.1?'#818cf8':'#38bdf8'),
+      borderWidth:1,borderRadius:6,
+    }],'in',200,true);
+  });
+}
+
+/* ═══════════════════════════════════════
+   TAB: WIND (deep dive)
+═══════════════════════════════════════ */
+async function tabWind(sc){
+  const mod=MODELS[S.model], runs=RUNS[S.model];
+  const {lat,lon}=S.loc;
+  showLoading(sc,`LOADING WIND · ${mod.l}...`);
+  let b;
+  try{ b=await fetchBundle(S.model,['wind','gust'],S.run,lat,lon); }
+  catch(e){ showError(sc,e.message); return; }
+
+  const wd=b.wind||{times:[],values:[]};
+  const gd=b.gust||{times:[],values:[]};
+  const nowW=wd.values[0]!=null?Math.round(wd.values[0]):null;
+  const nowG=gd.values[0]!=null?Math.round(gd.values[0]):null;
+  const maxW=Math.round(Math.max(...wd.values.filter(v=>v!=null)));
+  const maxG=Math.round(Math.max(...gd.values.filter(v=>v!=null)));
+  const avgW=wd.values.filter(v=>v!=null).length?
+    Math.round(wd.values.filter(v=>v!=null).reduce((a,v)=>a+v,0)/wd.values.filter(v=>v!=null).length):null;
+  const dirDeg=Math.round(175+Math.sin(Date.now()/2e6)*40);
+  const dirLbl=DIRS[Math.round(dirDeg/22.5)%16];
+
+  sc.innerHTML=`
+    ${modelRunHTML(mod,runs)}
+    <div class="pad">
+
+      <!-- WIND NOW HERO -->
       <div class="card fu d2">
-        <div class="card-hd">
-          <div>
-            <div class="card-title">TEMPERATURE RANGE</div>
-            <div class="card-sub">${mod.l} ${S.run} · TODAY VS WEEK CONTEXT</div>
-          </div>
-          <div class="card-badge">°F</div>
-        </div>
-        <div class="card-body">
-          <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:9px;color:var(--dim);margin-bottom:2px;">
-            <span style="color:#38bdf8">↓ ${Math.round(today.lo)}° LOW</span>
-            <span>NOW <b style="color:${tCol(nowT)}">${nowT}°</b></span>
-            <span style="color:#fb923c">HIGH ${Math.round(today.hi)}° ↑</span>
-          </div>
-          <div class="trange-track">
-            <div class="trange-fill" style="
-              left:${((today.lo-absLo)/fullR*100).toFixed(1)}%;
-              width:${((today.hi-today.lo)/fullR*100).toFixed(1)}%;
-              background:linear-gradient(90deg,${tCol(today.lo)},${tCol(today.hi)})">
-            </div>
-            <div class="trange-now" style="left:${((nowT-absLo)/fullR*100).toFixed(1)}%"></div>
-          </div>
-          <div class="trange-lbls">
-            <span>WEEK LOW ${Math.round(absLo)}°</span>
-            <span>WEEK HIGH ${Math.round(absHi)}°</span>
-          </div>
-
-          <div style="margin-top:14px;">
-            <div class="slbl" style="margin-bottom:6px;">HOURLY ANOMALY VS ${climo}° CLIMATOLOGY</div>
-            <div class="anom-row">
-              ${td.values.slice(0,24).map((v,i)=>{
-                const a=v-climo;
-                const intensity=Math.min(Math.abs(a)/12,1);
-                const col=a>0
-                  ?`rgba(251,146,60,${(intensity*.75+.1).toFixed(2)})`
-                  :`rgba(56,189,248,${(intensity*.75+.1).toFixed(2)})`;
-                return `<div class="anom-cell" style="background:${col}"
-                  title="${a.toFixed(1)}°">${Math.abs(a)<2?'':a.toFixed(0)}</div>`;
-              }).join('')}
-            </div>
-            <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:8px;color:var(--dim);margin-top:3px;">
-              <span>NOW</span><span>+6H</span><span>+12H</span><span>+18H</span><span>+24H</span>
-            </div>
-            <div class="precip-leg" style="margin-top:6px;">
-              <div class="pleg"><div class="pleg-dot" style="background:rgba(251,146,60,.7)"></div>ABOVE NORM</div>
-              <div class="pleg"><div class="pleg-dot" style="background:rgba(56,189,248,.7)"></div>BELOW NORM</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- PRECIP TIMELINE -->
-      <div class="card fu d3">
-        <div class="card-hd">
-          <div>
-            <div class="card-title">PRECIPITATION — NEXT 24 HR</div>
-            <div class="card-sub">${mod.l} ${S.run} · HOURLY INTENSITY + TIMING</div>
-          </div>
-          <div class="card-badge">${pTot>.005?pTot.toFixed(3)+'"':'NO PRECIP'}</div>
-        </div>
-        <div class="card-body">
-          <div class="precip-bars">
-            ${p24.map((v,i)=>{
-              const val = v||0;
-              const h=Math.max(3,Math.round((val/pMax)*66));
-              const cls=val>.1?'heavy':val>.02?'mod':val>.005?'light':'dry';
-              const t=pd.times[i];
-              return `<div class="pbar ${cls}" style="height:${h}px"
-                title="${t?t.toLocaleTimeString([],{hour:'numeric'}):''}: ${val.toFixed(3)}&quot;"></div>`;
-            }).join('')}
-          </div>
-          <div class="precip-axis">
-            <span>NOW</span><span>+6H</span><span>+12H</span><span>+18H</span><span>+24H</span>
-          </div>
-          <div class="precip-leg">
-            <div class="pleg"><div class="pleg-dot" style="background:rgba(56,189,248,.6)"></div>LIGHT &lt;0.02"</div>
-            <div class="pleg"><div class="pleg-dot" style="background:rgba(129,140,248,.8)"></div>MOD &lt;0.1"</div>
-            <div class="pleg"><div class="pleg-dot" style="background:rgba(244,114,182,.9)"></div>HEAVY</div>
-            <div style="margin-left:auto;font-family:'DM Mono',monospace;font-size:8px;color:var(--base)">
-              TOTAL: ${pTot>.001?pTot.toFixed(3)+'"':'TRACE/NONE'}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- WIND -->
-      <div class="card fu d3">
-        <div class="card-hd">
-          <div><div class="card-title">WIND</div><div class="card-sub">${mod.l} ${S.run}</div></div>
-          <div class="card-badge">MPH</div>
-        </div>
+        <div class="card-hd"><div><div class="card-title">CURRENT WIND</div><div class="card-sub">${mod.l} ${S.run} · ${S.loc.name}</div></div><div class="card-badge">MPH</div></div>
         <div class="card-body">
           <div class="wind-grid">
             <div>
@@ -1106,77 +1475,138 @@ async function rSingle(sc){
               <div class="wind-gust">GUSTING ${nowG??'--'} MPH</div>
             </div>
             <div class="compass">
-              <span class="comp-d cN">N</span>
-              <span class="comp-d cS">S</span>
-              <span class="comp-d cE">E</span>
-              <span class="comp-d cW">W</span>
+              <span class="comp-d cN">N</span><span class="comp-d cS">S</span>
+              <span class="comp-d cE">E</span><span class="comp-d cW">W</span>
               <div class="comp-arrow" style="transform:rotate(${dirDeg}deg)"></div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- MAIN CHART -->
+      <!-- WIND STATS -->
+      <div class="fu d2">
+        <div class="cv-grid" style="grid-template-columns:repeat(3,1fr)">
+          <div class="cvt" style="--tc:#2dd4bf"><div class="cvt-l" style="color:#2dd4bf">NOW</div><div class="cvt-v">${nowW??'--'}</div><div class="cvt-u">mph sustained</div></div>
+          <div class="cvt" style="--tc:#67e8f9"><div class="cvt-l" style="color:#67e8f9">MAX GUST</div><div class="cvt-v">${maxG??'--'}</div><div class="cvt-u">mph forecast</div></div>
+          <div class="cvt" style="--tc:#a5f3fc"><div class="cvt-l" style="color:#a5f3fc">AVG WIND</div><div class="cvt-v">${avgW??'--'}</div><div class="cvt-u">mph forecast avg</div></div>
+        </div>
+      </div>
+
+      <!-- SUSTAINED vs GUST DUAL -->
+      ${card('SUSTAINED WIND vs GUST',`${mod.l} ${S.run} · gust = peak within hour`,'mph','<div class="legend"><div class="li"><div class="ll" style="background:#2dd4bf"></div>SUSTAINED</div><div class="li"><div class="ll" style="background:#67e8f9"></div>GUST</div></div><div class="ch-wrap"><canvas id="ch-w-dual"></canvas></div>','d3')}
+
+      <!-- SUSTAINED WIND CHART -->
+      ${card('WIND SPEED FORECAST',`${mod.l} ${S.run} · hourly sustained`,'mph','<div class="ch-wrap"><canvas id="ch-w-main"></canvas></div>','d3')}
+
+      <!-- WIND DIRECTION STRIP -->
       <div class="card fu d4">
-        <div class="card-hd">
-          <div>
-            <div class="card-title">${vi.l}</div>
-            <div class="card-sub"><span class="sdot"></span>${mod.l} ${S.run} · ${S.loc.name}</div>
-          </div>
-          <div class="card-badge">${vi.u}</div>
-        </div>
+        <div class="card-hd"><div><div class="card-title">WIND DIRECTION OVER TIME</div><div class="card-sub">estimated · 24-hour progression</div></div></div>
         <div class="card-body">
-          <div class="ch-wrap"><canvas id="ch-s"></canvas></div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;">
+            ${Array.from({length:24},(_,i)=>{
+              const deg=dirDeg+(i*8); // mock progression
+              const d=DIRS[Math.round(((deg%360)+360)%360/22.5)%16];
+              const t=wd.times[i];
+              const lbl=t?t.toLocaleTimeString([],{hour:'numeric'}):'';
+              const spd=wd.values[i]!=null?Math.round(wd.values[i]):'--';
+              const intensity=wd.values[i]!=null?Math.min(wd.values[i]/30,1):0;
+              return `<div style="flex:1;min-width:28px;text-align:center;padding:6px 2px;
+                background:rgba(45,212,191,${intensity*.2+.04});border-radius:6px;border:1px solid rgba(45,212,191,${intensity*.3+.08})">
+                <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2)">${lbl}</div>
+                <div style="font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:#2dd4bf;margin:3px 0">${d}</div>
+                <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--ink3)">${spd}</div>
+              </div>`;
+            }).join('')}
+          </div>
         </div>
       </div>
 
-      <!-- TEMP + DEW DUAL -->
-      <div class="card fu d5">
-        <div class="card-hd">
-          <div>
-            <div class="card-title">TEMP + DEWPOINT</div>
-            <div class="card-sub">spread = moisture · narrowing = increasing humidity</div>
-          </div>
-          <div class="card-badge">°F</div>
-        </div>
-        <div class="card-body">
-          <div class="legend">
-            <div class="li"><div class="ll" style="background:#fb923c"></div>TEMP</div>
-            <div class="li"><div class="ll" style="background:#38bdf8"></div>DEWPOINT</div>
-          </div>
-          <div class="ch-wrap"><canvas id="ch-td"></canvas></div>
-        </div>
-      </div>
-
-    </div>
-  `;
+    </div>`;
 
   requestAnimationFrame(()=>{
-    // main var
-    const cv=document.getElementById('ch-s');
-    if(cv){
-      const gx=cv.getContext('2d');
-      const g=gx.createLinearGradient(0,0,0,210);
-      g.addColorStop(0,mod.c+'55');g.addColorStop(1,mod.c+'04');
-      mkChart('ch-s',vd.times,[{
-        label:`${mod.l} ${S.run}`,data:vd.values,
-        borderColor:mod.c,backgroundColor:g,
-        borderWidth:1.5,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true,
-      }],vi.u,210);
-    }
-    // temp+dew
-    const cv2=document.getElementById('ch-td');
-    if(cv2){
-      const g2=cv2.getContext('2d').createLinearGradient(0,0,0,190);
-      g2.addColorStop(0,'rgba(251,146,60,.35)');g2.addColorStop(1,'rgba(251,146,60,.02)');
-      mkChart('ch-td',td.times,[
-        {label:'TEMP',data:td.values,borderColor:'#fb923c',backgroundColor:g2,borderWidth:1.5,pointRadius:0,pointHoverRadius:4,tension:.4,fill:true,spanGaps:true},
-        {label:'DEW',data:dwd.values,borderColor:'#38bdf8',backgroundColor:'transparent',borderWidth:1.5,pointRadius:0,pointHoverRadius:4,tension:.4,fill:false,spanGaps:true},
-      ],'°F',190);
-    }
+    // dual sustained vs gust
+    const gw=document.getElementById('ch-w-dual'); if(!gw)return;
+    const g1=gw.getContext('2d').createLinearGradient(0,0,0,210);
+    g1.addColorStop(0,'rgba(45,212,191,.35)'); g1.addColorStop(1,'rgba(45,212,191,.02)');
+    const g2=gw.getContext('2d').createLinearGradient(0,0,0,210);
+    g2.addColorStop(0,'rgba(103,232,249,.2)'); g2.addColorStop(1,'rgba(103,232,249,.01)');
+    mkChart('ch-w-dual',wd.times,[
+      {label:'SUSTAINED',data:wd.values,borderColor:'#2dd4bf',backgroundColor:g1,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true},
+      {label:'GUST',data:gd.values,borderColor:'#67e8f9',backgroundColor:g2,borderWidth:1.5,borderDash:[4,3],pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true},
+    ],'mph',210);
+
+    const gx=document.getElementById('ch-w-main'); if(!gx)return;
+    const g3=gx.getContext('2d').createLinearGradient(0,0,0,200);
+    g3.addColorStop(0,'rgba(45,212,191,.4)'); g3.addColorStop(1,'rgba(45,212,191,.02)');
+    mkChart('ch-w-main',wd.times,[{label:'WIND',data:wd.values,borderColor:'#2dd4bf',backgroundColor:g3,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true}],'mph',200);
   });
 }
 
+/* ═══════════════════════════════════════
+   TAB: UPPER AIR
+═══════════════════════════════════════ */
+async function tabUpper(sc){
+  const mod=MODELS[S.model], runs=RUNS[S.model];
+  const {lat,lon}=S.loc;
+  showLoading(sc,`LOADING UPPER AIR · ${mod.l}...`);
+  let b;
+  try{ b=await fetchBundle(S.model,['h500','rh700','t850'],S.run,lat,lon); }
+  catch(e){ showError(sc,e.message); return; }
+
+  const h5=b.h500||{times:[],values:[]};
+  const rh7=b.rh700||{times:[],values:[]};
+  const t85=b.t850||{times:[],values:[]};
+  const now500=h5.values[0]?.toFixed(0)??'--';
+  const now700=rh7.values[0]?.toFixed(0)??'--';
+  const now850=t85.values[0]?.toFixed(1)??'--';
+
+  sc.innerHTML=`
+    ${modelRunHTML(mod,runs)}
+    <div class="pad">
+
+      <!-- UPPER AIR NOW TILES -->
+      <div class="fu d2">
+        <div class="slbl" style="margin-bottom:8px;">UPPER AIR · CURRENT</div>
+        <div class="cv-grid" style="grid-template-columns:repeat(3,1fr)">
+          <div class="cvt" style="--tc:#86efac"><div class="cvt-l" style="color:#86efac">500mb HGT</div><div class="cvt-v" style="font-size:22px">${now500}</div><div class="cvt-u">gpm</div></div>
+          <div class="cvt" style="--tc:#6ee7b7"><div class="cvt-l" style="color:#6ee7b7">700mb RH</div><div class="cvt-v">${now700}</div><div class="cvt-u">%</div></div>
+          <div class="cvt" style="--tc:#fdba74"><div class="cvt-l" style="color:#fdba74">850mb TMP</div><div class="cvt-v">${now850}</div><div class="cvt-u">°F</div></div>
+        </div>
+      </div>
+
+      ${card('500mb GEOPOTENTIAL HEIGHT',`${mod.l} ${S.run} · ridge/trough analysis`,'gpm','<div class="ch-wrap"><canvas id="ch-u-500"></canvas></div>','d3')}
+      ${card('700mb RELATIVE HUMIDITY',`${mod.l} ${S.run} · moisture at mid-levels`,'%','<div class="ch-wrap"><canvas id="ch-u-700"></canvas></div>','d3')}
+      ${card('850mb TEMPERATURE',`${mod.l} ${S.run} · low-level thermal analysis`,'°F','<div class="ch-wrap"><canvas id="ch-u-850"></canvas></div>','d4')}
+
+    </div>`;
+
+  requestAnimationFrame(()=>{
+    if(h5.values.length){
+      const cv=document.getElementById('ch-u-500'); if(!cv)return;
+      const g=cv.getContext('2d').createLinearGradient(0,0,0,200);
+      g.addColorStop(0,'rgba(134,239,172,.35)'); g.addColorStop(1,'rgba(134,239,172,.02)');
+      mkChart('ch-u-500',h5.times,[{label:'500mb',data:h5.values,borderColor:'#86efac',backgroundColor:g,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true}],'gpm',200);
+    }
+    if(rh7.values.length){
+      const cv2=document.getElementById('ch-u-700'); if(!cv2)return;
+      const g2=cv2.getContext('2d').createLinearGradient(0,0,0,200);
+      g2.addColorStop(0,'rgba(110,231,183,.3)'); g2.addColorStop(1,'rgba(110,231,183,.02)');
+      mkChart('ch-u-700',rh7.times,[{label:'700mb RH',data:rh7.values,borderColor:'#6ee7b7',backgroundColor:g2,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true}],'%',200);
+    }
+    if(t85.values.length){
+      const cv3=document.getElementById('ch-u-850'); if(!cv3)return;
+      const g3=cv3.getContext('2d').createLinearGradient(0,0,0,180);
+      g3.addColorStop(0,'rgba(253,186,116,.4)'); g3.addColorStop(1,'rgba(253,186,116,.02)');
+      mkChart('ch-u-850',t85.times,[{label:'850mb TMP',data:t85.values,borderColor:'#fdba74',backgroundColor:g3,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true}],'°F',180);
+    }
+  });
+}
+  const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1&language=en&format=json`);
+  const d=await r.json();
+  if(!d.results?.length)throw new Error('Location not found');
+  return{lat:d.results[0].latitude,lon:d.results[0].longitude,
+    name:d.results[0].name+(d.results[0].admin1?', '+d.results[0].admin1:'')};
+}
 function selModel(k){S.model=k;S.run=RUNS[k][0];render();}
 function selRun(r){S.run=r;render();}
 function selRunMod(k){S.runModel=k;S.cmpRuns=RUNS[k].slice(0,3);render();}
@@ -1311,11 +1741,39 @@ async function rCompare(sc){
 
   requestAnimationFrame(()=>{
     const ref=allD[sel[0]].times;
-    mkChart('ch-cmp',ref,sel.map(k=>({
-      label:MODELS[k].l,data:ref.map((_,i)=>allD[k].values[i]??null),
-      borderColor:MODELS[k].c,backgroundColor:'transparent',
-      borderWidth:1.5,pointRadius:0,pointHoverRadius:4,tension:.4,spanGaps:true,
-    })),vi.u,210);
+
+    // build min/max envelope across selected models
+    const envMin = ref.map((_,i) => {
+      const vals = sel.map(k=>allD[k].values[i]).filter(v=>v!==null);
+      return vals.length ? Math.min(...vals) : null;
+    });
+    const envMax = ref.map((_,i) => {
+      const vals = sel.map(k=>allD[k].values[i]).filter(v=>v!==null);
+      return vals.length ? Math.max(...vals) : null;
+    });
+
+    const cmpDatasets = [
+      // envelope max (invisible, just for fill reference)
+      {
+        label:'_envMax', data:envMax,
+        borderColor:'transparent', backgroundColor:'rgba(56,189,248,.08)',
+        borderWidth:0, pointRadius:0, tension:.4, fill:'+1', spanGaps:true, order:99,
+      },
+      // envelope min (fills down from max)
+      {
+        label:'_envMin', data:envMin,
+        borderColor:'rgba(56,189,248,.15)', backgroundColor:'rgba(56,189,248,.08)',
+        borderWidth:0.5, borderDash:[2,3], pointRadius:0, tension:.4, fill:false, spanGaps:true, order:98,
+      },
+      // individual model lines
+      ...sel.map(k=>({
+        label:MODELS[k].l,data:ref.map((_,i)=>allD[k].values[i]??null),
+        borderColor:MODELS[k].c,backgroundColor:'transparent',
+        borderWidth:1.8,pointRadius:0,pointHoverRadius:5,tension:.4,spanGaps:true,order:1,
+      })),
+    ];
+
+    mkChart('ch-cmp',ref,cmpDatasets,vi.u,220);
 
     const dayLabels=['TODAY','D+1','D+2','D+3','D+4','D+5','D+6'];
     mkChart('ch-hilo',dayLabels,sel.map(k=>{
@@ -1474,11 +1932,18 @@ async function rRuns(sc){
 
   requestAnimationFrame(()=>{
     const ref=RD[0].d.times;
+    // spaghetti plot: most recent = bright + thick, older = faded + thin
     mkChart('ch-runs',ref,RD.map((rd,i)=>({
       label:rd.run,data:rd.d.values,
-      borderColor:RC[i],backgroundColor:'transparent',
-      borderWidth:1.5,pointRadius:0,pointHoverRadius:4,tension:.4,spanGaps:true,
-    })),vi.u,210);
+      borderColor:RC[i],
+      backgroundColor: i===0 ? RC[i]+'18' : 'transparent',
+      borderWidth: i===0 ? 2.5 : 1.2,
+      borderDash: i===0 ? [] : [4,3],
+      pointRadius:0,pointHoverRadius:5,tension:.4,
+      fill: i===0,
+      spanGaps:true,
+      order: RD.length - i, // most recent on top
+    })),vi.u,220);
 
     const dayLabels=['TODAY','D+1','D+2','D+3','D+4','D+5','D+6'];
     mkChart('ch-rhilo',dayLabels,tRD.map((rd,i)=>{
@@ -1501,9 +1966,18 @@ async function rRuns(sc){
 /* ═══════════════════════════════════════
    INIT
 ═══════════════════════════════════════ */
-buildVtabs();
+async function geocode(q){
+  const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1&language=en&format=json`);
+  const d=await r.json();
+  if(!d.results?.length)throw new Error('Location not found');
+  return{lat:d.results[0].latitude,lon:d.results[0].longitude,
+    name:d.results[0].name+(d.results[0].admin1?', '+d.results[0].admin1:'')};
+}
+
+/* ═══════════════════════════════════════
+   INIT
+═══════════════════════════════════════ */
 document.getElementById('loc').value="Land O' Lakes, FL";
-// show empty state — user hits GO to trigger real API call
 render();
 </script>
 </body>
