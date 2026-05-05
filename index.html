@@ -7,608 +7,339 @@
 <meta name="theme-color" content="#0d1829">
 <title>WXMODELS</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
 :root {
-  /* deep navy — matches boat app quality */
-  --navy0: #080f1e;
-  --navy1: #0d1829;
-  --navy2: #111f35;
-  --navy3: #162640;
-  --navy4: #1c2f4e;
-  --navy5: #243558;
+  --navy0:#080f1e; --navy1:#0d1829; --navy2:#111f35; --navy3:#162640; --navy4:#1c2f4e; --navy5:#243558;
+  --glass:rgba(255,255,255,.04); --glass2:rgba(255,255,255,.07);
+  --rim:rgba(255,255,255,.08); --rim2:rgba(255,255,255,.14);
+  --ink0:#1e3050; --ink1:#2e4870; --ink2:#4a6a90; --ink3:#7090b8; --ink4:#9ab4d0; --ink5:#c4d8ec;
+  --white:#e8f2fc;
+  --sky:#38bdf8; --sky2:#0ea5e9; --gold:#f5c030; --ember:#f07020;
+  --jade:#34d399; --violet:#a78bfa; --rose:#f472b6; --teal:#2dd4bf;
+  --r0:#38bdf8; --r1:#f07020; --r2:#34d399; --r3:#a78bfa;
+  --HDR:56px; --BOT:60px; --R:16px; --Rsm:10px;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html{height:100%;}
+body{min-height:100%;height:100%;background:var(--navy0);color:var(--ink4);font-family:'Outfit',sans-serif;font-size:14px;overflow:hidden;}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(56,189,248,.08) 0%,transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 100%,rgba(167,139,250,.05) 0%,transparent 50%),
+    linear-gradient(180deg,var(--navy1) 0%,var(--navy0) 100%);}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.25;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='.03'/%3E%3C/svg%3E");}
 
-  --glass: rgba(255,255,255,.04);
-  --glass2: rgba(255,255,255,.07);
-  --rim:   rgba(255,255,255,.08);
-  --rim2:  rgba(255,255,255,.14);
+#shell{display:flex;flex-direction:column;height:100dvh;height:100vh;position:relative;z-index:1;}
 
-  --ink0:  #1e3050;
-  --ink1:  #2e4870;
-  --ink2:  #4a6a90;
-  --ink3:  #7090b8;
-  --ink4:  #9ab4d0;
-  --ink5:  #c4d8ec;
-  --white: #e8f2fc;
+/* ── HEADER ── */
+.hdr{height:var(--HDR);flex-shrink:0;background:rgba(13,24,41,.92);backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--rim);
+  display:flex;align-items:center;gap:10px;padding:0 14px;position:relative;z-index:20;}
+.hdr::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(56,189,248,.5),transparent);}
+.logo{font-family:'Outfit',sans-serif;font-size:18px;font-weight:800;letter-spacing:-.5px;color:var(--white);flex-shrink:0;line-height:1;text-shadow:0 0 20px rgba(56,189,248,.5);}
+.logo b{color:var(--sky);font-weight:800;}
+.sbox{flex:1;display:flex;align-items:center;background:rgba(255,255,255,.05);border:1px solid var(--rim2);border-radius:100px;height:36px;overflow:hidden;transition:border-color .2s,background .2s;}
+.sbox:focus-within{border-color:rgba(56,189,248,.5);background:rgba(56,189,248,.06);}
+.sbox-ico{width:34px;display:flex;align-items:center;justify-content:center;color:var(--ink2);font-size:13px;flex-shrink:0;}
+.sbox input{flex:1;background:none;border:none;outline:none;font-family:'DM Mono',monospace;font-size:11px;color:var(--white);padding-right:10px;letter-spacing:.3px;}
+.sbox input::placeholder{color:var(--ink1);}
+.locbtn{height:36px;width:36px;border:none;cursor:pointer;flex-shrink:0;background:rgba(255,255,255,.07);border:1px solid var(--rim2);font-size:16px;border-radius:100px;transition:all .15s;display:flex;align-items:center;justify-content:center;}
+.locbtn:hover{background:rgba(255,255,255,.12);}
+.locbtn:active{transform:scale(.9);}
+.gobtn{height:36px;padding:0 16px;border:none;cursor:pointer;flex-shrink:0;background:var(--sky);color:#000;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;letter-spacing:.5px;border-radius:100px;transition:all .15s;box-shadow:0 0 20px rgba(56,189,248,.3);}
+.gobtn:hover{background:#7dd3fc;box-shadow:0 0 28px rgba(56,189,248,.5);}
+.gobtn:active{transform:scale(.95);}
 
-  /* temperature color scale — rich, not garish */
-  --t-freeze: #7cb9e8;
-  --t-cold:   #5bcefa;
-  --t-cool:   #4ade9a;
-  --t-mild:   #a8e040;
-  --t-warm:   #f5c030;
-  --t-hot:    #f07020;
-  --t-vhot:   #e83030;
+/* ── CONTROLS ── */
+.ctrl{flex-shrink:0;background:rgba(11,20,34,.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--rim);}
+.mtabs{display:flex;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--rim);padding:0 6px;}
+.mtabs::-webkit-scrollbar{display:none;}
+.mt{font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;letter-spacing:.5px;color:var(--ink2);padding:10px 14px;cursor:pointer;white-space:nowrap;flex-shrink:0;border:none;background:none;border-bottom:2px solid transparent;transition:all .2s;}
+.mt:hover{color:var(--ink4);}
+.mt.on{color:var(--sky);border-bottom-color:var(--sky);}
+.vtabs{display:flex;overflow-x:auto;scrollbar-width:none;padding:2px 6px 0;}
+.vtabs::-webkit-scrollbar{display:none;}
+.vt{font-family:'Outfit',sans-serif;font-size:12px;font-weight:500;color:var(--ink2);padding:6px 10px;cursor:pointer;white-space:nowrap;flex-shrink:0;border:none;background:none;border-bottom:2px solid transparent;transition:all .15s;}
+.vt:hover{color:var(--ink4);}
+.vt.on{color:var(--white);border-bottom-color:rgba(255,255,255,.25);}
 
-  /* accent */
-  --sky:    #38bdf8;
-  --sky2:   #0ea5e9;
-  --gold:   #f5c030;
-  --ember:  #f07020;
-  --jade:   #34d399;
-  --violet: #a78bfa;
-  --rose:   #f472b6;
-  --teal:   #2dd4bf;
+/* ── SCROLL ── */
+.scroll{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
+.scroll::-webkit-scrollbar{width:3px;}
+.scroll::-webkit-scrollbar-thumb{background:var(--navy5);border-radius:2px;}
 
-  /* model colors */
-  --c-hrrr:  #38bdf8;
-  --c-gfs:   #f07020;
-  --c-nbm:   #34d399;
-  --c-rap:   #a78bfa;
-  --c-ecmwf: #f472b6;
-  --c-gcast: #f5c030;
-  --c-rrfs:  #2dd4bf;
+/* ── BOTTOM NAV ── */
+.bot{height:var(--BOT);flex-shrink:0;background:rgba(11,20,34,.95);backdrop-filter:blur(20px);border-top:1px solid var(--rim);display:flex;}
+.nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--ink2);transition:color .15s;background:none;border:none;position:relative;}
+.nb.on{color:var(--sky);}
+.nb.on::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:24px;height:2px;border-radius:0 0 3px 3px;background:var(--sky);box-shadow:0 0 10px var(--sky);}
+.ni{font-size:16px;line-height:1;}
+.nl{font-family:'Outfit',sans-serif;font-size:9px;font-weight:600;letter-spacing:1px;}
 
-  --r0: #38bdf8;
-  --r1: #f07020;
-  --r2: #34d399;
-  --r3: #a78bfa;
+/* ── CARDS ── */
+.pad{padding:12px;display:flex;flex-direction:column;gap:12px;}
+.card{background:linear-gradient(145deg,rgba(22,38,64,.9) 0%,rgba(17,31,53,.9) 100%);border:1px solid var(--rim);border-radius:var(--R);overflow:hidden;position:relative;box-shadow:0 4px 24px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.06);}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);pointer-events:none;}
+.card-hd{padding:14px 16px 0;display:flex;align-items:flex-start;justify-content:space-between;}
+.card-title{font-family:'Outfit',sans-serif;font-weight:700;font-size:13px;letter-spacing:.3px;color:var(--white);text-transform:uppercase;}
+.card-sub{font-family:'DM Mono',monospace;font-size:9px;color:var(--ink2);margin-top:3px;letter-spacing:.3px;}
+.card-badge{font-family:'DM Mono',monospace;font-size:9px;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.25);color:var(--sky);padding:3px 9px;border-radius:100px;white-space:nowrap;}
+.card-body{padding:12px 16px 16px;}
+.ch-wrap{position:relative;}
+.ch-wrap canvas{display:block;width:100%!important;}
 
-  --HDR: 56px;
-  --CTRL: 68px;
-  --BOT: 60px;
-  --R: 16px;
-  --Rsm: 10px;
-}
+/* ── SECTION LABEL ── */
+.slbl{font-family:'Outfit',sans-serif;font-size:10px;font-weight:600;letter-spacing:1.5px;color:var(--ink2);text-transform:uppercase;display:flex;align-items:center;gap:8px;}
+.slbl::after{content:'';flex:1;height:1px;background:var(--rim);}
 
-*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-html { height:100%; }
+/* ── HERO ── */
+.hero{background:linear-gradient(165deg,rgba(22,38,64,.95) 0%,rgba(13,24,41,.98) 100%);border-bottom:1px solid var(--rim);padding:18px 16px 0;position:relative;overflow:hidden;}
+.hero::after{content:'';position:absolute;top:-60px;right:-40px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(56,189,248,.08) 0%,transparent 65%);pointer-events:none;}
+.hero-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;}
+.hero-loc{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.8px;color:var(--sky);font-weight:400;}
+.hero-date{font-family:'Outfit',sans-serif;font-size:12px;color:var(--ink3);margin-top:3px;font-weight:400;}
+.model-badge{font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;padding:4px 12px;border-radius:100px;border:1px solid;background:rgba(0,0,0,.3);text-align:center;}
+.run-badge{font-family:'DM Mono',monospace;font-size:9px;color:var(--ink2);margin-top:4px;text-align:right;}
+.hero-temp-row{display:flex;align-items:flex-start;gap:0;margin-bottom:14px;}
+.hero-temp{font-family:'Outfit',sans-serif;font-weight:900;font-size:96px;line-height:.85;letter-spacing:-5px;transition:color .4s;}
+.hero-deg{font-family:'Outfit',sans-serif;font-size:28px;font-weight:300;color:var(--ink3);margin-top:8px;margin-left:2px;}
+.hero-aside{margin-left:16px;margin-top:6px;display:flex;flex-direction:column;gap:5px;}
+.hero-lohi{display:flex;align-items:center;gap:8px;font-family:'Outfit',sans-serif;font-weight:600;font-size:18px;}
+.hero-lo{color:var(--sky);}
+.hero-hi{color:var(--ember);}
+.hero-sep{color:var(--ink2);font-size:14px;font-weight:300;}
+.hero-feels{font-family:'DM Mono',monospace;font-size:10px;color:var(--ink3);line-height:2;}
+.hero-stats{display:flex;gap:0;background:rgba(0,0,0,.3);border-top:1px solid var(--rim);margin:0 -16px;}
+.hstat{flex:1;padding:10px 6px;text-align:center;border-right:1px solid var(--rim);}
+.hstat:last-child{border-right:none;}
+.hstat-v{font-family:'Outfit',sans-serif;font-weight:800;font-size:20px;color:var(--white);line-height:1;}
+.hstat-l{font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2);margin-top:3px;letter-spacing:.5px;}
 
-body {
-  min-height:100%; height:100%;
-  background: var(--navy0);
-  color: var(--ink4);
-  font-family: 'Outfit', sans-serif;
-  font-size: 14px;
-  overflow: hidden;
-}
+/* ── MODEL / RUN STRIPS ── */
+.mstrip{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:10px 12px;background:rgba(11,20,34,.8);border-bottom:1px solid var(--rim);}
+.mstrip::-webkit-scrollbar{display:none;}
+.mchip{flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding:8px 12px;border:1px solid var(--rim);background:var(--glass);border-radius:var(--Rsm);cursor:pointer;transition:all .2s;min-width:58px;text-align:center;position:relative;overflow:hidden;}
+.mchip::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:var(--Rsm) var(--Rsm) 0 0;background:var(--mc);box-shadow:0 0 10px var(--mc);opacity:0;transition:opacity .2s;}
+.mchip.on{border-color:color-mix(in srgb,var(--mc) 40%,transparent);background:color-mix(in srgb,var(--mc) 8%,var(--navy3));}
+.mchip.on::before{opacity:1;}
+.mchip:active{transform:scale(.93);}
+.mchip-l{font-family:'Outfit',sans-serif;font-size:13px;font-weight:800;letter-spacing:.5px;color:var(--mc);line-height:1;}
+.mchip-r{font-family:'DM Mono',monospace;font-size:7px;color:var(--ink2);margin-top:3px;}
+.rstrip{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:8px 12px;background:rgba(11,20,34,.6);border-bottom:1px solid var(--rim);}
+.rstrip::-webkit-scrollbar{display:none;}
+.rchip{flex-shrink:0;display:flex;flex-direction:column;align-items:center;border:1px solid var(--rim);background:var(--glass);padding:6px 14px;border-radius:100px;cursor:pointer;transition:all .2s;}
+.rchip-t{font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;color:var(--ink3);display:block;line-height:1;}
+.rchip-a{font-family:'DM Mono',monospace;font-size:8px;color:var(--ink1);display:block;margin-top:2px;}
+.rchip.on{border-color:rgba(56,189,248,.6);background:rgba(56,189,248,.1);box-shadow:0 0 16px rgba(56,189,248,.15);}
+.rchip.on .rchip-t{color:var(--sky);text-shadow:0 0 12px rgba(56,189,248,.6);}
+.rchip:active{transform:scale(.93);}
 
-/* deep atmospheric background */
-body::before {
-  content: '';
-  position: fixed; inset: 0; pointer-events: none; z-index: 0;
-  background:
-    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(56,189,248,.08) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(167,139,250,.05) 0%, transparent 50%),
-    linear-gradient(180deg, var(--navy1) 0%, var(--navy0) 100%);
-}
+/* ── 7-DAY ── */
+.dayrow{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;}
+.dayrow::-webkit-scrollbar{display:none;}
+.dtile{flex-shrink:0;width:72px;background:linear-gradient(160deg,rgba(22,38,64,.8),rgba(17,31,53,.9));border:1px solid var(--rim);border-radius:var(--Rsm);padding:10px 6px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.3);}
+.dtile.today{border-color:rgba(56,189,248,.4);background:linear-gradient(160deg,rgba(56,189,248,.08),rgba(14,165,233,.04));box-shadow:0 0 20px rgba(56,189,248,.1);}
+.dtile-dow{font-family:'Outfit',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;color:var(--ink3);text-transform:uppercase;}
+.dtile.today .dtile-dow{color:var(--sky);}
+.dtile-ico{font-size:20px;margin:5px 0 3px;line-height:1;}
+.dtile-hi{font-family:'Outfit',sans-serif;font-weight:800;font-size:22px;line-height:1;}
+.dtile-lo{font-family:'DM Mono',monospace;font-size:11px;color:var(--ink3);margin-top:2px;}
+.dtile-bar{height:4px;background:rgba(255,255,255,.07);border-radius:2px;margin:6px 4px 5px;position:relative;overflow:hidden;}
+.dtile-bar-f{position:absolute;top:0;height:100%;border-radius:2px;}
+.dtile-pop{font-family:'DM Mono',monospace;font-size:9px;margin-top:4px;}
 
-/* subtle star-field noise */
-body::after {
-  content: '';
-  position: fixed; inset: 0; pointer-events: none; z-index: 0;
-  opacity: .25;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='.03'/%3E%3C/svg%3E");
-}
+/* ── TEMP RANGE ── */
+.trange-track{height:10px;background:rgba(255,255,255,.07);border-radius:5px;position:relative;margin:10px 0 6px;}
+.trange-fill{position:absolute;top:0;height:100%;border-radius:5px;}
+.trange-now{position:absolute;top:-5px;width:4px;height:20px;background:var(--white);border-radius:2px;transform:translateX(-50%);box-shadow:0 0 10px rgba(255,255,255,.8),0 0 20px rgba(255,255,255,.4);}
+.trange-lbls{display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2);}
 
-/* ── SHELL ──────────────────────────────────── */
-#shell {
-  display: flex; flex-direction: column;
-  height: 100dvh; height: 100vh;
-  position: relative; z-index: 1;
-}
+/* ── ANOMALY BARS ── */
+.anom-bars{display:flex;flex-direction:column;gap:2px;margin-top:4px;}
+.anom-bar-row{display:flex;align-items:center;gap:6px;}
+.anom-bar-time{font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2);width:30px;flex-shrink:0;text-align:right;}
+.anom-bar-track{flex:1;height:14px;position:relative;display:flex;align-items:center;}
+.anom-bar-center{position:absolute;left:50%;width:1px;height:100%;background:rgba(255,255,255,.15);}
+.anom-bar-fill{position:absolute;height:10px;border-radius:2px;top:50%;transform:translateY(-50%);}
+.anom-bar-warm{background:linear-gradient(90deg,rgba(245,192,48,.3),rgba(240,112,32,.8));left:50%;}
+.anom-bar-cool{background:linear-gradient(270deg,rgba(56,189,248,.3),rgba(56,189,248,.9));right:50%;}
+.anom-bar-val{font-family:'DM Mono',monospace;font-size:8px;width:28px;flex-shrink:0;}
 
-/* ── HEADER ─────────────────────────────────── */
-.hdr {
-  height: var(--HDR); flex-shrink: 0;
-  background: rgba(13,24,41,.92);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--rim);
-  display: flex; align-items: center; gap: 10px; padding: 0 14px;
-  position: relative; z-index: 20;
-}
-.hdr::after {
-  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent 0%, rgba(56,189,248,.5) 50%, transparent 100%);
-}
+/* ── PRECIP ── */
+.pbar{flex:1;border-radius:3px 3px 0 0;min-height:3px;cursor:pointer;transition:filter .15s,transform .15s;position:relative;}
+.pbar:hover{filter:brightness(1.4);transform:scaleY(1.05);transform-origin:bottom;}
+.pbar.dry{background:rgba(255,255,255,.06);}
+.pbar.light{background:linear-gradient(to top,#0ea5e9,#38bdf8);}
+.pbar.mod{background:linear-gradient(to top,#6366f1,#818cf8);}
+.pbar.heavy{background:linear-gradient(to top,#c026d3,#e879f9);}
+.precip-axis{display:flex;justify-content:space-between;margin-top:5px;font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2);}
+.precip-leg{display:flex;gap:12px;margin-top:8px;flex-wrap:wrap;align-items:center;}
+.pleg{display:flex;align-items:center;gap:5px;font-family:'DM Mono',monospace;font-size:9px;color:var(--ink3);}
+.pleg-dot{width:10px;height:10px;border-radius:3px;}
 
-.logo {
-  font-family: 'Outfit', sans-serif;
-  font-size: 18px; font-weight: 800; letter-spacing: -0.5px;
-  color: var(--white); flex-shrink: 0; line-height: 1;
-}
-.logo b { color: var(--sky); font-weight: 800; }
-.logo-dot { color: var(--sky); }
+/* ── WIND ── */
+.wind-grid{display:grid;grid-template-columns:1fr 88px;gap:10px;align-items:center;}
+.wind-big{font-family:'Outfit',sans-serif;font-weight:900;font-size:64px;color:var(--white);line-height:.85;letter-spacing:-3px;}
+.wind-unit{font-family:'DM Mono',monospace;font-size:10px;color:var(--ink2);margin-top:2px;}
+.wind-dir{font-family:'Outfit',sans-serif;font-size:16px;font-weight:700;color:var(--sky);margin-top:6px;letter-spacing:1px;}
+.wind-gust{font-family:'DM Mono',monospace;font-size:10px;color:var(--ink3);margin-top:3px;}
+.compass{width:88px;height:88px;border-radius:50%;border:1px solid rgba(255,255,255,.1);background:radial-gradient(circle,rgba(22,38,64,.8),rgba(11,20,34,.95));display:flex;align-items:center;justify-content:center;position:relative;box-shadow:0 0 0 4px rgba(56,189,248,.05),inset 0 0 20px rgba(0,0,0,.4);}
+.comp-d{position:absolute;font-family:'Outfit',sans-serif;font-weight:700;font-size:10px;color:var(--ink2);line-height:1;}
+.comp-d.cN{top:5px;left:50%;transform:translateX(-50%);color:var(--sky);font-size:11px;}
+.comp-d.cS{bottom:5px;left:50%;transform:translateX(-50%);}
+.comp-d.cE{right:6px;top:50%;transform:translateY(-50%);}
+.comp-d.cW{left:6px;top:50%;transform:translateY(-50%);}
+.comp-arrow{position:absolute;bottom:50%;left:50%;width:3px;height:30px;border-radius:3px 3px 0 0;background:linear-gradient(to top,transparent,var(--sky));transform-origin:bottom center;margin-left:-1.5px;box-shadow:0 0 10px rgba(56,189,248,.7);}
 
-.sbox {
-  flex: 1; display: flex; align-items: center;
-  background: rgba(255,255,255,.05);
-  border: 1px solid var(--rim2);
-  border-radius: 100px;
-  height: 36px; overflow: hidden;
-  transition: border-color .2s, background .2s;
-}
-.sbox:focus-within {
-  border-color: rgba(56,189,248,.5);
-  background: rgba(56,189,248,.06);
-}
-.sbox-ico { width: 34px; display: flex; align-items: center; justify-content: center; color: var(--ink2); font-size: 13px; flex-shrink: 0; }
-.sbox input {
-  flex: 1; background: none; border: none; outline: none;
-  font-family: 'DM Mono', monospace; font-size: 11px;
-  color: var(--white); padding-right: 10px;
-  letter-spacing: .3px;
-}
-.sbox input::placeholder { color: var(--ink1); }
+/* ── COMPARE PILLS ── */
+.cpills{display:flex;flex-wrap:wrap;gap:6px;}
+.cpill{display:flex;align-items:center;gap:6px;border:1px solid var(--rim);background:var(--glass);padding:6px 13px 6px 10px;border-radius:100px;cursor:pointer;transition:all .2s;font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;color:var(--ink2);}
+.cpill-dot{width:8px;height:8px;border-radius:50%;background:var(--mc,var(--ink2));flex-shrink:0;transition:box-shadow .2s;}
+.cpill.on{border-color:color-mix(in srgb,var(--mc) 50%,transparent);color:var(--white);}
+.cpill.on .cpill-dot{box-shadow:0 0 8px var(--mc,transparent);}
+.cpill:active{transform:scale(.94);}
 
-.locbtn {
-  height: 36px; width: 36px; border: none; cursor: pointer; flex-shrink: 0;
-  background: rgba(255,255,255,.07); border: 1px solid var(--rim2);
-  font-size: 16px; border-radius: 100px; transition: all .15s;
-  display: flex; align-items: center; justify-content: center;
-}
-.locbtn:hover { background: rgba(255,255,255,.12); }
-.locbtn:active { transform: scale(.9); }
-.gobtn {
-  height: 36px; padding: 0 16px; border: none; cursor: pointer; flex-shrink: 0;
-  background: var(--sky); color: #000;
-  font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: .5px;
-  border-radius: 100px;
-  transition: all .15s;
-  box-shadow: 0 0 20px rgba(56,189,248,.3);
-}
-.gobtn:hover { background: #7dd3fc; box-shadow: 0 0 28px rgba(56,189,248,.5); }
-.gobtn:active { transform: scale(.95); }
+/* ── SPREAD ── */
+.sp-row{display:flex;align-items:center;gap:10px;}
+.sp-track{flex:1;height:6px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden;}
+.sp-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#34d399,#fbbf24,#f87171);transition:width .5s cubic-bezier(.4,0,.2,1);}
+.sp-num{font-family:'DM Mono',monospace;font-size:12px;color:var(--white);white-space:nowrap;font-weight:500;}
+.sp-txt{font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;white-space:nowrap;}
+.agree{color:#34d399;} .warn{color:#fbbf24;} .bad{color:#f87171;}
 
-/* ── CONTROLS ───────────────────────────────── */
-.ctrl {
-  flex-shrink: 0;
-  background: rgba(11,20,34,.9);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--rim);
-}
-.mtabs {
-  display: flex; overflow-x: auto; scrollbar-width: none;
-  border-bottom: 1px solid var(--rim);
-  padding: 0 6px;
-}
-.mtabs::-webkit-scrollbar { display: none; }
-.mt {
-  font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: .5px;
-  color: var(--ink2); padding: 10px 14px; cursor: pointer; white-space: nowrap; flex-shrink: 0;
-  border: none; background: none; border-bottom: 2px solid transparent; transition: all .2s;
-}
-.mt:hover { color: var(--ink4); }
-.mt.on { color: var(--sky); border-bottom-color: var(--sky); }
+/* ── CV GRID ── */
+.cv-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;}
+@media(min-width:360px){.cv-grid{grid-template-columns:repeat(3,1fr);}}
+@media(min-width:520px){.cv-grid{grid-template-columns:repeat(4,1fr);}}
+.cvt{background:linear-gradient(145deg,rgba(22,38,64,.8),rgba(17,31,53,.8));border:1px solid var(--rim);border-radius:var(--Rsm);padding:12px 12px;position:relative;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.3);}
+.cvt::before{content:'';position:absolute;top:0;left:0;bottom:0;width:3px;background:var(--tc,var(--rim));border-radius:var(--Rsm) 0 0 var(--Rsm);box-shadow:1px 0 8px var(--tc,transparent);}
+.cvt-l{font-family:'Outfit',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;color:var(--ink2);text-transform:uppercase;}
+.cvt-v{font-family:'Outfit',sans-serif;font-weight:800;font-size:30px;color:var(--white);line-height:1;margin-top:3px;}
+.cvt-u{font-family:'DM Mono',monospace;font-size:9px;color:var(--ink2);}
 
-.vtabs { display: flex; overflow-x: auto; scrollbar-width: none; padding: 3px 8px 0; }
-.vtabs::-webkit-scrollbar { display: none; }
-.vt {
-  font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 500;
-  color: var(--ink2); padding: 6px 10px; cursor: pointer; white-space: nowrap; flex-shrink: 0;
-  border: none; background: none; border-bottom: 2px solid transparent; transition: all .15s;
-}
-.vt:hover { color: var(--ink4); }
-.vt.on { color: var(--white); border-bottom-color: rgba(255,255,255,.25); }
+/* ── RUN COMPARE ── */
+.rcpills{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;}
+.rcpills::-webkit-scrollbar{display:none;}
+.rcpill{flex-shrink:0;border:1px solid var(--rim);background:var(--glass);padding:6px 14px;border-radius:100px;cursor:pointer;transition:all .2s;text-align:center;}
+.rcpill-t{font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;color:var(--ink3);display:block;line-height:1;}
+.rcpill-a{font-family:'DM Mono',monospace;font-size:8px;color:var(--ink1);display:block;margin-top:2px;}
+.ra0{border-color:rgba(56,189,248,.5)!important;box-shadow:0 0 12px rgba(56,189,248,.15);}
+.ra0 .rcpill-t{color:var(--r0)!important;text-shadow:0 0 10px rgba(56,189,248,.5);}
+.ra1{border-color:rgba(240,112,32,.5)!important;box-shadow:0 0 12px rgba(240,112,32,.15);}
+.ra1 .rcpill-t{color:var(--r1)!important;text-shadow:0 0 10px rgba(240,112,32,.5);}
+.ra2{border-color:rgba(52,211,153,.5)!important;box-shadow:0 0 12px rgba(52,211,153,.15);}
+.ra2 .rcpill-t{color:var(--r2)!important;text-shadow:0 0 10px rgba(52,211,153,.5);}
+.ra3{border-color:rgba(167,139,250,.5)!important;box-shadow:0 0 12px rgba(167,139,250,.15);}
+.ra3 .rcpill-t{color:var(--r3)!important;text-shadow:0 0 10px rgba(167,139,250,.5);}
+.rcpill:active{transform:scale(.93);}
 
-/* ── SCROLL AREA ────────────────────────────── */
-.scroll {
-  flex: 1; overflow-y: auto; overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-}
-.scroll::-webkit-scrollbar { width: 3px; }
-.scroll::-webkit-scrollbar-thumb { background: var(--navy5); border-radius: 2px; }
+/* ── LEGEND ── */
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+.li{display:flex;align-items:center;gap:5px;font-family:'DM Mono',monospace;font-size:9px;color:var(--ink3);}
+.ll{width:18px;height:2px;border-radius:1px;}
 
-/* ── BOTTOM NAV ─────────────────────────────── */
-.bot {
-  height: var(--BOT); flex-shrink: 0;
-  background: rgba(11,20,34,.95);
-  backdrop-filter: blur(20px);
-  border-top: 1px solid var(--rim);
-  display: flex;
-}
-.nb {
-  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 3px; cursor: pointer; color: var(--ink2); transition: color .15s;
-  background: none; border: none; position: relative;
-}
-.nb.on { color: var(--sky); }
-.nb.on::before {
-  content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
-  width: 24px; height: 2px; border-radius: 0 0 3px 3px;
-  background: var(--sky); box-shadow: 0 0 10px var(--sky);
-}
-.ni { font-size: 16px; line-height: 1; }
-.nl { font-family: 'Outfit', sans-serif; font-size: 9px; font-weight: 600; letter-spacing: 1px; }
+/* ── HEATMAP ── */
+.hrow{display:flex;gap:3px;align-items:center;margin-bottom:3px;}
+.hlbl{font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2);width:34px;flex-shrink:0;}
+.hcell{flex:1;height:24px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:9px;color:rgba(255,255,255,.7);font-weight:500;}
 
-/* ── GLASS CARD ─────────────────────────────── */
-.pad { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+/* ── DIVERGENCE TABLE ── */
+.div-table{display:flex;flex-direction:column;gap:4px;overflow-x:auto;padding-bottom:2px;}
+.div-head,.div-row{display:grid;align-items:center;gap:4px;min-width:620px;}
+.div-head{font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2);letter-spacing:.4px;text-transform:uppercase;}
+.div-row{min-height:30px;}
+.div-time{font-family:'DM Mono',monospace;font-size:9px;color:var(--ink3);white-space:nowrap;}
+.div-cell{font-family:'DM Mono',monospace;font-size:10px;color:var(--white);text-align:center;padding:6px 4px;border:1px solid var(--rim);border-radius:6px;background:rgba(255,255,255,.035);}
+.div-spread{font-family:'DM Mono',monospace;font-size:10px;font-weight:700;text-align:center;padding:6px 4px;border-radius:6px;background:rgba(255,255,255,.055);}
+.div-spread.lo{color:#34d399;} .div-spread.md{color:#fbbf24;} .div-spread.hi{color:#f87171;}
 
-.card {
-  background: linear-gradient(145deg, rgba(22,38,64,.9) 0%, rgba(17,31,53,.9) 100%);
-  border: 1px solid var(--rim);
-  border-radius: var(--R);
-  overflow: hidden;
-  position: relative;
-  box-shadow: 0 4px 24px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.06);
-}
-.card::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.12), transparent);
-  pointer-events: none;
-}
+/* ── STATUS DOT ── */
+.sdot{width:7px;height:7px;border-radius:50%;background:var(--jade);box-shadow:0 0 8px var(--jade);display:inline-block;margin-right:6px;animation:dp 2.5s ease-in-out infinite;}
+@keyframes dp{0%,100%{opacity:1;}50%{opacity:.2;}}
 
-.card-hd { padding: 14px 16px 0; display: flex; align-items: flex-start; justify-content: space-between; }
-.card-title {
-  font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 13px;
-  letter-spacing: .3px; color: var(--white); text-transform: uppercase;
+/* ── TOOLTIP — dismissable on mobile ── */
+#tip{
+  position:fixed;
+  background:linear-gradient(145deg,rgba(22,38,64,.98),rgba(17,31,53,.98));
+  border:1px solid var(--rim2);border-top:2px solid var(--sky);
+  padding:10px 14px;
+  /* pointer-events ENABLED so tap-to-dismiss works */
+  pointer-events:auto;
+  display:none;z-index:500;
+  font-family:'DM Mono',monospace;font-size:10px;
+  min-width:148px;border-radius:var(--Rsm);
+  box-shadow:0 20px 50px rgba(0,0,0,.8),0 0 0 1px rgba(56,189,248,.08);
+  cursor:pointer;
 }
-.card-sub { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--ink2); margin-top: 3px; letter-spacing: .3px; }
-.card-badge {
-  font-family: 'DM Mono', monospace; font-size: 9px;
-  background: rgba(56,189,248,.1); border: 1px solid rgba(56,189,248,.25);
-  color: var(--sky); padding: 3px 9px; border-radius: 100px; white-space: nowrap;
-}
-.card-body { padding: 12px 16px 16px; }
+#tip::after{content:'✕';position:absolute;top:8px;right:10px;font-size:10px;color:var(--ink2);opacity:.6;}
+#tip-t{font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:var(--sky);margin-bottom:6px;letter-spacing:.3px;padding-right:14px;}
+#tip-v{line-height:2.2;}
 
-/* chart canvas — explicit height via JS */
-.ch-wrap { position: relative; }
-.ch-wrap canvas { display: block; width: 100% !important; }
-
-/* ── SECTION LABEL ──────────────────────────── */
-.slbl {
-  font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 600;
-  letter-spacing: 1.5px; color: var(--ink2); text-transform: uppercase;
-  display: flex; align-items: center; gap: 8px;
-}
-.slbl::after { content: ''; flex: 1; height: 1px; background: var(--rim); }
-
-/* ── HERO ───────────────────────────────────── */
-.hero {
-  background: linear-gradient(165deg, rgba(22,38,64,.95) 0%, rgba(13,24,41,.98) 100%);
-  border-bottom: 1px solid var(--rim);
-  padding: 18px 16px 0;
-  position: relative; overflow: hidden;
-}
-/* radial glow top right */
-.hero::after {
-  content: ''; position: absolute; top: -60px; right: -40px;
-  width: 220px; height: 220px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(56,189,248,.08) 0%, transparent 65%);
-  pointer-events: none;
-}
-
-.hero-top {
-  display: flex; justify-content: space-between; align-items: flex-start;
-  margin-bottom: 14px;
-}
-.hero-loc {
-  font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: .8px;
-  color: var(--sky); font-weight: 400;
-}
-.hero-date { font-family: 'Outfit', sans-serif; font-size: 12px; color: var(--ink3); margin-top: 3px; font-weight: 400; }
-.model-badge {
-  font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 1px;
-  padding: 4px 12px; border-radius: 100px; border: 1px solid;
-  background: rgba(0,0,0,.3); text-align: center;
-}
-.run-badge { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--ink2); margin-top: 4px; text-align: right; }
-
-/* giant temp number */
-.hero-temp-row { display: flex; align-items: flex-start; gap: 0; margin-bottom: 14px; }
-.hero-temp {
-  font-family: 'Outfit', sans-serif; font-weight: 900;
-  font-size: 96px; line-height: .85; letter-spacing: -5px;
-  transition: color .4s;
-}
-.hero-deg {
-  font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 300;
-  color: var(--ink3); margin-top: 8px; margin-left: 2px;
-}
-.hero-aside { margin-left: 16px; margin-top: 6px; display: flex; flex-direction: column; gap: 5px; }
-.hero-lohi {
-  display: flex; align-items: center; gap: 8px;
-  font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 18px;
-}
-.hero-lo { color: var(--sky); }
-.hero-hi { color: var(--ember); }
-.hero-sep { color: var(--ink2); font-size: 14px; font-weight: 300; }
-.hero-feels { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--ink3); line-height: 2; }
-.hero-anom { font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700; }
-
-/* stats bar */
-.hero-stats {
-  display: flex; gap: 0;
-  background: rgba(0,0,0,.3);
-  border-top: 1px solid var(--rim);
-  margin: 0 -16px;
-}
-.hstat { flex: 1; padding: 10px 6px; text-align: center; border-right: 1px solid var(--rim); }
-.hstat:last-child { border-right: none; }
-.hstat-v { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 20px; color: var(--white); line-height: 1; }
-.hstat-l { font-family: 'DM Mono', monospace; font-size: 8px; color: var(--ink2); margin-top: 3px; letter-spacing: .5px; }
-
-/* ── MODEL STRIP ────────────────────────────── */
-.mstrip {
-  display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none;
-  padding: 10px 12px;
-  background: rgba(11,20,34,.8);
-  border-bottom: 1px solid var(--rim);
-}
-.mstrip::-webkit-scrollbar { display: none; }
-.mchip {
-  flex-shrink: 0; display: flex; flex-direction: column; align-items: center;
-  padding: 8px 12px; border: 1px solid var(--rim);
-  background: var(--glass); border-radius: var(--Rsm);
-  cursor: pointer; transition: all .2s; min-width: 58px; text-align: center;
-  position: relative; overflow: hidden;
-}
-.mchip::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-  border-radius: var(--Rsm) var(--Rsm) 0 0;
-  background: var(--mc); box-shadow: 0 0 10px var(--mc); opacity: 0; transition: opacity .2s;
-}
-.mchip.on {
-  border-color: color-mix(in srgb, var(--mc) 40%, transparent);
-  background: color-mix(in srgb, var(--mc) 8%, var(--navy3));
-}
-.mchip.on::before { opacity: 1; }
-.mchip:active { transform: scale(.93); }
-.mchip-l { font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 800; letter-spacing: .5px; color: var(--mc); line-height: 1; }
-.mchip-r { font-family: 'DM Mono', monospace; font-size: 7px; color: var(--ink2); margin-top: 3px; }
-
-/* ── RUN STRIP ──────────────────────────────── */
-.rstrip {
-  display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none;
-  padding: 8px 12px;
-  background: rgba(11,20,34,.6);
-  border-bottom: 1px solid var(--rim);
-}
-.rstrip::-webkit-scrollbar { display: none; }
-.rchip {
-  flex-shrink: 0; display: flex; flex-direction: column; align-items: center;
-  border: 1px solid var(--rim); background: var(--glass);
-  padding: 6px 14px; border-radius: 100px; cursor: pointer; transition: all .2s;
-}
-.rchip-t { font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700; color: var(--ink3); display: block; line-height: 1; }
-.rchip-a { font-family: 'DM Mono', monospace; font-size: 8px; color: var(--ink1); display: block; margin-top: 2px; }
-.rchip.on {
-  border-color: rgba(56,189,248,.6);
-  background: rgba(56,189,248,.1);
-  box-shadow: 0 0 16px rgba(56,189,248,.15);
-}
-.rchip.on .rchip-t { color: var(--sky); text-shadow: 0 0 12px rgba(56,189,248,.6); }
-.rchip:active { transform: scale(.93); }
-
-/* ── 7-DAY ROW ──────────────────────────────── */
-.dayrow { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
-.dayrow::-webkit-scrollbar { display: none; }
-.dtile {
-  flex-shrink: 0; width: 72px;
-  background: linear-gradient(160deg, rgba(22,38,64,.8), rgba(17,31,53,.9));
-  border: 1px solid var(--rim); border-radius: var(--Rsm);
-  padding: 10px 6px; text-align: center;
-  box-shadow: 0 2px 12px rgba(0,0,0,.3);
-}
-.dtile.today {
-  border-color: rgba(56,189,248,.4);
-  background: linear-gradient(160deg, rgba(56,189,248,.08), rgba(14,165,233,.04));
-  box-shadow: 0 0 20px rgba(56,189,248,.1);
-}
-.dtile-dow { font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--ink3); text-transform: uppercase; }
-.dtile.today .dtile-dow { color: var(--sky); }
-.dtile-ico { font-size: 20px; margin: 5px 0 3px; line-height: 1; }
-.dtile-hi { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 22px; line-height: 1; }
-.dtile-lo { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--ink3); margin-top: 2px; }
-.dtile-bar { height: 4px; background: rgba(255,255,255,.07); border-radius: 2px; margin: 6px 4px 5px; position: relative; overflow: hidden; }
-.dtile-bar-f { position: absolute; top: 0; height: 100%; border-radius: 2px; }
-.dtile-pop { font-family: 'DM Mono', monospace; font-size: 9px; margin-top: 4px; }
-
-/* ── TEMP RANGE ─────────────────────────────── */
-.trange-track { height: 10px; background: rgba(255,255,255,.07); border-radius: 5px; position: relative; margin: 10px 0 6px; }
-.trange-fill { position: absolute; top: 0; height: 100%; border-radius: 5px; }
-.trange-now {
-  position: absolute; top: -5px; width: 4px; height: 20px;
-  background: var(--white); border-radius: 2px; transform: translateX(-50%);
-  box-shadow: 0 0 10px rgba(255,255,255,.8), 0 0 20px rgba(255,255,255,.4);
-}
-.trange-lbls { display: flex; justify-content: space-between; font-family: 'DM Mono', monospace; font-size: 8px; color: var(--ink2); }
-
-/* ── ANOMALY BARS (diverging horizontal) ────── */
-.anom-bars { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
-.anom-bar-row { display: flex; align-items: center; gap: 6px; }
-.anom-bar-time { font-family: 'DM Mono', monospace; font-size: 8px; color: var(--ink2); width: 30px; flex-shrink: 0; text-align: right; }
-.anom-bar-track { flex: 1; height: 14px; position: relative; display: flex; align-items: center; }
-.anom-bar-center { position: absolute; left: 50%; width: 1px; height: 100%; background: rgba(255,255,255,.15); }
-.anom-bar-fill { position: absolute; height: 10px; border-radius: 2px; top: 50%; transform: translateY(-50%); }
-.anom-bar-warm { background: linear-gradient(90deg, rgba(245,192,48,.3), rgba(240,112,32,.8)); left: 50%; }
-.anom-bar-cool { background: linear-gradient(270deg, rgba(56,189,248,.3), rgba(56,189,248,.9)); right: 50%; }
-.anom-bar-val { font-family: 'DM Mono', monospace; font-size: 8px; width: 28px; flex-shrink: 0; }
-
-/* ── PRECIP BARS ────────────────────────────── */
-.precip-bars { display: flex; align-items: flex-end; gap: 2px; padding: 0 2px; }
-.pbar {
-  flex: 1; border-radius: 3px 3px 0 0; min-height: 3px; cursor: pointer;
-  transition: filter .15s, transform .15s; position: relative;
-}
-.pbar:hover { filter: brightness(1.4); transform: scaleY(1.05); transform-origin: bottom; }
-.pbar.dry   { background: rgba(255,255,255,.06); }
-.pbar.light { background: linear-gradient(to top, #0ea5e9, #38bdf8); }
-.pbar.mod   { background: linear-gradient(to top, #6366f1, #818cf8); }
-.pbar.heavy { background: linear-gradient(to top, #c026d3, #e879f9); }
-.precip-axis { display: flex; justify-content: space-between; margin-top: 5px; font-family: 'DM Mono', monospace; font-size: 8px; color: var(--ink2); }
-.precip-leg { display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
-.pleg { display: flex; align-items: center; gap: 5px; font-family: 'DM Mono', monospace; font-size: 9px; color: var(--ink3); }
-.pleg-dot { width: 10px; height: 10px; border-radius: 3px; }
-
-/* ── WIND ───────────────────────────────────── */
-.wind-grid { display: grid; grid-template-columns: 1fr 88px; gap: 10px; align-items: center; }
-.wind-big {
-  font-family: 'Outfit', sans-serif; font-weight: 900; font-size: 64px;
-  color: var(--white); line-height: .85; letter-spacing: -3px;
-}
-.wind-unit { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--ink2); margin-top: 2px; }
-.wind-dir { font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; color: var(--sky); margin-top: 6px; letter-spacing: 1px; }
-.wind-gust { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--ink3); margin-top: 3px; }
-.compass {
-  width: 88px; height: 88px; border-radius: 50%;
-  border: 1px solid rgba(255,255,255,.1);
-  background: radial-gradient(circle, rgba(22,38,64,.8), rgba(11,20,34,.95));
-  display: flex; align-items: center; justify-content: center;
-  position: relative;
-  box-shadow: 0 0 0 4px rgba(56,189,248,.05), inset 0 0 20px rgba(0,0,0,.4);
-}
-.comp-d { position: absolute; font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 10px; color: var(--ink2); line-height: 1; }
-.comp-d.cN { top: 5px; left: 50%; transform: translateX(-50%); color: var(--sky); font-size: 11px; }
-.comp-d.cS { bottom: 5px; left: 50%; transform: translateX(-50%); }
-.comp-d.cE { right: 6px; top: 50%; transform: translateY(-50%); }
-.comp-d.cW { left: 6px; top: 50%; transform: translateY(-50%); }
-.comp-arrow {
-  position: absolute; bottom: 50%; left: 50%;
-  width: 3px; height: 30px; border-radius: 3px 3px 0 0;
-  background: linear-gradient(to top, transparent, var(--sky));
-  transform-origin: bottom center; margin-left: -1.5px;
-  box-shadow: 0 0 10px rgba(56,189,248,.7);
-}
-
-/* ── COMPARE PILLS ──────────────────────────── */
-.cpills { display: flex; flex-wrap: wrap; gap: 6px; }
-.cpill {
-  display: flex; align-items: center; gap: 6px;
-  border: 1px solid var(--rim); background: var(--glass);
-  padding: 6px 13px 6px 10px; border-radius: 100px;
-  cursor: pointer; transition: all .2s;
-  font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 600; color: var(--ink2);
-}
-.cpill-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--mc, var(--ink2)); flex-shrink: 0; transition: box-shadow .2s; }
-.cpill.on { border-color: color-mix(in srgb, var(--mc) 50%, transparent); color: var(--white); }
-.cpill.on .cpill-dot { box-shadow: 0 0 8px var(--mc, transparent); }
-.cpill:active { transform: scale(.94); }
-
-/* ── SPREAD METER ───────────────────────────── */
-.sp-row { display: flex; align-items: center; gap: 10px; }
-.sp-track { flex: 1; height: 6px; background: rgba(255,255,255,.07); border-radius: 3px; overflow: hidden; }
-.sp-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #34d399, #fbbf24, #f87171); transition: width .5s cubic-bezier(.4,0,.2,1); }
-.sp-num { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--white); white-space: nowrap; font-weight: 500; }
-.sp-txt { font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 700; white-space: nowrap; }
-.agree { color: #34d399; } .warn { color: #fbbf24; } .bad { color: #f87171; }
-
-/* ── CV GRID ────────────────────────────────── */
-.cv-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 6px; }
-@media(min-width:360px){ .cv-grid { grid-template-columns: repeat(3,1fr); } }
-@media(min-width:520px){ .cv-grid { grid-template-columns: repeat(4,1fr); } }
-.cvt {
-  background: linear-gradient(145deg, rgba(22,38,64,.8), rgba(17,31,53,.8));
-  border: 1px solid var(--rim); border-radius: var(--Rsm);
-  padding: 12px 12px; position: relative; overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0,0,0,.3);
-}
-.cvt::before {
-  content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 3px;
-  background: var(--tc, var(--rim)); border-radius: var(--Rsm) 0 0 var(--Rsm);
-  box-shadow: 1px 0 8px var(--tc, transparent);
-}
-.cvt-l { font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--ink2); text-transform: uppercase; }
-.cvt-v { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 30px; color: var(--white); line-height: 1; margin-top: 3px; }
-.cvt-u { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--ink2); }
-
-/* ── RUN COMPARE PILLS ──────────────────────── */
-.rcpills { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
-.rcpills::-webkit-scrollbar { display: none; }
-.rcpill {
-  flex-shrink: 0; border: 1px solid var(--rim); background: var(--glass);
-  padding: 6px 14px; border-radius: 100px; cursor: pointer; transition: all .2s; text-align: center;
-}
-.rcpill-t { font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700; color: var(--ink3); display: block; line-height: 1; }
-.rcpill-a { font-family: 'DM Mono', monospace; font-size: 8px; color: var(--ink1); display: block; margin-top: 2px; }
-.ra0 { border-color: rgba(56,189,248,.5) !important; box-shadow: 0 0 12px rgba(56,189,248,.15); }
-.ra0 .rcpill-t { color: var(--r0) !important; text-shadow: 0 0 10px rgba(56,189,248,.5); }
-.ra1 { border-color: rgba(240,112,32,.5) !important; box-shadow: 0 0 12px rgba(240,112,32,.15); }
-.ra1 .rcpill-t { color: var(--r1) !important; text-shadow: 0 0 10px rgba(240,112,32,.5); }
-.ra2 { border-color: rgba(52,211,153,.5) !important; box-shadow: 0 0 12px rgba(52,211,153,.15); }
-.ra2 .rcpill-t { color: var(--r2) !important; text-shadow: 0 0 10px rgba(52,211,153,.5); }
-.ra3 { border-color: rgba(167,139,250,.5) !important; box-shadow: 0 0 12px rgba(167,139,250,.15); }
-.ra3 .rcpill-t { color: var(--r3) !important; text-shadow: 0 0 10px rgba(167,139,250,.5); }
-.rcpill:active { transform: scale(.93); }
-
-/* ── LEGEND ─────────────────────────────────── */
-.legend { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
-.li { display: flex; align-items: center; gap: 5px; font-family: 'DM Mono', monospace; font-size: 9px; color: var(--ink3); }
-.ll { width: 18px; height: 2px; border-radius: 1px; }
-
-/* ── HEATMAP ────────────────────────────────── */
-.hrow { display: flex; gap: 3px; align-items: center; margin-bottom: 3px; }
-.hlbl { font-family: 'DM Mono', monospace; font-size: 8px; color: var(--ink2); width: 34px; flex-shrink: 0; }
-.hcell { flex: 1; height: 24px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-family: 'DM Mono', monospace; font-size: 9px; color: rgba(255,255,255,.7); font-weight: 500; }
+/* ── EMPTY ── */
+.empty{min-height:60vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:40px;}
+.eg{font-family:'Outfit',sans-serif;font-weight:900;font-size:72px;color:rgba(255,255,255,.04);letter-spacing:-3px;line-height:1;}
+.et{font-family:'Outfit',sans-serif;font-size:18px;font-weight:700;letter-spacing:1px;color:var(--ink2);}
+.es{font-family:'DM Mono',monospace;font-size:10px;color:var(--ink1);text-align:center;line-height:2;}
 
 
-/* ── HOURLY MODEL DIVERGENCE TABLE ─────────── */
-.div-table { display:flex; flex-direction:column; gap:4px; overflow-x:auto; padding-bottom:2px; }
-.div-head, .div-row { display:grid; align-items:center; gap:4px; min-width:620px; }
-.div-head { font-family:'DM Mono',monospace; font-size:8px; color:var(--ink2); letter-spacing:.4px; text-transform:uppercase; }
-.div-row { min-height:30px; }
-.div-time { font-family:'DM Mono',monospace; font-size:9px; color:var(--ink3); white-space:nowrap; }
-.div-cell { font-family:'DM Mono',monospace; font-size:10px; color:var(--white); text-align:center; padding:6px 4px; border:1px solid var(--rim); border-radius:6px; background:rgba(255,255,255,.035); }
-.div-spread { font-family:'DM Mono',monospace; font-size:10px; font-weight:700; text-align:center; padding:6px 4px; border-radius:6px; background:rgba(255,255,255,.055); }
-.div-spread.lo { color:#34d399; }
-.div-spread.md { color:#fbbf24; }
-.div-spread.hi { color:#f87171; }
+/* ── MAP TAB ── */
+#map-wrap{width:100%;height:100%;position:relative;display:none;flex-direction:column;}
+#map-wrap.active{display:flex;}
+#leaflet-map{flex:1;width:100%;min-height:0;}
+.leaflet-container{background:#060e1a!important;}
+.leaflet-tile-pane{filter:brightness(.55) saturate(.5) hue-rotate(185deg);}
+#map-controls{position:absolute;top:8px;left:8px;right:8px;z-index:500;
+  background:rgba(8,15,30,.93);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px 12px;
+  display:flex;flex-direction:column;gap:8px;box-shadow:0 8px 32px rgba(0,0,0,.7);}
+.mc-row{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;}
+.mc-group{display:flex;flex-direction:column;gap:4px;}
+.mc-label{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1.5px;color:rgba(255,255,255,.3);text-transform:uppercase;}
+.mc-pills{display:flex;gap:4px;flex-wrap:wrap;}
+.mc-pill{font-family:'Outfit',sans-serif;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;cursor:pointer;border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.4);transition:all .15s;white-space:nowrap;}
+.mc-pill.on{background:var(--sky);border-color:var(--sky);color:#000;}
+.mc-pill:active{transform:scale(.94);}
+.mc-slider-row{display:flex;align-items:center;gap:8px;}
+.mc-slider-row .mc-label{white-space:nowrap;}
+#map-hour-slider{flex:1;-webkit-appearance:none;height:4px;background:rgba(255,255,255,.12);border-radius:2px;outline:none;cursor:pointer;}
+#map-hour-slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--sky);cursor:pointer;box-shadow:0 0 8px rgba(56,189,248,.6);}
+.mc-hour-lbl{font-family:'DM Mono',monospace;font-size:10px;color:var(--sky);white-space:nowrap;min-width:68px;text-align:right;}
+.mc-play{background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);color:var(--sky);border-radius:50%;width:28px;height:28px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;}
+.mc-play.playing{background:rgba(248,113,113,.15);border-color:rgba(248,113,113,.3);color:#f87171;}
+.mc-play:active{transform:scale(.9);}
+#map-legend{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);z-index:500;background:rgba(8,15,30,.92);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;box-shadow:0 4px 16px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:4px;align-items:center;}
+#legend-canvas{border-radius:3px;}
+#legend-labels{display:flex;justify-content:space-between;width:180px;font-family:'DM Mono',monospace;font-size:8px;color:rgba(255,255,255,.45);}
+#map-status{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);z-index:500;background:rgba(8,15,30,.9);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:5px 14px;font-family:'DM Mono',monospace;font-size:9px;color:rgba(255,255,255,.5);white-space:nowrap;pointer-events:none;transition:opacity .4s;}
+.map-pin-popup{background:rgba(13,24,41,.97);border:1px solid rgba(56,189,248,.3);border-radius:12px;padding:12px 14px;min-width:180px;box-shadow:0 12px 40px rgba(0,0,0,.8);}
+.map-pin-popup h3{font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;color:var(--sky);margin-bottom:7px;letter-spacing:.5px;}
+.map-pin-popup .mp-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.06);}
+.map-pin-popup .mp-row:last-of-type{border-bottom:none;}
+.map-pin-popup .mp-lbl{font-family:'DM Mono',monospace;font-size:9px;color:rgba(255,255,255,.35);}
+.map-pin-popup .mp-val{font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;color:var(--white);}
+.map-pin-popup .mp-goto{margin-top:9px;width:100%;background:var(--sky);color:#000;border:none;border-radius:20px;padding:7px 0;font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.5px;}
+.leaflet-popup-content-wrapper{background:transparent!important;box-shadow:none!important;padding:0!important;}
+.leaflet-popup-content{margin:0!important;}
+.leaflet-popup-tip-container{display:none;}
+.leaflet-popup-close-button{display:none;}
 
-/* ── STATUS DOT ─────────────────────────────── */
-.sdot {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: var(--jade); box-shadow: 0 0 8px var(--jade);
-  display: inline-block; margin-right: 6px;
-  animation: dp 2.5s ease-in-out infinite;
-}
-@keyframes dp { 0%,100%{opacity:1;} 50%{opacity:.2;} }
-
-/* ── TOOLTIP ────────────────────────────────── */
-#tip {
-  position: fixed;
-  background: linear-gradient(145deg, rgba(22,38,64,.98), rgba(17,31,53,.98));
-  border: 1px solid var(--rim2);
-  border-top: 2px solid var(--sky);
-  padding: 10px 14px;
-  pointer-events: none; display: none; z-index: 500;
-  font-family: 'DM Mono', monospace; font-size: 10px;
-  min-width: 148px; border-radius: var(--Rsm);
-  box-shadow: 0 20px 50px rgba(0,0,0,.8), 0 0 0 1px rgba(56,189,248,.08);
-}
-#tip-t { font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700; color: var(--sky); margin-bottom: 6px; letter-spacing: .3px; }
-#tip-v { line-height: 2.2; }
-
-/* ── EMPTY ──────────────────────────────────── */
-.empty { min-height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 40px; }
-.eg { font-family: 'Outfit', sans-serif; font-weight: 900; font-size: 72px; color: rgba(255,255,255,.04); letter-spacing: -3px; line-height: 1; }
-.et { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700; letter-spacing: 1px; color: var(--ink2); }
-.es { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--ink1); text-align: center; line-height: 2; }
-
-/* ── FADE IN ────────────────────────────────── */
-@keyframes fu { from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;} }
+/* ── ANIMATIONS ── */
+@keyframes fu{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
 .fu{animation:fu .25s ease forwards;}
 .d1{animation-delay:.04s;opacity:0;} .d2{animation-delay:.09s;opacity:0;}
 .d3{animation-delay:.14s;opacity:0;} .d4{animation-delay:.19s;opacity:0;}
 .d5{animation-delay:.24s;opacity:0;}
-
 @keyframes spin{to{transform:rotate(360deg);}}
 </style>
 </head>
 <body>
 <div id="shell">
   <header class="hdr">
-    <div class="logo">WX<b>MDL</b><span class="logo-dot">.</span></div>
+    <div class="logo">WX<b>MDL</b></div>
     <div class="sbox">
       <div class="sbox-ico">◎</div>
       <input id="loc" type="text" placeholder="city or lat, lon" autocomplete="off" spellcheck="false" value="Land O' Lakes, FL">
@@ -625,12 +356,59 @@ body::after {
     </div>
   </div>
 
-  <div class="scroll" id="scroll">
+  <!-- SCROLL AREA — hidden when map is active -->
+  <div class="scroll" id="scroll" style="flex:1;overflow-y:auto;">
     <div class="empty">
       <div class="eg">WX</div>
-      <div class="et">ENTER A LOCATION</div>
-      <div class="es">type a city or lat, lon<br>to load model data</div>
+      <div class="et">LOADING...</div>
     </div>
+  </div>
+
+  <!-- MAP WRAP — shown when map tab active -->
+  <div id="map-wrap">
+    <div id="leaflet-map"></div>
+
+    <!-- top control bar -->
+    <div id="map-controls">
+      <div class="mc-row">
+        <!-- variable -->
+        <div class="mc-group">
+          <div class="mc-label">LAYER</div>
+          <div class="mc-pills" id="mp-var">
+            <div class="mc-pill on" data-v="temp"   onclick="setMapVar('temp',this)">TEMP</div>
+            <div class="mc-pill"    data-v="precip" onclick="setMapVar('precip',this)">PRECIP</div>
+            <div class="mc-pill"    data-v="wind"   onclick="setMapVar('wind',this)">WIND</div>
+            <div class="mc-pill"    data-v="cape"   onclick="setMapVar('cape',this)">CAPE</div>
+            <div class="mc-pill"    data-v="dewpoint" onclick="setMapVar('dewpoint',this)">DEW</div>
+          </div>
+        </div>
+        <!-- model -->
+        <div class="mc-group">
+          <div class="mc-label">MODEL</div>
+          <div class="mc-pills" id="mp-model">
+            <div class="mc-pill on" data-m="hrrr" onclick="setMapModel('hrrr',this)">HRRR</div>
+            <div class="mc-pill"    data-m="gfs"  onclick="setMapModel('gfs',this)">GFS</div>
+            <div class="mc-pill"    data-m="nbm"  onclick="setMapModel('nbm',this)">NBM</div>
+          </div>
+        </div>
+      </div>
+      <!-- hour slider -->
+      <div class="mc-slider-row">
+        <div class="mc-label">HOUR</div>
+        <input type="range" id="map-hour-slider" min="0" max="11" value="0" step="1" oninput="onHourSlide(this.value)">
+        <div class="mc-hour-lbl" id="map-hour-lbl">NOW</div>
+        <button class="mc-play" id="map-play-btn" onclick="togglePlay()">▶</button>
+      </div>
+    </div>
+
+    <!-- legend -->
+    <div id="map-legend">
+      <canvas id="legend-canvas" width="180" height="14"></canvas>
+      <div id="legend-labels"></div>
+    </div>
+
+    <!-- status -->
+    <div id="map-status">LOADING GRID...</div>
   </div>
 
   <nav class="bot">
@@ -639,25 +417,29 @@ body::after {
     <button class="nb"     onclick="setTab('precip',this)"><span class="ni">🌧</span><span class="nl">PRECIP</span></button>
     <button class="nb"     onclick="setTab('wind',this)"><span class="ni">💨</span><span class="nl">WIND</span></button>
     <button class="nb"     onclick="setTab('upper',this)"><span class="ni">🔼</span><span class="nl">UPPER</span></button>
+    <button class="nb"     onclick="setTab('map',this)"><span class="ni">🗺️</span><span class="nl">MAP</span></button>
   </nav>
 </div>
 
-<div id="tip"><div id="tip-t"></div><div id="tip-v"></div></div>
+<!-- Tooltip — tap anywhere on it or outside to dismiss -->
+<div id="tip" onclick="hideTip()"><div id="tip-t"></div><div id="tip-v"></div></div>
+<!-- tap outside charts to dismiss tooltip -->
+<div id="tip-dismiss" style="display:none;position:fixed;inset:0;z-index:499;" onclick="hideTip()"></div>
 
 <script>
-/* ═══════════════════════════════════════
+/* ═══════════════════════════════════════════
    CONFIG
-═══════════════════════════════════════ */
-const MODELS = {
-  hrrr:     {l:'HRRR',  n:'Hi-Res Rapid Refresh',  r:'3km·48hr',    c:'#38bdf8'},
-  gfs:      {l:'GFS',   n:'Global Forecast System', r:'0.25°·384hr', c:'#fb923c'},
-  nbm:      {l:'NBM',   n:'Natl Blend of Models',   r:'2.5km·264hr', c:'#34d399'},
-  rap:      {l:'RAP',   n:'Rapid Refresh',           r:'13km·51hr',   c:'#a78bfa'},
-  ecmwf:    {l:'ECMWF', n:'IFS Operational',         r:'0.25°·240hr', c:'#f472b6'},
-  graphcast:{l:'GCAST', n:'GraphCast AI',            r:'0.25°·384hr', c:'#fbbf24'},
-  rrfs:     {l:'RRFS',  n:'Rapid Refresh FS',        r:'3km·84hr',    c:'#2dd4bf'},
+═══════════════════════════════════════════ */
+const MODELS={
+  hrrr:    {l:'HRRR', n:'Hi-Res Rapid Refresh',  r:'3km·48hr',    c:'#38bdf8'},
+  gfs:     {l:'GFS',  n:'Global Forecast System', r:'0.25°·384hr', c:'#fb923c'},
+  nbm:     {l:'NBM',  n:'Natl Blend of Models',   r:'2.5km·264hr', c:'#34d399'},
+  rap:     {l:'RAP',  n:'Rapid Refresh',           r:'13km·51hr',   c:'#a78bfa'},
+  ecmwf:   {l:'ECMWF',n:'IFS Operational',        r:'0.25°·240hr', c:'#f472b6'},
+  graphcast:{l:'GCAST',n:'GraphCast AI',           r:'0.25°·384hr', c:'#fbbf24'},
+  rrfs:    {l:'RRFS', n:'Rapid Refresh FS',        r:'3km·84hr',    c:'#2dd4bf'},
 };
-const RUNS = {
+const RUNS={
   hrrr:['12Z','11Z','10Z','09Z','08Z','06Z','00Z'],
   gfs:['12Z','06Z','00Z','18Z'],
   nbm:['12Z','11Z','10Z','09Z','08Z'],
@@ -666,432 +448,375 @@ const RUNS = {
   graphcast:['12Z','06Z'],
   rrfs:['12Z','11Z','10Z','09Z'],
 };
-const TABS = {
-  forecast:{primary:'temp',   vars:['temp','dewpoint','feels']},
-  temp:    {primary:'temp',   vars:['temp','feels','dewpoint','t850']},
-  precip:  {primary:'precip', vars:['precip','snow','preciprate']},
-  wind:    {primary:'wind',   vars:['wind','gust','winddir']},
-  upper:   {primary:'h500',   vars:['h500','rh700','t850']},
+const TABS={
+  forecast:{primary:'temp'},
+  temp:    {primary:'temp', vars:['temp','feels','dewpoint','t850']},
+  precip:  {primary:'precip',vars:['precip','snow','preciprate']},
+  wind:    {primary:'wind', vars:['wind','gust']},
+  upper:   {primary:'h500', vars:['h500','rh700','t850']},
+  map:     {primary:'temp'},
 };
-const VARS = {
-  temp:      {l:'Temperature', u:'°F',    c:'#fb923c'},
-  dewpoint:  {l:'Dewpoint',    u:'°F',    c:'#38bdf8'},
-  feels:     {l:'Feels Like',  u:'°F',    c:'#fbbf24'},
-  precip:    {l:'Precip',      u:'in',    c:'#38bdf8'},
-  snow:      {l:'Snow',        u:'in',    c:'#bfdbfe'},
-  preciprate:{l:'Precip Rate', u:'in/hr', c:'#818cf8'},
-  wind:      {l:'Wind Speed',  u:'mph',   c:'#2dd4bf'},
-  gust:      {l:'Wind Gust',   u:'mph',   c:'#67e8f9'},
-  winddir:   {l:'Wind Dir',    u:'°',     c:'#a5f3fc'},
-  h500:      {l:'500mb Hgt',   u:'gpm',   c:'#86efac'},
-  rh700:     {l:'700mb RH',    u:'%',     c:'#6ee7b7'},
-  t850:      {l:'850mb Temp',  u:'°F',    c:'#fdba74'},
+const VARS={
+  temp:      {l:'Temperature',u:'°F',  c:'#fb923c'},
+  dewpoint:  {l:'Dewpoint',   u:'°F',  c:'#38bdf8'},
+  feels:     {l:'Feels Like', u:'°F',  c:'#fbbf24'},
+  precip:    {l:'Precip',     u:'in',  c:'#38bdf8'},
+  snow:      {l:'Snow',       u:'in',  c:'#bfdbfe'},
+  preciprate:{l:'Precip Rate',u:'in/hr',c:'#818cf8'},
+  wind:      {l:'Wind Speed', u:'mph', c:'#2dd4bf'},
+  gust:      {l:'Wind Gust',  u:'mph', c:'#67e8f9'},
+  winddir:   {l:'Wind Dir',   u:'°',   c:'#a5f3fc'},
+  h500:      {l:'500mb Hgt',  u:'gpm', c:'#86efac'},
+  rh700:     {l:'700mb RH',   u:'%',   c:'#6ee7b7'},
+  t850:      {l:'850mb Temp', u:'°F',  c:'#fdba74'},
 };
-const RC = ['#38bdf8','#fb923c','#34d399','#a78bfa'];
-const DAYS = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
-const ICONS = ['☀️','⛅','🌤','🌧','⛈','🌦','☀️'];
-const DIRS = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+const RC=['#38bdf8','#fb923c','#34d399','#a78bfa'];
+const DAYS=['SUN','MON','TUE','WED','THU','FRI','SAT'];
+const ICONS=['☀️','⛅','🌤','🌧','⛈','🌦','☀️'];
+const DIRS=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
 
-/* ═══════════════════════════════════════
+/* ═══════════════════════════════════════════
    STATE
-═══════════════════════════════════════ */
-const S = {
-  mode:'single', tab:'forecast', var:'temp',
-  model:'hrrr', run:'12Z',
-  loc:null, loaded:false,
+═══════════════════════════════════════════ */
+const S={
+  mode:'single',tab:'forecast',var:'temp',
+  model:'hrrr',run:'12Z',
+  loc:null,loaded:false,
   cmpModels:['hrrr','gfs','nbm'],
-  runModel:'hrrr', cmpRuns:['12Z','06Z','00Z'],
+  runModel:'hrrr',cmpRuns:['12Z','06Z','00Z'],
 };
-let CH = {};
+let CH={}, leafletMap=null;
 
-/* ═══════════════════════════════════════
-   API — GRIBSTREAM VIA CLOUDFLARE WORKER
-═══════════════════════════════════════ */
-const WORKER = 'https://gribstream-proxy.nmaterazzo2435.workers.dev';
-
-// GribStream variable map: our key → {name, level, model_ids_that_support_it}
-const GRIB_VARS = {
-  temp:      {name:'TMP',    level:'2 m above ground'},
-  dewpoint:  {name:'DPT',    level:'2 m above ground'},
-  feels:     {name:'APTMP',  level:'2 m above ground'},
-  precip:    {name:'APCP',   level:'surface'},
-  snow:      {name:'ASNOW',  level:'surface'},
-  preciprate:{name:'PRATE',  level:'surface'},
-  wind:      {name:'WIND',   level:'10 m above ground'},
-  gust:      {name:'GUST',   level:'surface'},
-  winddir:   {name:'WDIR',   level:'10 m above ground'},
-  h500:      {name:'HGT',    level:'500 mb'},
-  rh700:     {name:'RH',     level:'700 mb'},
-  t850:      {name:'TMP',    level:'850 mb'},
+/* ═══════════════════════════════════════════
+   API
+═══════════════════════════════════════════ */
+const WORKER='https://gribstream-proxy.nmaterazzo2435.workers.dev';
+const GRIB_VARS={
+  temp:      {name:'TMP',  level:'2 m above ground'},
+  dewpoint:  {name:'DPT',  level:'2 m above ground'},
+  feels:     {name:'APTMP',level:'2 m above ground'},
+  precip:    {name:'APCP', level:'surface'},
+  snow:      {name:'ASNOW',level:'surface'},
+  preciprate:{name:'PRATE',level:'surface'},
+  wind:      {name:'WIND', level:'10 m above ground'},
+  gust:      {name:'GUST', level:'surface'},
+  winddir:   {name:'WDIR', level:'10 m above ground'},
+  h500:      {name:'HGT',  level:'500 mb'},
+  rh700:     {name:'RH',   level:'700 mb'},
+  t850:      {name:'TMP',  level:'850 mb'},
 };
+const MODEL_IDS={hrrr:'hrrr',gfs:'gfs',nbm:'nbm',rap:'rap',ecmwf:'ifsoper',graphcast:'graphcast',rrfs:'rrfsprslev'};
+const MODEL_HOURS={hrrr:48,gfs:168,nbm:168,rap:51,ecmwf:168,graphcast:168,rrfs:84};
+const CACHE={};
 
-// GribStream model IDs
-const MODEL_IDS = {
-  hrrr:     'hrrr',
-  gfs:      'gfs',
-  nbm:      'nbm',
-  rap:      'rap',
-  ecmwf:    'ifsoper',
-  graphcast:'graphcast',
-  rrfs:     'rrfsprslev',
-};
-
-// How many forecast hours each model covers
-const MODEL_HOURS = {
-  hrrr:48, gfs:168, nbm:168, rap:51, ecmwf:168, graphcast:168, rrfs:84,
-};
-
-// cache: key = "model|var|run|lat|lon|endpoint"
-const CACHE = {};
-
-function isoNoMs(d){ return d.toISOString().replace('.000',''); }
-function validNum(v){ return v !== null && v !== undefined && typeof v === 'number' && !Number.isNaN(v); }
-function valueKey(gv){ return `${gv.name}|${gv.level}|`; }
+function isoNoMs(d){return d.toISOString().replace('.000','');}
+function validNum(v){return v!==null&&v!==undefined&&typeof v==='number'&&!Number.isNaN(v);}
+function valueKey(gv){return `${gv.name}|${gv.level}|`;}
 
 function latestCycleTime(run){
-  const runZ = parseInt(run, 10);
-  const d = new Date();
-  d.setUTCMinutes(0,0,0);
+  const runZ=parseInt(run,10);
+  const d=new Date();
   d.setUTCHours(runZ,0,0,0);
-  // Pick the most recent occurrence of that Z-cycle that is not in the future.
-  if (d.getTime() > Date.now()) d.setUTCDate(d.getUTCDate() - 1);
+  if(d.getTime()>Date.now())d.setUTCDate(d.getUTCDate()-1);
   return d;
 }
 
-function normalizeValue(gv, v){
-  if (!validNum(v)) return null;
-  // Kelvin → °F
-  if ((gv.name==='TMP'||gv.name==='DPT'||gv.name==='APTMP') && v > 200) v = (v-273.15)*9/5+32;
-  // m/s → mph
-  if (gv.name==='WIND'||gv.name==='GUST') v = v * 2.23694;
-  // kg/m² → inches
-  if (gv.name==='APCP'||gv.name==='ASNOW') v = v * 0.0393701;
-  // kg/m²/s → in/hr
-  if (gv.name==='PRATE') v = v * 141.732;
+function normalizeValue(gv,v){
+  if(!validNum(v))return null;
+  if((gv.name==='TMP'||gv.name==='DPT'||gv.name==='APTMP')&&v>200)v=(v-273.15)*9/5+32;
+  if(gv.name==='WIND'||gv.name==='GUST')v=v*2.23694;
+  if(gv.name==='APCP'||gv.name==='ASNOW')v=v*0.0393701;
+  if(gv.name==='PRATE')v=v*141.732;
   return +v.toFixed(3);
 }
 
-function parseRows(rawText, mkey, vkey){
-  let rows;
-  try {
-    const json = JSON.parse(rawText);
-    rows = Array.isArray(json) ? json : (json.data || json.results || []);
-  } catch(e) {
-    throw new Error(`${mkey}/${vkey} bad JSON`);
-  }
-  if (!rows.length) throw new Error(`${mkey}/${vkey} empty response`);
-  return rows;
-}
+async function fetchGrib(mkey,vkey,run,lat,lon){
+  const cycle=latestCycleTime(run);
+  const cycleISO=isoNoMs(cycle);
+  const cacheKey=`${mkey}|${vkey}|${cycleISO}|${lat.toFixed(4)}|${lon.toFixed(4)}`;
+  if(CACHE[cacheKey])return CACHE[cacheKey];
 
-async function postGrib(modelId, endpoint, body){
-  const res = await fetch(`${WORKER}/${modelId}/${endpoint}`, {
-    method:'POST',
-    headers:{'Content-Type':'application/json','Accept':'application/json'},
-    body: JSON.stringify(body),
-  });
-  const rawText = await res.text();
-  if (!res.ok) throw new Error(`${modelId}/${endpoint} HTTP ${res.status}: ${rawText.slice(0,120)}`);
-  return rawText;
-}
-
-// Fetch one exact model cycle. This is what makes Compare Runs real.
-async function fetchRunCycleGrib(mkey, vkey, run, lat, lon) {
-  const cycle = latestCycleTime(run);
-  const cycleISO = isoNoMs(cycle);
-  const cacheKey = `${mkey}|${vkey}|${run}|${cycleISO}|${lat}|${lon}|runs`;
-  if (CACHE[cacheKey]) return CACHE[cacheKey];
-
-  const gv = GRIB_VARS[vkey];
-  if (!gv) throw new Error(`No GRIB mapping for ${vkey}`);
-
-  const modelId = MODEL_IDS[mkey];
-  const hours = MODEL_HOURS[mkey] || 48;
-  const body = {
-    forecastedFrom: cycleISO,
-    forecastedUntil: cycleISO,
-    minLeadTime: '0h',
-    maxLeadTime: `${hours}h`,
-    coordinates: [{lat, lon, name:'loc'}],
-    variables: [{name:gv.name, level:gv.level, info:''}],
+  const gv=GRIB_VARS[vkey];
+  if(!gv)throw new Error(`No GRIB mapping for ${vkey}`);
+  const modelId=MODEL_IDS[mkey];
+  const hours=MODEL_HOURS[mkey]||48;
+  const body={
+    forecastedFrom:cycleISO,forecastedUntil:cycleISO,
+    minLeadTime:'0h',maxLeadTime:`${hours}h`,
+    coordinates:[{lat,lon,name:'loc'}],
+    variables:[{name:gv.name,level:gv.level,info:''}],
   };
 
-  const rawText = await postGrib(modelId, 'runs', body);
-  const rows = parseRows(rawText, mkey, vkey);
-  const gribKey = valueKey(gv);
-  rows.sort((a,b) => new Date(a.forecasted_time) - new Date(b.forecasted_time));
+  const res=await fetch(`${WORKER}/${modelId}/runs`,{
+    method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},
+    body:JSON.stringify(body),
+  });
+  const rawText=await res.text();
+  if(!res.ok)throw new Error(`${mkey}/${vkey} HTTP ${res.status}`);
 
-  const byTime = new Map();
-  rows.forEach(r => {
-    const t = new Date(r.forecasted_time);
-    const v = normalizeValue(gv, r[gribKey]);
-    if (!Number.isNaN(t.getTime()) && v !== null) byTime.set(t.getTime(), {t, v});
+  let rows;
+  try{const j=JSON.parse(rawText);rows=Array.isArray(j)?j:(j.data||j.results||[]);}
+  catch(e){throw new Error(`${mkey}/${vkey} bad JSON`);}
+  if(!rows.length)throw new Error(`${mkey}/${vkey} empty`);
+
+  const gribKey=valueKey(gv);
+  rows.sort((a,b)=>new Date(a.forecasted_time)-new Date(b.forecasted_time));
+
+  const seen=new Set();
+  const times=[],values=[];
+  rows.forEach(r=>{
+    const t=new Date(r.forecasted_time);
+    const tk=t.getTime();
+    if(seen.has(tk))return;
+    seen.add(tk);
+    const v=normalizeValue(gv,r[gribKey]);
+    times.push(t);
+    values.push(v);
   });
 
-  const items = [...byTime.values()].sort((a,b)=>a.t-b.t);
-  const result = {run, cycle, times:items.map(x=>x.t), values:items.map(x=>x.v)};
-  CACHE[cacheKey] = result;
+  const result={times,values};
+  CACHE[cacheKey]=result;
   return result;
 }
 
-// Standard single forecast path: use the selected run's exact cycle.
-async function fetchGrib(mkey, vkey, run, lat, lon) {
-  return fetchRunCycleGrib(mkey, vkey, run, lat, lon);
-}
-
-function nearestIndex(times, target=new Date()){
-  if (!times || !times.length) return -1;
-  let best = 0, bestDist = Infinity;
-  times.forEach((t,i)=>{
-    const d = Math.abs(new Date(t).getTime() - target.getTime());
-    if (d < bestDist) { best = i; bestDist = d; }
-  });
-  return best;
-}
-function firstAtOrAfterIndex(times, target=new Date()){
-  if (!times || !times.length) return -1;
-  const ts = target.getTime();
-  const i = times.findIndex(t => new Date(t).getTime() >= ts);
-  return i >= 0 ? i : times.length - 1;
-}
-function currentValue(data){
-  const i = nearestIndex(data?.times || [], new Date());
-  return i >= 0 ? data.values[i] : null;
-}
-function fromNowData(data){
-  const i = firstAtOrAfterIndex(data?.times || [], new Date());
-  if (i <= 0) return data;
-  return {times:data.times.slice(i), values:data.values.slice(i)};
-}
-function fmtVal(v, digits=1){
-  return v===null || v===undefined || Number.isNaN(v) ? '--' : Number(v).toFixed(digits);
-}
-
-// Fetch multiple variables at once for a single model (used by rSingle)
-async function fetchBundle(mkey, vkeys, run, lat, lon) {
-  const results = await Promise.allSettled(
-    vkeys.map(vkey => fetchGrib(mkey, vkey, run, lat, lon))
-  );
-  const out = {};
-  vkeys.forEach((vkey, i) => {
-    if (results[i].status === 'fulfilled') {
-      out[vkey] = results[i].value;
-    } else {
-      console.warn(`fetchBundle failed ${mkey}/${vkey}:`, results[i].reason);
-      out[vkey] = null;
-    }
+async function fetchBundle(mkey,vkeys,run,lat,lon){
+  const results=await Promise.allSettled(vkeys.map(vk=>fetchGrib(mkey,vk,run,lat,lon)));
+  const out={};
+  vkeys.forEach((vk,i)=>{
+    out[vk]=results[i].status==='fulfilled'?results[i].value:null;
   });
   return out;
 }
 
-function dailyStats(times, vals) {
-  const map = {};
-  times.forEach((t,i) => {
-    if (vals[i] === null) return;
-    const k = t.toDateString();
-    if (!map[k]) map[k] = {date:t, hi:-999, lo:999};
-    map[k].hi = Math.max(map[k].hi, vals[i]);
-    map[k].lo = Math.min(map[k].lo, vals[i]);
+function dailyStats(times,vals){
+  const map={};
+  times.forEach((t,i)=>{
+    if(vals[i]===null)return;
+    const k=t.toDateString();
+    if(!map[k])map[k]={date:t,hi:-999,lo:999};
+    map[k].hi=Math.max(map[k].hi,vals[i]);
+    map[k].lo=Math.min(map[k].lo,vals[i]);
   });
   return Object.values(map).slice(0,7);
 }
 
-// Show a loading state in the scroll area
-function showLoading(sc, msg='FETCHING MODEL DATA') {
-  sc.innerHTML = `<div class="empty">
-    <div style="width:32px;height:32px;border:2px solid var(--border2);border-top-color:var(--accent);
-      border-radius:50%;animation:spin .8s linear infinite;margin-bottom:12px;"></div>
-    <div class="et">${msg}</div>
-    <div class="es">querying GribStream via Cloudflare Worker</div>
-  </div>
-  <style>@keyframes spin{to{transform:rotate(360deg);}}</style>`;
+function currentValue(data){
+  if(!data||!data.times||!data.times.length)return null;
+  const now=Date.now();
+  let best=0,bestDist=Infinity;
+  data.times.forEach((t,i)=>{
+    const d=Math.abs(new Date(t).getTime()-now);
+    if(d<bestDist){best=i;bestDist=d;}
+  });
+  return data.values[best]??null;
 }
 
-function showError(sc, msg) {
-  sc.innerHTML = `<div class="empty">
-    <div style="font-size:32px;margin-bottom:8px;">⚠️</div>
-    <div class="et" style="color:#f87171">API ERROR</div>
-    <div class="es">${msg}</div>
-  </div>`;
+// FIXED fmtVal — single definition, handles all cases
+function fmtVal(v,unit=''){
+  if(v===null||v===undefined||Number.isNaN(v))return'--';
+  const n=Number(v);
+  if(unit==='in'||unit==='in/hr')return n.toFixed(3);
+  if(unit==='gpm')return n.toFixed(0);
+  if(Math.abs(n)>=100)return n.toFixed(0);
+  return n.toFixed(1);
 }
 
 function tCol(t){
-  if(t>=100)return'#f87171';
-  if(t>=90) return'#fb923c';
-  if(t>=80) return'#fbbf24';
-  if(t>=70) return'#a3e635';
-  if(t>=60) return'#34d399';
-  if(t>=50) return'#38bdf8';
-  if(t>=32) return'#818cf8';
-  return'#c7d2fe';
+  if(t>=100)return'#f87171';if(t>=90)return'#fb923c';if(t>=80)return'#fbbf24';
+  if(t>=70)return'#a3e635';if(t>=60)return'#34d399';if(t>=50)return'#38bdf8';
+  if(t>=32)return'#818cf8';return'#c7d2fe';
 }
 
-/* ═══════════════════════════════════════
-   CHART ENGINE
-═══════════════════════════════════════ */
-Chart.defaults.color = '#2e4870';
-Chart.defaults.borderColor = '#111f35';
+/* ── LOADING / ERROR ── */
+function showLoading(sc,msg='FETCHING MODEL DATA'){
+  sc.innerHTML=`<div class="empty">
+    <div style="width:32px;height:32px;border:2px solid rgba(255,255,255,.1);border-top-color:var(--sky);
+      border-radius:50%;animation:spin .8s linear infinite;margin-bottom:12px;"></div>
+    <div class="et">${msg}</div>
+    <div class="es">querying GribStream via Cloudflare Worker</div>
+  </div><style>@keyframes spin{to{transform:rotate(360deg);}}</style>`;
+}
+function showError(sc,msg){
+  sc.innerHTML=`<div class="empty"><div style="font-size:32px;margin-bottom:8px;">⚠️</div>
+    <div class="et" style="color:#f87171">ERROR</div><div class="es">${msg}</div></div>`;
+}
 
-const nowLinePlug = { id:'nl', afterDraw(c) {
-  const now = new Date();
-  const idx = c.data.labels.findIndex(l => l instanceof Date && l >= now);
-  if (idx < 0) return;
-  const meta = c.getDatasetMeta(0); if (!meta.data[idx]) return;
-  const x = meta.data[idx].x, {top,bottom} = c.chartArea;
-  const ctx2 = c.ctx;
-  ctx2.save();
-  // glowing now line
-  const g = ctx2.createLinearGradient(0, top, 0, bottom);
-  g.addColorStop(0, 'rgba(56,189,248,.4)'); g.addColorStop(1, 'rgba(56,189,248,.0)');
-  ctx2.fillStyle = g; ctx2.fillRect(x-1, top, 2, bottom-top);
-  // "NOW" label
-  ctx2.font = '600 9px Outfit'; ctx2.fillStyle = 'rgba(56,189,248,.7)';
-  ctx2.textAlign = 'center'; ctx2.textBaseline = 'top'; ctx2.fillText('NOW', x, top + 3);
-  ctx2.restore();
+/* ═══════════════════════════════════════════
+   CHART ENGINE
+═══════════════════════════════════════════ */
+Chart.defaults.color='#2e4870';
+Chart.defaults.borderColor='#111f35';
+
+const nowLinePlug={id:'nl',afterDraw(c){
+  const now=new Date();
+  const idx=c.data.labels.findIndex(l=>l instanceof Date&&l>=now);
+  if(idx<0)return;
+  const meta=c.getDatasetMeta(0);if(!meta.data[idx])return;
+  const x=meta.data[idx].x,{top,bottom}=c.chartArea;
+  const cx=c.ctx;
+  cx.save();
+  const g=cx.createLinearGradient(0,top,0,bottom);
+  g.addColorStop(0,'rgba(56,189,248,.4)');g.addColorStop(1,'rgba(56,189,248,0)');
+  cx.fillStyle=g;cx.fillRect(x-1,top,2,bottom-top);
+  cx.font='600 9px Outfit';cx.fillStyle='rgba(56,189,248,.7)';
+  cx.textAlign='center';cx.textBaseline='top';cx.fillText('NOW',x,top+3);
+  cx.restore();
 }};
 
-function killC(id) { if (CH[id]) { CH[id].destroy(); delete CH[id]; } }
+function killC(id){if(CH[id]){CH[id].destroy();delete CH[id];}}
 
-function mkChart(id, labels, datasets, unit='', h=220, bar=false) {
+function mkChart(id,labels,datasets,unit='',h=220,bar=false){
   killC(id);
-  const el = document.getElementById(id); if (!el) return;
-  el.style.height = h + 'px';
-  CH[id] = new Chart(el, {
-    type: bar ? 'bar' : 'line',
-    data: { labels, datasets },
-    plugins: [nowLinePlug],
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      interaction: { mode:'index', intersect:false },
-      layout: { padding: { top: 18, bottom: 10, left: 2, right: 8 } },
-      plugins: {
-        legend: { display:false },
-        tooltip: { enabled:false, external(ctx) {
-          const tip = document.getElementById('tip');
-          if (ctx.tooltip.opacity === 0) { tip.style.display='none'; return; }
-          const i = ctx.tooltip.dataIndex, t = labels[i];
-          document.getElementById('tip-t').textContent =
-            t instanceof Date ? t.toLocaleString([],{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : String(t);
-          document.getElementById('tip-v').innerHTML =
-            ctx.tooltip.dataPoints.map(p => {
-              const raw = p.parsed && p.parsed.y !== undefined ? p.parsed.y : p.raw;
-              const val = raw === null || raw === undefined || Number.isNaN(raw) ? '--' : Number(raw).toFixed(unit==='in'?3:1).replace(/\.0$/,'');
-              const col = Array.isArray(p.dataset.borderColor) ? p.dataset.borderColor[p.dataIndex] : (p.dataset.borderColor || p.dataset.backgroundColor || '#e8f2fc');
-              return `<div style="color:${col}">
-                <span style="opacity:.4">${p.dataset.label || ''}</span>
-                &nbsp;<b style="color:#e8f2fc">${val}</b>
-                <span style="opacity:.3"> ${unit}</span>
-              </div>`;
-            }).join('');
-          tip.style.display = 'block';
-          const r = ctx.chart.canvas.getBoundingClientRect();
-          let x = r.left + ctx.tooltip.caretX + 14, y = r.top + ctx.tooltip.caretY - 14;
-          if (x + 155 > window.innerWidth) x -= 165; if (y < 60) y += 44;
-          tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  const el=document.getElementById(id);if(!el)return;
+  el.style.height=h+'px';
+  CH[id]=new Chart(el,{
+    type:bar?'bar':'line',
+    data:{labels,datasets},
+    plugins:[nowLinePlug],
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      layout:{padding:{top:18,bottom:10,left:2,right:8}},
+      plugins:{
+        legend:{display:false},
+        tooltip:{enabled:false,external(ctx){
+          showTip(ctx,labels,unit);
         }}
       },
-      scales: {
-        x: {
-          ticks: { color:'#2e4870', font:{family:'DM Mono',size:8}, maxRotation:0, autoSkip:true, maxTicksLimit:7,
-            callback(v,i) { const l=labels[i]; if(!(l instanceof Date)) return l;
-              if(l.getHours()===0) return l.toLocaleDateString([],{weekday:'short',month:'numeric',day:'numeric'});
-              if(l.getHours()%6===0) return l.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-              return ''; }},
-          grid: { color:'rgba(255,255,255,.025)' }, border: { color:'rgba(255,255,255,.04)' }
-        },
-        y: {
-          ticks: { color:'#2e4870', font:{family:'DM Mono',size:8} },
-          grid: { color:'rgba(255,255,255,.025)' }, border: { color:'rgba(255,255,255,.04)' },
-          afterDataLimits(scale){ const p=(scale.max-scale.min||1)*0.08; scale.max+=p; scale.min-=p; }
-        }
+      scales:{
+        x:{ticks:{color:'#2e4870',font:{family:'DM Mono',size:8},maxRotation:0,autoSkip:true,maxTicksLimit:7,
+          callback(v,i){const l=labels[i];if(!(l instanceof Date))return l;
+            if(l.getHours()===0)return l.toLocaleDateString([],{weekday:'short',month:'numeric',day:'numeric'});
+            if(l.getHours()%6===0)return l.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+            return'';}},
+          grid:{color:'rgba(255,255,255,.025)'},border:{color:'rgba(255,255,255,.04)'}},
+        y:{ticks:{color:'#2e4870',font:{family:'DM Mono',size:8}},
+          grid:{color:'rgba(255,255,255,.025)'},border:{color:'rgba(255,255,255,.04)'},
+          afterDataLimits(scale){const p=(scale.max-scale.min||1)*0.08;scale.max+=p;scale.min-=p;}}
       }
     }
   });
 }
 
-// Special temperature chart with gradient fill that changes color with temperature
-function mkTempChart(id, times, values, h=240) {
-  killC(id);
-  const el = document.getElementById(id); if (!el) return;
-  el.style.height = h + 'px';
-  const canvas = el;
-  const ctx2 = canvas.getContext('2d');
+// Shared tooltip show — handles both mkChart and mkTempChart
+function showTip(ctx,labels,unit){
+  const tip=document.getElementById('tip');
+  const dismiss=document.getElementById('tip-dismiss');
+  if(ctx.tooltip.opacity===0){hideTip();return;}
+  const i=ctx.tooltip.dataIndex,t=labels[i];
+  document.getElementById('tip-t').textContent=
+    t instanceof Date?t.toLocaleString([],{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):String(t);
+  document.getElementById('tip-v').innerHTML=
+    ctx.tooltip.dataPoints.map(p=>{
+      // get the raw numeric value correctly
+      const raw=p.parsed?.y??p.raw;
+      const val=raw===null||raw===undefined||Number.isNaN(Number(raw))?'--':fmtVal(Number(raw),unit);
+      const col=Array.isArray(p.dataset.borderColor)?p.dataset.borderColor[p.dataIndex]:(p.dataset.borderColor||p.dataset.backgroundColor||'#e8f2fc');
+      return `<div style="color:${col}"><span style="opacity:.4">${p.dataset.label||''}</span>&nbsp;<b style="color:#e8f2fc">${val}</b><span style="opacity:.3"> ${unit}</span></div>`;
+    }).join('');
+  tip.style.display='block';
+  dismiss.style.display='block';
+  const r=ctx.chart.canvas.getBoundingClientRect();
+  let x=r.left+ctx.tooltip.caretX+14,y=r.top+ctx.tooltip.caretY-14;
+  if(x+160>window.innerWidth)x-=170;
+  if(y+80>window.innerHeight)y-=90;
+  if(y<60)y=60;
+  tip.style.left=x+'px';tip.style.top=y+'px';
+}
 
-  CH[id] = new Chart(canvas, {
-    type: 'line',
-    data: { labels: times, datasets: [{
-      label: 'TEMP',
-      data: values,
-      borderColor: '#f5c030',
-      backgroundColor: (ctx3) => {
-        const chart = ctx3.chart;
-        const {ctx: c, chartArea} = chart;
-        if (!chartArea) return 'transparent';
-        const g = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-        g.addColorStop(0,   'rgba(232,48,48,.5)');   // hot top
-        g.addColorStop(0.3, 'rgba(240,112,32,.35)');
-        g.addColorStop(0.6, 'rgba(245,192,48,.2)');
-        g.addColorStop(1,   'rgba(56,189,248,.02)');
+function hideTip(){
+  document.getElementById('tip').style.display='none';
+  document.getElementById('tip-dismiss').style.display='none';
+}
+
+// Hide tooltip when scrolling
+document.getElementById('scroll').addEventListener('scroll',hideTip,{passive:true});
+
+// Temperature chart with proper value access
+function mkTempChart(id,times,values,h=240){
+  killC(id);
+  const el=document.getElementById(id);if(!el)return;
+  el.style.height=h+'px';
+
+  CH[id]=new Chart(el,{
+    type:'line',
+    data:{labels:times,datasets:[{
+      label:'TEMP',
+      data:values.map(v=>v===null?null:Number(v)), // ensure numeric or null
+      borderColor:'#f5c030',
+      backgroundColor:(ctx3)=>{
+        const{ctx:c,chartArea}=ctx3.chart;
+        if(!chartArea)return'transparent';
+        const g=c.createLinearGradient(0,chartArea.top,0,chartArea.bottom);
+        g.addColorStop(0,'rgba(232,48,48,.5)');
+        g.addColorStop(0.3,'rgba(240,112,32,.35)');
+        g.addColorStop(0.6,'rgba(245,192,48,.2)');
+        g.addColorStop(1,'rgba(56,189,248,.02)');
         return g;
       },
-      borderWidth: 2,
-      pointRadius: 0,
-      pointHoverRadius: 6,
-      pointHoverBackgroundColor: '#f5c030',
-      tension: 0.4,
-      fill: true,
-      spanGaps: true,
+      borderWidth:2,pointRadius:0,pointHoverRadius:6,
+      pointHoverBackgroundColor:'#f5c030',
+      tension:.4,fill:true,spanGaps:true,
     }]},
-    plugins: [nowLinePlug],
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      interaction: { mode:'index', intersect:false },
-      layout: { padding: { top: 18, bottom: 10, left: 2, right: 8 } },
-      plugins: {
-        legend: { display:false },
-        tooltip: { enabled:false, external(ctx) {
-          const tip = document.getElementById('tip');
-          if (ctx.tooltip.opacity === 0) { tip.style.display='none'; return; }
-          const i = ctx.tooltip.dataIndex, t = times[i], v = values[i];
-          document.getElementById('tip-t').textContent =
-            t instanceof Date ? t.toLocaleString([],{weekday:'short',hour:'2-digit',minute:'2-digit'}) : String(t);
-          document.getElementById('tip-v').innerHTML =
-            `<div style="color:${tCol(v??82)}"><b style="color:#e8f2fc;font-size:14px">${v??'--'}°F</b></div>`;
-          tip.style.display = 'block';
-          const r = ctx.chart.canvas.getBoundingClientRect();
-          let x = r.left + ctx.tooltip.caretX + 14, y = r.top + ctx.tooltip.caretY - 14;
-          if (x + 155 > window.innerWidth) x -= 165;
-          tip.style.left = x + 'px'; tip.style.top = y + 'px';
-        }}
+    plugins:[nowLinePlug],
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      layout:{padding:{top:18,bottom:10,left:2,right:8}},
+      plugins:{
+        legend:{display:false},
+        tooltip:{enabled:false,external(ctx){showTip(ctx,times,'°F');}}
       },
-      scales: {
-        x: { ticks:{color:'#2e4870',font:{family:'DM Mono',size:8},maxRotation:0,autoSkip:true,maxTicksLimit:8,
+      scales:{
+        x:{ticks:{color:'#2e4870',font:{family:'DM Mono',size:8},maxRotation:0,autoSkip:true,maxTicksLimit:8,
           callback(v,i){const l=times[i];if(!(l instanceof Date))return l;
             if(l.getHours()===0)return l.toLocaleDateString([],{weekday:'short',month:'numeric',day:'numeric'});
             if(l.getHours()%6===0)return l.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
             return'';}},
           grid:{color:'rgba(255,255,255,.025)'},border:{color:'rgba(255,255,255,.04)'}},
-        y: { ticks:{color:'#2e4870',font:{family:'DM Mono',size:8}},
+        y:{ticks:{color:'#2e4870',font:{family:'DM Mono',size:8}},
           grid:{color:'rgba(255,255,255,.025)'},border:{color:'rgba(255,255,255,.04)'},
-          afterDataLimits(scale){scale.max+=2;scale.min-=2;} }
+          afterDataLimits(scale){scale.max+=2;scale.min-=2;}}
       }
     }
   });
 }
 
-/* ═══════════════════════════════════════
+/* ═══════════════════════════════════════════
    UI WIRING
-═══════════════════════════════════════ */
+═══════════════════════════════════════════ */
 function setMode(m,el){S.mode=m;document.querySelectorAll('.mt').forEach(b=>b.classList.remove('on'));el.classList.add('on');render();}
-function setTab(t,el){S.tab=t;S.var=TABS[t]?.primary||S.var;document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));el.classList.add('on');render();}
 
-// shared model+run selectors injected at top of every single-mode page
+function setTab(t,el){
+  S.tab=t;
+  if(TABS[t]?.primary)S.var=TABS[t].primary;
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+
+  // show/hide map vs scroll
+  const mapWrap=document.getElementById('map-wrap');
+  const scroll=document.getElementById('scroll');
+  const ctrl=document.querySelector('.ctrl');
+  if(t==='map'){
+    scroll.style.display='none';
+    mapWrap.classList.add('active');
+    ctrl.style.display='none';
+    initMap();
+  } else {
+    scroll.style.display='';
+    mapWrap.classList.remove('active');
+    ctrl.style.display='';
+    if(MS.playing) togglePlay();
+    render();
+  }
+}
+
 function modelRunHTML(mod,runs){
   return `
     <div class="mstrip fu d1">
       ${Object.entries(MODELS).map(([k,m])=>`
         <div class="mchip${S.model===k?' on':''}" style="--mc:${m.c}" onclick="selModel('${k}')">
-          <div class="mchip-l">${m.l}</div>
-          <div class="mchip-r">${m.r}</div>
+          <div class="mchip-l">${m.l}</div><div class="mchip-r">${m.r}</div>
         </div>`).join('')}
     </div>
     <div class="rstrip fu d1">
@@ -1103,9 +828,8 @@ function modelRunHTML(mod,runs){
     </div>`;
 }
 
-// shared card wrapper
 function card(title,sub,badge,body,d='d2'){
-  return `<div class="card fu ${d}">
+  return`<div class="card fu ${d}">
     <div class="card-hd">
       <div><div class="card-title">${title}</div>${sub?`<div class="card-sub">${sub}</div>`:''}
       </div>${badge?`<div class="card-badge">${badge}</div>`:''}
@@ -1114,18 +838,50 @@ function card(title,sub,badge,body,d='d2'){
   </div>`;
 }
 
-/* ═══════════════════════════════════════
+function compareVarTabs(){
+  const allowed=TABS[S.tab]?.vars||['temp'];
+  return`<div class="vtabs fu d1">${allowed.map(v=>`<button class="vt${S.var===v?' on':''}" onclick="selVar('${v}')">${VARS[v].l}</button>`).join('')}</div>`;
+}
+function selVar(v){S.var=v;render();}
+function selModel(k){S.model=k;S.run=RUNS[k][0];render();}
+function selRun(r){S.run=r;render();}
+function selRunMod(k){S.runModel=k;S.cmpRuns=RUNS[k].slice(0,3);render();}
+function togRunCmp(r){
+  if(S.cmpRuns.includes(r)){if(S.cmpRuns.length>1)S.cmpRuns=S.cmpRuns.filter(x=>x!==r);}
+  else if(S.cmpRuns.length<4)S.cmpRuns.push(r);
+  render();
+}
+function togCmp(k){
+  if(S.cmpModels.includes(k)){if(S.cmpModels.length>1)S.cmpModels=S.cmpModels.filter(m=>m!==k);}
+  else if(S.cmpModels.length<6)S.cmpModels.push(k);
+  render();
+}
+function spreadClass(spread,unit){
+  const c1=unit==='°F'?2:unit==='in'?0.03:unit==='mph'?4:unit==='%'?10:30;
+  const c2=unit==='°F'?5:unit==='in'?0.10:unit==='mph'?9:unit==='%'?25:70;
+  return spread<=c1?'lo':spread<=c2?'md':'hi';
+}
+
+/* ═══════════════════════════════════════════
    LOCATION
-═══════════════════════════════════════ */
+═══════════════════════════════════════════ */
 const PLACES={
-  'tampa':    {lat:27.947,lon:-82.458,name:'Tampa, FL'},
-  'land o':   {lat:28.184,lon:-82.474,name:"Land O' Lakes, FL"},
-  'chicago':  {lat:41.881,lon:-87.623,name:'Chicago, IL'},
-  'new york': {lat:40.712,lon:-74.006,name:'New York, NY'},
-  'houston':  {lat:29.760,lon:-95.369,name:'Houston, TX'},
-  'miami':    {lat:25.775,lon:-80.208,name:'Miami, FL'},
-  'orlando':  {lat:28.538,lon:-81.379,name:'Orlando, FL'},
+  'tampa':   {lat:27.947,lon:-82.458,name:'Tampa, FL'},
+  'land o':  {lat:28.184,lon:-82.474,name:"Land O' Lakes, FL"},
+  'chicago': {lat:41.881,lon:-87.623,name:'Chicago, IL'},
+  'new york':{lat:40.712,lon:-74.006,name:'New York, NY'},
+  'houston': {lat:29.760,lon:-95.369,name:'Houston, TX'},
+  'miami':   {lat:25.775,lon:-80.208,name:'Miami, FL'},
+  'orlando': {lat:28.538,lon:-81.379,name:'Orlando, FL'},
 };
+
+async function geocode(q){
+  const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1&language=en&format=json`);
+  const d=await r.json();
+  if(!d.results?.length)throw new Error('Location not found');
+  return{lat:d.results[0].latitude,lon:d.results[0].longitude,
+    name:d.results[0].name+(d.results[0].admin1?', '+d.results[0].admin1:'')};
+}
 
 async function useMyLoc(){
   const sc=document.getElementById('scroll');
@@ -1133,10 +889,10 @@ async function useMyLoc(){
   if(!navigator.geolocation){showError(sc,'Geolocation not supported');return;}
   navigator.geolocation.getCurrentPosition(
     pos=>{
-      const {latitude:lat,longitude:lon}=pos.coords;
+      const{latitude:lat,longitude:lon}=pos.coords;
       S.loc={lat,lon,name:`${lat.toFixed(3)}°N, ${Math.abs(lon).toFixed(3)}°W`};
       document.getElementById('loc').value=S.loc.name;
-      S.loaded=true; render();
+      S.loaded=true;render();
     },
     ()=>showError(sc,'Location access denied')
   );
@@ -1148,40 +904,31 @@ async function go(){
   const sc=document.getElementById('scroll');
   showLoading(sc,'LOCATING...');
   try{
-    // lat,lon directly
     const m=q.match(/^(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)$/);
-    if(m){
-      S.loc={lat:+m[1],lon:+m[2],name:`${(+m[1]).toFixed(3)}°N`};
-    } else {
-      // try hardcoded list first (instant, no API needed)
+    if(m){S.loc={lat:+m[1],lon:+m[2],name:`${(+m[1]).toFixed(3)}°N`};}
+    else{
       const key=Object.keys(PLACES).find(p=>q.toLowerCase().includes(p));
-      if(key){
-        S.loc=PLACES[key];
-      } else {
-        // try Open-Meteo geocoding
-        S.loc=await geocode(q);
-      }
+      S.loc=key?PLACES[key]:await geocode(q);
     }
-    S.loaded=true;
-    render();
+    S.loaded=true;render();
   }catch(e){
-    showError(sc,`Could not find "${q}".<br><br>Try: Tampa, Chicago, Houston, Miami<br>or use lat,lon like: 28.18, -82.47`);
+    showError(sc,`Could not find "${q}".<br>Try: Tampa, Chicago, Miami<br>or lat,lon: 28.18,-82.47`);
   }
 }
 document.getElementById('loc').addEventListener('keydown',e=>{if(e.key==='Enter')go();});
 
-/* ═══════════════════════════════════════
+/* ═══════════════════════════════════════════
    RENDER
-═══════════════════════════════════════ */
+═══════════════════════════════════════════ */
 function render(){
   const sc=document.getElementById('scroll');
   if(!S.loaded){
-    sc.innerHTML=`<div class="empty"><div class="eg">WX</div><div class="et">ENTER A LOCATION</div><div class="es">type a city or lat, lon<br>to load model data</div></div>`;
+    sc.innerHTML=`<div class="empty"><div class="eg">WX</div><div class="et">ENTER A LOCATION</div><div class="es">type a city or lat, lon above<br>to load model data</div></div>`;
     return;
   }
-  if(S.mode==='single')  rSingle(sc);
-  if(S.mode==='compare') rCompare(sc);
-  if(S.mode==='runs')    rRuns(sc);
+  if(S.mode==='single') rSingle(sc);
+  if(S.mode==='compare')rCompare(sc);
+  if(S.mode==='runs')   rRuns(sc);
 }
 
 async function rSingle(sc){
@@ -1192,19 +939,20 @@ async function rSingle(sc){
   else if(S.tab==='upper')  await tabUpper(sc);
 }
 
-/* ═══════════════════════════════════════
-   TAB: FORECAST (overview)
-═══════════════════════════════════════ */
+/* ═══════════════════════════════════════════
+   TAB: FORECAST
+═══════════════════════════════════════════ */
 async function tabForecast(sc){
-  const mod=MODELS[S.model], runs=RUNS[S.model];
-  const {lat,lon}=S.loc;
+  const mod=MODELS[S.model],runs=RUNS[S.model],{lat,lon}=S.loc;
   showLoading(sc,`LOADING FORECAST · ${mod.l}...`);
   let b;
-  try{ b=await fetchBundle(S.model,['temp','dewpoint','wind','gust','precip'],S.run,lat,lon); }
-  catch(e){ showError(sc,e.message); return; }
+  try{b=await fetchBundle(S.model,['temp','dewpoint','wind','gust','precip'],S.run,lat,lon);}
+  catch(e){showError(sc,e.message);return;}
 
-  const td=b.temp||{times:[],values:[]}, dwd=b.dewpoint||{times:[],values:[]};
-  const wd=b.wind||{times:[],values:[]}, gd=b.gust||{times:[],values:[]};
+  const td=b.temp||{times:[],values:[]};
+  const dwd=b.dewpoint||{times:[],values:[]};
+  const wd=b.wind||{times:[],values:[]};
+  const gd=b.gust||{times:[],values:[]};
   const pd=b.precip||{times:[],values:[]};
   const now=new Date();
   const nowT=currentValue(td)!=null?Math.round(currentValue(td)):null;
@@ -1217,7 +965,7 @@ async function tabForecast(sc){
   const absHi=days7.length?Math.max(...days7.map(d=>d.hi)):95;
   const today=days7[0]||{hi:absHi,lo:absLo};
   const fullR=absHi-absLo||1;
-  const p24=pd.values.slice(0,24), pTot=p24.reduce((a,v)=>a+(v||0),0);
+  const p24=pd.values.slice(0,24),pTot=p24.reduce((a,v)=>a+(v||0),0);
 
   sc.innerHTML=`
     <div class="hero fu d1">
@@ -1237,7 +985,7 @@ async function tabForecast(sc){
         <div class="hero-aside">
           <div class="hero-lohi">
             <span class="hero-lo">↓${Math.round(today.lo??0)}°</span>
-            <span class="hero-sep"> / </span>
+            <span class="hero-sep">/</span>
             <span class="hero-hi">${Math.round(today.hi??0)}°↑</span>
           </div>
           <div class="hero-feels">FEELS ${nowF??'--'}° · DEW ${nowD??'--'}°</div>
@@ -1262,7 +1010,7 @@ async function tabForecast(sc){
             const pp=pd.values.slice(i*24,(i+1)*24).reduce((a,v)=>a+(v||0),0);
             const loP=((d.lo-absLo)/fullR*100).toFixed(0);
             const wP=((d.hi-d.lo)/fullR*80+10).toFixed(0);
-            return `<div class="dtile${isToday?' today':''}">
+            return`<div class="dtile${isToday?' today':''}">
               <div class="dtile-dow">${isToday?'TODAY':DAYS[d.date.getDay()]}</div>
               <div class="dtile-ico">${ICONS[i%ICONS.length]}</div>
               <div class="dtile-hi" style="color:${tCol(d.hi)}">${Math.round(d.hi)}°</div>
@@ -1276,33 +1024,34 @@ async function tabForecast(sc){
         </div>
       </div>
       ${card('TEMPERATURE FORECAST',`${mod.l} ${S.run} · ${S.loc.name}`,'°F','<div class="ch-wrap"><canvas id="ch-f-temp"></canvas></div>','d3')}
-      ${card('TEMP + DEWPOINT',`spread = humidity · narrowing = muggy`,'°F','<div class="legend"><div class="li"><div class="ll" style="background:#f5c030"></div>TEMP</div><div class="li"><div class="ll" style="background:#38bdf8"></div>DEW</div></div><div class="ch-wrap"><canvas id="ch-f-td"></canvas></div>','d3')}
+      ${card('TEMP + DEWPOINT','spread = humidity · narrowing = muggy','°F',
+        `<div class="legend"><div class="li"><div class="ll" style="background:#f5c030"></div>TEMP</div><div class="li"><div class="ll" style="background:#38bdf8"></div>DEW</div></div>
+        <div class="ch-wrap"><canvas id="ch-f-td"></canvas></div>`,'d4')}
     </div>`;
 
   requestAnimationFrame(()=>{
-    mkTempChart('ch-f-temp', td.times, td.values, 240);
-    const cv2=document.getElementById('ch-f-td'); if(!cv2) return;
+    mkTempChart('ch-f-temp',td.times,td.values,240);
+    const cv2=document.getElementById('ch-f-td');if(!cv2)return;
     const g2=cv2.getContext('2d').createLinearGradient(0,0,0,200);
-    g2.addColorStop(0,'rgba(245,192,48,.4)'); g2.addColorStop(1,'rgba(245,192,48,.02)');
+    g2.addColorStop(0,'rgba(245,192,48,.4)');g2.addColorStop(1,'rgba(245,192,48,.02)');
     const g3=cv2.getContext('2d').createLinearGradient(0,0,0,200);
-    g3.addColorStop(0,'rgba(56,189,248,.25)'); g3.addColorStop(1,'rgba(56,189,248,.01)');
+    g3.addColorStop(0,'rgba(56,189,248,.25)');g3.addColorStop(1,'rgba(56,189,248,.01)');
     mkChart('ch-f-td',td.times,[
-      {label:'TEMP',data:td.values,borderColor:'#f5c030',backgroundColor:g2,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true},
-      {label:'DEW', data:dwd.values,borderColor:'#38bdf8',backgroundColor:g3,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true},
+      {label:'TEMP',data:td.values.map(v=>v===null?null:Number(v)),borderColor:'#f5c030',backgroundColor:g2,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true},
+      {label:'DEW', data:dwd.values.map(v=>v===null?null:Number(v)),borderColor:'#38bdf8',backgroundColor:g3,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true},
     ],'°F',200);
   });
 }
 
-/* ═══════════════════════════════════════
-   TAB: TEMPERATURE (deep dive)
-═══════════════════════════════════════ */
+/* ═══════════════════════════════════════════
+   TAB: TEMPERATURE
+═══════════════════════════════════════════ */
 async function tabTemp(sc){
-  const mod=MODELS[S.model], runs=RUNS[S.model];
-  const {lat,lon}=S.loc;
+  const mod=MODELS[S.model],runs=RUNS[S.model],{lat,lon}=S.loc;
   showLoading(sc,`LOADING TEMPERATURE · ${mod.l}...`);
   let b;
-  try{ b=await fetchBundle(S.model,['temp','dewpoint','t850'],S.run,lat,lon); }
-  catch(e){ showError(sc,e.message); return; }
+  try{b=await fetchBundle(S.model,['temp','dewpoint','t850'],S.run,lat,lon);}
+  catch(e){showError(sc,e.message);return;}
 
   const td=b.temp||{times:[],values:[]};
   const dwd=b.dewpoint||{times:[],values:[]};
@@ -1314,14 +1063,11 @@ async function tabTemp(sc){
   const today=days7[0]||{hi:90,lo:72};
   const fullR=absHi-absLo||1;
   const nowT=currentValue(td)!=null?Math.round(currentValue(td)):null;
-  const anom=nowT!=null?nowT-climo:null;
 
   sc.innerHTML=`
     ${modelRunHTML(mod,runs)}
     <div class="pad">
-
-      <!-- TODAY RANGE CARD -->
-      ${card('TODAY\'S TEMPERATURE RANGE',`${mod.l} ${S.run} · week context`,'°F',`
+      ${card("TODAY'S TEMPERATURE RANGE",`${mod.l} ${S.run} · week context`,'°F',`
         <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:10px;margin-bottom:4px;">
           <span style="color:#38bdf8">↓ ${Math.round(today.lo??0)}° LOW</span>
           <span>NOW <b style="color:${tCol(nowT??82)};font-size:14px">${nowT??'--'}°</b></span>
@@ -1334,22 +1080,19 @@ async function tabTemp(sc){
         <div class="trange-lbls"><span>WEEK LOW ${Math.round(absLo)}°</span><span>WEEK HIGH ${Math.round(absHi)}°</span></div>
       `,'d2')}
 
-      <!-- HOURLY GRADIENT TEMP CHART -->
       ${card('HOURLY TEMPERATURE',`${mod.l} ${S.run} · color = temperature`,'°F','<div class="ch-wrap"><canvas id="ch-t-main"></canvas></div>','d2')}
 
-      <!-- DAILY HI/LO BARS -->
-      ${card('DAILY HIGH / LOW',`7-day · each bar shows the full day range`,'°F','<div class="ch-wrap"><canvas id="ch-t-hilo"></canvas></div>','d3')}
+      ${card('DAILY HIGH / LOW','7-day · color coded by temperature','°F','<div class="ch-wrap"><canvas id="ch-t-hilo"></canvas></div>','d3')}
 
-      <!-- TEMP ANOMALY (diverging bars) -->
       ${card('TEMPERATURE ANOMALY',`vs ${climo}° climatology · ${mod.l} ${S.run}`,'°F',`
         <div class="anom-bars">
           ${td.values.slice(0,36).map((v,i)=>{
             if(v===null)return'';
-            const a=v-climo, pct=Math.min(Math.abs(a)/15*50,50);
+            const a=v-climo,pct=Math.min(Math.abs(a)/15*50,50);
             const t=td.times[i];
             const lbl=t?t.toLocaleTimeString([],{hour:'numeric'}):'';
             const show=i===0||i%4===0;
-            return `<div class="anom-bar-row">
+            return`<div class="anom-bar-row">
               <div class="anom-bar-time" style="opacity:${show?1:.2}">${show?lbl:''}</div>
               <div class="anom-bar-track">
                 <div class="anom-bar-center"></div>
@@ -1367,116 +1110,84 @@ async function tabTemp(sc){
         </div>
       `,'d3')}
 
-      <!-- DEWPOINT SPREAD -->
-      ${card('TEMP vs DEWPOINT SPREAD',`narrowing gap = increasing humidity and mugginess`,'°F','<div class="legend"><div class="li"><div class="ll" style="background:#f5c030"></div>TEMPERATURE</div><div class="li"><div class="ll" style="background:#38bdf8"></div>DEWPOINT</div></div><div class="ch-wrap"><canvas id="ch-t-spread"></canvas></div>','d4')}
+      ${card('TEMP vs DEWPOINT SPREAD','narrowing gap = increasing humidity','°F',
+        `<div class="legend"><div class="li"><div class="ll" style="background:#f5c030"></div>TEMPERATURE</div><div class="li"><div class="ll" style="background:#38bdf8"></div>DEWPOINT</div></div>
+        <div class="ch-wrap"><canvas id="ch-t-spread"></canvas></div>`,'d4')}
 
-      <!-- 850MB TEMP -->
       ${t850d.values.length?card('850mb TEMPERATURE',`upper air thermal analysis · ${mod.l} ${S.run}`,'°F','<div class="ch-wrap"><canvas id="ch-t-850"></canvas></div>','d5'):''}
-
     </div>`;
 
   requestAnimationFrame(()=>{
-    mkTempChart('ch-t-main', td.times, td.values, 250);
+    mkTempChart('ch-t-main',td.times,td.values,250);
 
-    // daily hi/lo floating bar chart
     const dayLbls=days7.map((d,i)=>i===0?'TODAY':DAYS[d.date.getDay()]);
-    const loVals=days7.map(d=>+d.lo.toFixed(1));
-    const hiVals=days7.map(d=>+d.hi.toFixed(1));
-    // use bar chart with min/max trick
     mkChart('ch-t-hilo',dayLbls,[
-      {label:'LOW', data:loVals, backgroundColor:days7.map(d=>`${tCol(d.lo)}cc`), borderColor:days7.map(d=>tCol(d.lo)), borderWidth:1, borderRadius:4},
-      {label:'HIGH',data:hiVals,backgroundColor:days7.map(d=>`${tCol(d.hi)}99`), borderColor:days7.map(d=>tCol(d.hi)), borderWidth:1, borderRadius:4},
+      {label:'LOW', data:days7.map(d=>+d.lo.toFixed(1)),backgroundColor:days7.map(d=>tCol(d.lo)+'cc'),borderColor:days7.map(d=>tCol(d.lo)),borderWidth:1,borderRadius:4},
+      {label:'HIGH',data:days7.map(d=>+d.hi.toFixed(1)),backgroundColor:days7.map(d=>tCol(d.hi)+'99'),borderColor:days7.map(d=>tCol(d.hi)),borderWidth:1,borderRadius:4},
     ],'°F',200,true);
 
-    // spread
-    const cv3=document.getElementById('ch-t-spread'); if(!cv3) return;
+    const cv3=document.getElementById('ch-t-spread');if(!cv3)return;
     const g2=cv3.getContext('2d').createLinearGradient(0,0,0,200);
-    g2.addColorStop(0,'rgba(245,192,48,.35)'); g2.addColorStop(1,'rgba(245,192,48,.02)');
+    g2.addColorStop(0,'rgba(245,192,48,.35)');g2.addColorStop(1,'rgba(245,192,48,.02)');
     const g3=cv3.getContext('2d').createLinearGradient(0,0,0,200);
-    g3.addColorStop(0,'rgba(56,189,248,.25)'); g3.addColorStop(1,'rgba(56,189,248,.01)');
+    g3.addColorStop(0,'rgba(56,189,248,.25)');g3.addColorStop(1,'rgba(56,189,248,.01)');
     mkChart('ch-t-spread',td.times,[
-      {label:'TEMP',data:td.values,borderColor:'#f5c030',backgroundColor:g2,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true},
-      {label:'DEW', data:dwd.values,borderColor:'#38bdf8',backgroundColor:g3,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true},
+      {label:'TEMP',data:td.values.map(v=>v===null?null:Number(v)),borderColor:'#f5c030',backgroundColor:g2,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true},
+      {label:'DEW', data:dwd.values.map(v=>v===null?null:Number(v)),borderColor:'#38bdf8',backgroundColor:g3,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true},
     ],'°F',210);
 
     if(t850d.values.length){
-      const cv4=document.getElementById('ch-t-850'); if(!cv4) return;
+      const cv4=document.getElementById('ch-t-850');if(!cv4)return;
       const g4=cv4.getContext('2d').createLinearGradient(0,0,0,180);
-      g4.addColorStop(0,'rgba(253,186,116,.4)'); g4.addColorStop(1,'rgba(253,186,116,.02)');
-      mkChart('ch-t-850',t850d.times,[{label:'850mb TMP',data:t850d.values,borderColor:'#fdba74',backgroundColor:g4,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true}],'°F',180);
+      g4.addColorStop(0,'rgba(253,186,116,.4)');g4.addColorStop(1,'rgba(253,186,116,.02)');
+      mkChart('ch-t-850',t850d.times,[{label:'850mb',data:t850d.values.map(v=>v===null?null:Number(v)),borderColor:'#fdba74',backgroundColor:g4,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true}],'°F',180);
     }
   });
 }
 
-/* ═══════════════════════════════════════
-   TAB: PRECIPITATION (deep dive)
-═══════════════════════════════════════ */
+/* ═══════════════════════════════════════════
+   TAB: PRECIPITATION
+═══════════════════════════════════════════ */
 async function tabPrecip(sc){
-  const mod=MODELS[S.model], runs=RUNS[S.model];
-  const {lat,lon}=S.loc;
+  const mod=MODELS[S.model],runs=RUNS[S.model],{lat,lon}=S.loc;
   showLoading(sc,`LOADING PRECIP · ${mod.l}...`);
   let b;
-  try{ b=await fetchBundle(S.model,['precip','snow'],S.run,lat,lon); }
-  catch(e){ showError(sc,e.message); return; }
+  try{b=await fetchBundle(S.model,['precip','snow'],S.run,lat,lon);}
+  catch(e){showError(sc,e.message);return;}
 
   const pd=b.precip||{times:[],values:[]};
-  const sd=b.snow||{times:[],values:[]};
   const p24=pd.values.slice(0,24);
   const pMax=Math.max(...p24.map(v=>v||0),.005);
   const pTot24=p24.reduce((a,v)=>a+(v||0),0);
-
-  // cumulative accumulation
   let cumul=0;
-  const cumulVals=pd.values.map(v=>{ cumul+=v||0; return +cumul.toFixed(4); });
+  const cumulVals=pd.values.map(v=>{cumul+=v||0;return+cumul.toFixed(4);});
 
-  // daily totals
-  const days7p=pd.values.length?dailyStats(pd.times,pd.values.map((_,i)=>{
-    const day=Math.floor(i/24);
-    return pd.values.slice(day*24,(day+1)*24).reduce((a,v)=>a+(v||0),0);
-  })):[];
-
-  // 6-hour bucket totals for bar chart
-  const buckets48=Array.from({length:Math.ceil(pd.values.length/6)},(_,b)=>{
-    return +pd.values.slice(b*6,(b+1)*6).reduce((a,v)=>a+(v||0),0).toFixed(4);
+  const buckets=Array.from({length:Math.ceil(Math.min(pd.values.length,96)/6)},(_,i)=>{
+    return+pd.values.slice(i*6,(i+1)*6).reduce((a,v)=>a+(v||0),0).toFixed(4);
   }).slice(0,16);
-  const bucketLabels=Array.from({length:buckets48.length},(_,i)=>{
-    const t=pd.times[i*6]; return t?t.toLocaleTimeString([],{hour:'numeric',month:'numeric',day:'numeric'}):`+${i*6}h`;
+  const bucketLabels=Array.from({length:buckets.length},(_,i)=>{
+    const t=pd.times[i*6];return t?t.toLocaleTimeString([],{hour:'numeric',month:'numeric',day:'numeric'}):'+'+i*6+'h';
   });
 
   sc.innerHTML=`
     ${modelRunHTML(mod,runs)}
     <div class="pad">
-
-      <!-- SUMMARY TILES -->
       <div class="fu d2">
         <div class="slbl" style="margin-bottom:8px;">PRECIP SUMMARY</div>
         <div class="cv-grid" style="grid-template-columns:repeat(3,1fr)">
-          <div class="cvt" style="--tc:#38bdf8">
-            <div class="cvt-l" style="color:#38bdf8">24HR TOTAL</div>
-            <div class="cvt-v">${pTot24>.001?pTot24.toFixed(3):0}</div>
-            <div class="cvt-u">inches</div>
-          </div>
-          <div class="cvt" style="--tc:#818cf8">
-            <div class="cvt-l" style="color:#818cf8">PEAK HR</div>
-            <div class="cvt-v">${Math.max(...p24.map(v=>v||0)).toFixed(3)}</div>
-            <div class="cvt-u">in/hr max</div>
-          </div>
-          <div class="cvt" style="--tc:#e879f9">
-            <div class="cvt-l" style="color:#e879f9">RAIN HRS</div>
-            <div class="cvt-v">${p24.filter(v=>(v||0)>.005).length}</div>
-            <div class="cvt-u">of 24 hrs</div>
-          </div>
+          <div class="cvt" style="--tc:#38bdf8"><div class="cvt-l" style="color:#38bdf8">24HR TOTAL</div><div class="cvt-v">${pTot24>.001?pTot24.toFixed(3):0}</div><div class="cvt-u">inches</div></div>
+          <div class="cvt" style="--tc:#818cf8"><div class="cvt-l" style="color:#818cf8">PEAK HOUR</div><div class="cvt-v">${Math.max(...p24.map(v=>v||0)).toFixed(3)}</div><div class="cvt-u">in/hr max</div></div>
+          <div class="cvt" style="--tc:#e879f9"><div class="cvt-l" style="color:#e879f9">RAIN HOURS</div><div class="cvt-v">${p24.filter(v=>(v||0)>.005).length}</div><div class="cvt-u">of 24 hrs</div></div>
         </div>
       </div>
 
-      <!-- HOURLY INTENSITY BARS -->
       ${card('HOURLY PRECIPITATION INTENSITY',`next 24 hours · ${mod.l} ${S.run}`,'in',`
         <div style="height:100px;display:flex;align-items:flex-end;gap:2px;padding:0 2px;">
           ${p24.map((v,i)=>{
-            const val=v||0, h=Math.max(3,Math.round((val/pMax)*94));
+            const val=v||0,h=Math.max(3,Math.round((val/pMax)*94));
             const cls=val>.1?'heavy':val>.02?'mod':val>.005?'light':'dry';
             const t=pd.times[i];
-            return `<div class="pbar ${cls}" style="height:${h}px"
+            return`<div class="pbar ${cls}" style="height:${h}px"
               title="${t?t.toLocaleTimeString([],{hour:'numeric'}):''}: ${val.toFixed(3)}&quot;"></div>`;
           }).join('')}
         </div>
@@ -1491,42 +1202,26 @@ async function tabPrecip(sc){
         </div>
       `,'d2')}
 
-      <!-- 6-HR BUCKETS -->
-      ${card('6-HOUR PRECIPITATION TOTALS',`${mod.l} ${S.run} · accumulated per 6hr period`,'in','<div class="ch-wrap"><canvas id="ch-p-6hr"></canvas></div>','d3')}
-
-      <!-- CUMULATIVE ACCUMULATION -->
+      ${card('6-HOUR TOTALS',`${mod.l} ${S.run} · accumulated per 6hr period`,'in','<div class="ch-wrap"><canvas id="ch-p-6hr"></canvas></div>','d3')}
       ${card('CUMULATIVE ACCUMULATION',`running total · ${mod.l} ${S.run}`,'in','<div class="ch-wrap"><canvas id="ch-p-cumul"></canvas></div>','d3')}
-
-      <!-- 7-DAY DAILY TOTALS -->
       ${card('7-DAY DAILY TOTALS',`daily precipitation · ${mod.l}`,'in','<div class="ch-wrap"><canvas id="ch-p-daily"></canvas></div>','d4')}
-
     </div>`;
 
   requestAnimationFrame(()=>{
-    // 6hr buckets bar
-
     mkChart('ch-p-6hr',bucketLabels,[{
-      label:'6HR',data:buckets48,
-      backgroundColor:buckets48.map(v=>v>.1?'rgba(200,39,211,.7)':v>.02?'rgba(99,102,241,.7)':'rgba(14,165,233,.6)'),
-      borderColor:buckets48.map(v=>v>.1?'#e879f9':v>.02?'#818cf8':'#38bdf8'),
+      label:'6HR',data:buckets,
+      backgroundColor:buckets.map(v=>v>.1?'rgba(200,39,211,.7)':v>.02?'rgba(99,102,241,.7)':'rgba(14,165,233,.6)'),
+      borderColor:buckets.map(v=>v>.1?'#e879f9':v>.02?'#818cf8':'#38bdf8'),
       borderWidth:1,borderRadius:4,
     }],'in',190,true);
 
-    // cumulative
-    const cv2=document.getElementById('ch-p-cumul'); if(!cv2)return;
+    const cv2=document.getElementById('ch-p-cumul');if(!cv2)return;
     const gc=cv2.getContext('2d').createLinearGradient(0,0,0,200);
-    gc.addColorStop(0,'rgba(56,189,248,.4)'); gc.addColorStop(1,'rgba(56,189,248,.02)');
-    mkChart('ch-p-cumul',pd.times,[{
-      label:'CUMUL',data:cumulVals,
-      borderColor:'#38bdf8',backgroundColor:gc,
-      borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true,
-    }],'in',200);
+    gc.addColorStop(0,'rgba(56,189,248,.4)');gc.addColorStop(1,'rgba(56,189,248,.02)');
+    mkChart('ch-p-cumul',pd.times,[{label:'CUMUL',data:cumulVals,borderColor:'#38bdf8',backgroundColor:gc,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true}],'in',200);
 
-    // daily totals
     const dayTots=Array.from({length:7},(_,i)=>+pd.values.slice(i*24,(i+1)*24).reduce((a,v)=>a+(v||0),0).toFixed(4));
-    const dayLbls7=Array.from({length:7},(_,i)=>{
-      const t=pd.times[i*24]; return t?t.toLocaleDateString([],{weekday:'short',month:'numeric',day:'numeric'}):`D+${i}`;
-    });
+    const dayLbls7=Array.from({length:7},(_,i)=>{const t=pd.times[i*24];return t?t.toLocaleDateString([],{weekday:'short',month:'numeric',day:'numeric'}):'D+'+i;});
     mkChart('ch-p-daily',dayLbls7,[{
       label:'DAILY',data:dayTots,
       backgroundColor:dayTots.map(v=>v>.5?'rgba(200,39,211,.7)':v>.1?'rgba(99,102,241,.7)':'rgba(14,165,233,.6)'),
@@ -1536,33 +1231,29 @@ async function tabPrecip(sc){
   });
 }
 
-/* ═══════════════════════════════════════
-   TAB: WIND (deep dive)
-═══════════════════════════════════════ */
+/* ═══════════════════════════════════════════
+   TAB: WIND
+═══════════════════════════════════════════ */
 async function tabWind(sc){
-  const mod=MODELS[S.model], runs=RUNS[S.model];
-  const {lat,lon}=S.loc;
+  const mod=MODELS[S.model],runs=RUNS[S.model],{lat,lon}=S.loc;
   showLoading(sc,`LOADING WIND · ${mod.l}...`);
   let b;
-  try{ b=await fetchBundle(S.model,['wind','gust'],S.run,lat,lon); }
-  catch(e){ showError(sc,e.message); return; }
+  try{b=await fetchBundle(S.model,['wind','gust'],S.run,lat,lon);}
+  catch(e){showError(sc,e.message);return;}
 
   const wd=b.wind||{times:[],values:[]};
   const gd=b.gust||{times:[],values:[]};
   const nowW=currentValue(wd)!=null?Math.round(currentValue(wd)):null;
   const nowG=currentValue(gd)!=null?Math.round(currentValue(gd)):null;
-  const maxW=Math.round(Math.max(...wd.values.filter(v=>v!=null)));
-  const maxG=Math.round(Math.max(...gd.values.filter(v=>v!=null)));
-  const avgW=wd.values.filter(v=>v!=null).length?
-    Math.round(wd.values.filter(v=>v!=null).reduce((a,v)=>a+v,0)/wd.values.filter(v=>v!=null).length):null;
+  const wVals=wd.values.filter(v=>v!=null);
+  const maxG=gd.values.filter(v=>v!=null).length?Math.round(Math.max(...gd.values.filter(v=>v!=null))):null;
+  const avgW=wVals.length?Math.round(wVals.reduce((a,v)=>a+v,0)/wVals.length):null;
   const dirDeg=Math.round(175+Math.sin(Date.now()/2e6)*40);
   const dirLbl=DIRS[Math.round(dirDeg/22.5)%16];
 
   sc.innerHTML=`
     ${modelRunHTML(mod,runs)}
     <div class="pad">
-
-      <!-- WIND NOW HERO -->
       <div class="card fu d2">
         <div class="card-hd"><div><div class="card-title">CURRENT WIND</div><div class="card-sub">${mod.l} ${S.run} · ${S.loc.name}</div></div><div class="card-badge">MPH</div></div>
         <div class="card-body">
@@ -1582,35 +1273,34 @@ async function tabWind(sc){
         </div>
       </div>
 
-      <!-- WIND STATS -->
       <div class="fu d2">
         <div class="cv-grid" style="grid-template-columns:repeat(3,1fr)">
           <div class="cvt" style="--tc:#2dd4bf"><div class="cvt-l" style="color:#2dd4bf">NOW</div><div class="cvt-v">${nowW??'--'}</div><div class="cvt-u">mph sustained</div></div>
           <div class="cvt" style="--tc:#67e8f9"><div class="cvt-l" style="color:#67e8f9">MAX GUST</div><div class="cvt-v">${maxG??'--'}</div><div class="cvt-u">mph forecast</div></div>
-          <div class="cvt" style="--tc:#a5f3fc"><div class="cvt-l" style="color:#a5f3fc">AVG WIND</div><div class="cvt-v">${avgW??'--'}</div><div class="cvt-u">mph forecast avg</div></div>
+          <div class="cvt" style="--tc:#a5f3fc"><div class="cvt-l" style="color:#a5f3fc">AVG WIND</div><div class="cvt-v">${avgW??'--'}</div><div class="cvt-u">mph avg</div></div>
         </div>
       </div>
 
-      <!-- SUSTAINED vs GUST DUAL -->
-      ${card('SUSTAINED WIND vs GUST',`${mod.l} ${S.run} · gust = peak within hour`,'mph','<div class="legend"><div class="li"><div class="ll" style="background:#2dd4bf"></div>SUSTAINED</div><div class="li"><div class="ll" style="background:#67e8f9"></div>GUST</div></div><div class="ch-wrap"><canvas id="ch-w-dual"></canvas></div>','d3')}
+      ${card('SUSTAINED WIND vs GUST',`${mod.l} ${S.run}`,'mph',
+        `<div class="legend"><div class="li"><div class="ll" style="background:#2dd4bf"></div>SUSTAINED</div><div class="li"><div class="ll" style="background:#67e8f9"></div>GUST</div></div>
+        <div class="ch-wrap"><canvas id="ch-w-dual"></canvas></div>`,'d3')}
 
-      <!-- SUSTAINED WIND CHART -->
       ${card('WIND SPEED FORECAST',`${mod.l} ${S.run} · hourly sustained`,'mph','<div class="ch-wrap"><canvas id="ch-w-main"></canvas></div>','d3')}
 
-      <!-- WIND DIRECTION STRIP -->
       <div class="card fu d4">
-        <div class="card-hd"><div><div class="card-title">WIND DIRECTION OVER TIME</div><div class="card-sub">estimated · 24-hour progression</div></div></div>
+        <div class="card-hd"><div><div class="card-title">WIND DIRECTION OVER TIME</div><div class="card-sub">24-hour · estimated progression</div></div></div>
         <div class="card-body">
           <div style="display:flex;gap:4px;flex-wrap:wrap;">
             ${Array.from({length:24},(_,i)=>{
-              const deg=dirDeg+(i*8); // mock progression
+              const deg=dirDeg+(i*8);
               const d=DIRS[Math.round(((deg%360)+360)%360/22.5)%16];
               const t=wd.times[i];
               const lbl=t?t.toLocaleTimeString([],{hour:'numeric'}):'';
               const spd=wd.values[i]!=null?Math.round(wd.values[i]):'--';
               const intensity=wd.values[i]!=null?Math.min(wd.values[i]/30,1):0;
-              return `<div style="flex:1;min-width:28px;text-align:center;padding:6px 2px;
-                background:rgba(45,212,191,${intensity*.2+.04});border-radius:6px;border:1px solid rgba(45,212,191,${intensity*.3+.08})">
+              return`<div style="flex:1;min-width:28px;text-align:center;padding:6px 2px;
+                background:rgba(45,212,191,${(intensity*.2+.04).toFixed(2)});border-radius:6px;
+                border:1px solid rgba(45,212,191,${(intensity*.3+.08).toFixed(2)})">
                 <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2)">${lbl}</div>
                 <div style="font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:#2dd4bf;margin:3px 0">${d}</div>
                 <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--ink3)">${spd}</div>
@@ -1619,171 +1309,107 @@ async function tabWind(sc){
           </div>
         </div>
       </div>
-
     </div>`;
 
   requestAnimationFrame(()=>{
-    // dual sustained vs gust
-    const gw=document.getElementById('ch-w-dual'); if(!gw)return;
+    const gw=document.getElementById('ch-w-dual');if(!gw)return;
     const g1=gw.getContext('2d').createLinearGradient(0,0,0,210);
-    g1.addColorStop(0,'rgba(45,212,191,.35)'); g1.addColorStop(1,'rgba(45,212,191,.02)');
+    g1.addColorStop(0,'rgba(45,212,191,.35)');g1.addColorStop(1,'rgba(45,212,191,.02)');
     const g2=gw.getContext('2d').createLinearGradient(0,0,0,210);
-    g2.addColorStop(0,'rgba(103,232,249,.2)'); g2.addColorStop(1,'rgba(103,232,249,.01)');
+    g2.addColorStop(0,'rgba(103,232,249,.2)');g2.addColorStop(1,'rgba(103,232,249,.01)');
     mkChart('ch-w-dual',wd.times,[
-      {label:'SUSTAINED',data:wd.values,borderColor:'#2dd4bf',backgroundColor:g1,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true},
-      {label:'GUST',data:gd.values,borderColor:'#67e8f9',backgroundColor:g2,borderWidth:1.5,borderDash:[4,3],pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true},
+      {label:'SUSTAINED',data:wd.values.map(v=>v===null?null:Number(v)),borderColor:'#2dd4bf',backgroundColor:g1,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true},
+      {label:'GUST',data:gd.values.map(v=>v===null?null:Number(v)),borderColor:'#67e8f9',backgroundColor:g2,borderWidth:1.5,borderDash:[4,3],pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true},
     ],'mph',210);
-
-    const gx=document.getElementById('ch-w-main'); if(!gx)return;
+    const gx=document.getElementById('ch-w-main');if(!gx)return;
     const g3=gx.getContext('2d').createLinearGradient(0,0,0,200);
-    g3.addColorStop(0,'rgba(45,212,191,.4)'); g3.addColorStop(1,'rgba(45,212,191,.02)');
-    mkChart('ch-w-main',wd.times,[{label:'WIND',data:wd.values,borderColor:'#2dd4bf',backgroundColor:g3,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true}],'mph',200);
+    g3.addColorStop(0,'rgba(45,212,191,.4)');g3.addColorStop(1,'rgba(45,212,191,.02)');
+    mkChart('ch-w-main',wd.times,[{label:'WIND',data:wd.values.map(v=>v===null?null:Number(v)),borderColor:'#2dd4bf',backgroundColor:g3,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true}],'mph',200);
   });
 }
 
-/* ═══════════════════════════════════════
+/* ═══════════════════════════════════════════
    TAB: UPPER AIR
-═══════════════════════════════════════ */
+═══════════════════════════════════════════ */
 async function tabUpper(sc){
-  const mod=MODELS[S.model], runs=RUNS[S.model];
-  const {lat,lon}=S.loc;
+  const mod=MODELS[S.model],runs=RUNS[S.model],{lat,lon}=S.loc;
   showLoading(sc,`LOADING UPPER AIR · ${mod.l}...`);
   let b;
-  try{ b=await fetchBundle(S.model,['h500','rh700','t850'],S.run,lat,lon); }
-  catch(e){ showError(sc,e.message); return; }
+  try{b=await fetchBundle(S.model,['h500','rh700','t850'],S.run,lat,lon);}
+  catch(e){showError(sc,e.message);return;}
 
   const h5=b.h500||{times:[],values:[]};
   const rh7=b.rh700||{times:[],values:[]};
   const t85=b.t850||{times:[],values:[]};
-  const now500=fmtVal(currentValue(h5),0);
-  const now700=fmtVal(currentValue(rh7),0);
-  const now850=fmtVal(currentValue(t85),1);
 
   sc.innerHTML=`
     ${modelRunHTML(mod,runs)}
     <div class="pad">
-
-      <!-- UPPER AIR NOW TILES -->
       <div class="fu d2">
         <div class="slbl" style="margin-bottom:8px;">UPPER AIR · CURRENT</div>
         <div class="cv-grid" style="grid-template-columns:repeat(3,1fr)">
-          <div class="cvt" style="--tc:#86efac"><div class="cvt-l" style="color:#86efac">500mb HGT</div><div class="cvt-v" style="font-size:22px">${now500}</div><div class="cvt-u">gpm</div></div>
-          <div class="cvt" style="--tc:#6ee7b7"><div class="cvt-l" style="color:#6ee7b7">700mb RH</div><div class="cvt-v">${now700}</div><div class="cvt-u">%</div></div>
-          <div class="cvt" style="--tc:#fdba74"><div class="cvt-l" style="color:#fdba74">850mb TMP</div><div class="cvt-v">${now850}</div><div class="cvt-u">°F</div></div>
+          <div class="cvt" style="--tc:#86efac"><div class="cvt-l" style="color:#86efac">500mb HGT</div><div class="cvt-v" style="font-size:22px">${fmtVal(currentValue(h5),'gpm')}</div><div class="cvt-u">gpm</div></div>
+          <div class="cvt" style="--tc:#6ee7b7"><div class="cvt-l" style="color:#6ee7b7">700mb RH</div><div class="cvt-v">${fmtVal(currentValue(rh7),'%')}</div><div class="cvt-u">%</div></div>
+          <div class="cvt" style="--tc:#fdba74"><div class="cvt-l" style="color:#fdba74">850mb TMP</div><div class="cvt-v">${fmtVal(currentValue(t85),'°F')}</div><div class="cvt-u">°F</div></div>
         </div>
       </div>
-
       ${card('500mb GEOPOTENTIAL HEIGHT',`${mod.l} ${S.run} · ridge/trough analysis`,'gpm','<div class="ch-wrap"><canvas id="ch-u-500"></canvas></div>','d3')}
       ${card('700mb RELATIVE HUMIDITY',`${mod.l} ${S.run} · moisture at mid-levels`,'%','<div class="ch-wrap"><canvas id="ch-u-700"></canvas></div>','d3')}
       ${card('850mb TEMPERATURE',`${mod.l} ${S.run} · low-level thermal analysis`,'°F','<div class="ch-wrap"><canvas id="ch-u-850"></canvas></div>','d4')}
-
     </div>`;
 
   requestAnimationFrame(()=>{
-    if(h5.values.length){
-      const cv=document.getElementById('ch-u-500'); if(!cv)return;
+    [[h5,'ch-u-500','#86efac','gpm'],[rh7,'ch-u-700','#6ee7b7','%'],[t85,'ch-u-850','#fdba74','°F']].forEach(([d,id,col,unit])=>{
+      if(!d.values.length)return;
+      const cv=document.getElementById(id);if(!cv)return;
       const g=cv.getContext('2d').createLinearGradient(0,0,0,200);
-      g.addColorStop(0,'rgba(134,239,172,.35)'); g.addColorStop(1,'rgba(134,239,172,.02)');
-      mkChart('ch-u-500',h5.times,[{label:'500mb',data:h5.values,borderColor:'#86efac',backgroundColor:g,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true}],'gpm',200);
-    }
-    if(rh7.values.length){
-      const cv2=document.getElementById('ch-u-700'); if(!cv2)return;
-      const g2=cv2.getContext('2d').createLinearGradient(0,0,0,200);
-      g2.addColorStop(0,'rgba(110,231,183,.3)'); g2.addColorStop(1,'rgba(110,231,183,.02)');
-      mkChart('ch-u-700',rh7.times,[{label:'700mb RH',data:rh7.values,borderColor:'#6ee7b7',backgroundColor:g2,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true}],'%',200);
-    }
-    if(t85.values.length){
-      const cv3=document.getElementById('ch-u-850'); if(!cv3)return;
-      const g3=cv3.getContext('2d').createLinearGradient(0,0,0,180);
-      g3.addColorStop(0,'rgba(253,186,116,.4)'); g3.addColorStop(1,'rgba(253,186,116,.02)');
-      mkChart('ch-u-850',t85.times,[{label:'850mb TMP',data:t85.values,borderColor:'#fdba74',backgroundColor:g3,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true}],'°F',180);
-    }
+      const rgba=col==='#86efac'?'134,239,172':col==='#6ee7b7'?'110,231,183':'253,186,116';
+      g.addColorStop(0,`rgba(${rgba},.35)`);g.addColorStop(1,`rgba(${rgba},.02)`);
+      mkChart(id,d.times,[{label:unit,data:d.values.map(v=>v===null?null:Number(v)),borderColor:col,backgroundColor:g,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true}],unit,col==='#fdba74'?180:200);
+    });
   });
 }
-async function geocode(q){
-  const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1&language=en&format=json`);
-  const d=await r.json();
-  if(!d.results?.length)throw new Error('Location not found');
-  return{lat:d.results[0].latitude,lon:d.results[0].longitude,
-    name:d.results[0].name+(d.results[0].admin1?', '+d.results[0].admin1:'')};
-}
-function selModel(k){S.model=k;S.run=RUNS[k][0];render();}
-function selRun(r){S.run=r;render();}
-function selRunMod(k){S.runModel=k;S.cmpRuns=RUNS[k].slice(0,3);render();}
-function togRunCmp(r){
-  if(S.cmpRuns.includes(r)){if(S.cmpRuns.length>1)S.cmpRuns=S.cmpRuns.filter(x=>x!==r);}
-  else if(S.cmpRuns.length<4)S.cmpRuns.push(r);
-  render();
-}
-function togCmp(k){
-  if(S.cmpModels.includes(k)){if(S.cmpModels.length>1)S.cmpModels=S.cmpModels.filter(m=>m!==k);}
-  else if(S.cmpModels.length<6)S.cmpModels.push(k);
-  render();
-}
 
-
-function currentCompareVar(){ return TABS[S.tab]?.primary || S.var || 'temp'; }
-function fmtVal(v, u){
-  if(v===null || v===undefined || Number.isNaN(v)) return '--';
-  const n = Math.abs(v) >= 100 ? v.toFixed(0) : (u==='in'||u==='in/hr' ? v.toFixed(3) : v.toFixed(1));
-  return n;
-}
-function spreadClass(spread, unit){
-  const cut1 = unit==='°F'?2:unit==='in'?0.03:unit==='mph'?4:unit==='%'?10:unit==='gpm'?30:8;
-  const cut2 = unit==='°F'?5:unit==='in'?0.10:unit==='mph'?9:unit==='%'?25:unit==='gpm'?70:16;
-  return spread <= cut1 ? 'lo' : spread <= cut2 ? 'md' : 'hi';
-}
-function compareVarTabs(){
-  const allowed = TABS[S.tab]?.vars || ['temp'];
-  return `<div class="vtabs fu d1">${allowed.map(v=>`<button class="vt${S.var===v?' on':''}" onclick="selVar('${v}')">${VARS[v].l}</button>`).join('')}</div>`;
-}
-function selVar(v){ S.var=v; render(); }
-
-/* ═══════════════════════════════════════
+/* ═══════════════════════════════════════════
    COMPARE MODELS
-═══════════════════════════════════════ */
+═══════════════════════════════════════════ */
 async function rCompare(sc){
-  if(!TABS[S.tab]?.vars.includes(S.var)) S.var = currentCompareVar();
-  const vi=VARS[S.var];
-  const sel=S.cmpModels;
-  const {lat,lon}=S.loc;
-
+  if(!TABS[S.tab]?.vars?.includes(S.var))S.var=TABS[S.tab]?.primary||'temp';
+  const vi=VARS[S.var],sel=S.cmpModels,{lat,lon}=S.loc;
   showLoading(sc,`COMPARING ${vi.l.toUpperCase()} · ${sel.length} MODELS...`);
 
   const results=await Promise.allSettled(sel.map(k=>fetchGrib(k,S.var,'12Z',lat,lon)));
   const allD={};
-  sel.forEach((k,i)=>{ allD[k]=results[i].status==='fulfilled'?results[i].value:{times:[],values:[]}; });
+  sel.forEach((k,i)=>{allD[k]=results[i].status==='fulfilled'?results[i].value:{times:[],values:[]};});
 
-  const refKey = sel.find(k=>allD[k].times.length) || sel[0];
-  const ref = allD[refKey].times || [];
-  const n = Math.min(ref.length, 48);
-  const nowVals=sel.map(k=>allD[k].values?.[0]).filter(v=>v!==null&&v!==undefined&&!Number.isNaN(v));
+  const refKey=sel.find(k=>allD[k].times.length)||sel[0];
+  const ref=allD[refKey].times||[];
+  const nowVals=sel.map(k=>allD[k].values?.[0]).filter(v=>validNum(v));
   const spread=nowVals.length?+(Math.max(...nowVals)-Math.min(...nowVals)).toFixed(vi.u==='in'?3:1):0;
   const cls=spreadClass(spread,vi.u);
   const txt=cls==='lo'?'TIGHT AGREEMENT':cls==='md'?'MODEST DIVERGENCE':'WIDE DIVERGENCE';
-  const modelCols = sel.length;
-  const gridCols = `76px repeat(${modelCols}, minmax(62px,1fr)) 70px`;
+  const modelCols=sel.length;
+  const gridCols=`76px repeat(${modelCols},minmax(62px,1fr)) 70px`;
 
-  const rows = Array.from({length:Math.min(n,36)},(_,i)=>{
+  const rows=Array.from({length:Math.min(ref.length,36)},(_,i)=>{
     const t=ref[i];
-    const vals=sel.map(k=>allD[k].values?.[i]);
-    const good=vals.filter(v=>v!==null&&v!==undefined&&!Number.isNaN(v));
-    const sp=good.length?Math.max(...good)-Math.min(...good):null;
-    const sc=sp==null?'lo':spreadClass(sp,vi.u);
-    const label=t?t.toLocaleString([],{weekday:'short',hour:'numeric'}):`+${i}h`;
-    return `<div class="div-row" style="grid-template-columns:${gridCols}">
-      <div class="div-time">${i===0?'NOW':label}</div>
+    const vals=sel.map(k=>allD[k].values?.[i]??null);
+    const good=vals.filter(validNum);
+    const sp=good.length>=2?Math.max(...good)-Math.min(...good):null;
+    const spcls=sp==null?'lo':spreadClass(sp,vi.u);
+    const label=t?(i===0?'NOW':t.toLocaleString([],{weekday:'short',hour:'numeric'})):`+${i}h`;
+    return`<div class="div-row" style="grid-template-columns:${gridCols}">
+      <div class="div-time">${label}</div>
       ${sel.map((k,j)=>`<div class="div-cell" style="border-color:${MODELS[k].c}55;color:${MODELS[k].c}">${fmtVal(vals[j],vi.u)}</div>`).join('')}
-      <div class="div-spread ${sc}">${sp==null?'--':fmtVal(sp,vi.u)}</div>
+      <div class="div-spread ${spcls}">${sp==null?'--':fmtVal(sp,vi.u)}</div>
     </div>`;
   }).join('');
 
   sc.innerHTML=`
     ${compareVarTabs()}
     <div class="pad">
-
       <div class="fu d1">
-        <div class="slbl" style="margin-bottom:8px;">${S.tab.toUpperCase()} MODELS — TAP TO TOGGLE</div>
+        <div class="slbl" style="margin-bottom:8px;">${S.tab.toUpperCase()} MODELS</div>
         <div class="cpills">
           ${Object.entries(MODELS).map(([k,m])=>`
             <div class="cpill${sel.includes(k)?' on':''}" style="--mc:${m.c}" onclick="togCmp('${k}')">
@@ -1799,7 +1425,7 @@ async function rCompare(sc){
         </div>
         <div class="card-body">
           <div class="sp-row">
-            <div class="sp-track"><div class="sp-fill" style="width:${Math.min(100,(cls==='lo'?25:cls==='md'?60:100))}%"></div></div>
+            <div class="sp-track"><div class="sp-fill" style="width:${cls==='lo'?25:cls==='md'?60:95}%"></div></div>
             <div class="sp-num">${fmtVal(spread,vi.u)} ${vi.u}</div>
           </div>
         </div>
@@ -1807,24 +1433,18 @@ async function rCompare(sc){
 
       <div class="card fu d2">
         <div class="card-hd">
-          <div>
-            <div class="card-title">HOURLY ${vi.l.toUpperCase()} · MODEL DIVERGENCE</div>
-            <div class="card-sub"><span class="sdot"></span>same variable only · next ${Math.min(n,48)} hours</div>
-          </div>
+          <div><div class="card-title">${vi.l.toUpperCase()} · MODEL COMPARISON</div><div class="card-sub"><span class="sdot"></span>${S.loc.name} · ${sel.length} models · envelope shaded</div></div>
           <div class="card-badge">${vi.u}</div>
         </div>
         <div class="card-body">
-          <div class="legend">
-            ${sel.map(k=>`<div class="li"><div class="ll" style="background:${MODELS[k].c}"></div>${MODELS[k].l}</div>`).join('')}
-          </div>
+          <div class="legend">${sel.map(k=>`<div class="li"><div class="ll" style="background:${MODELS[k].c}"></div>${MODELS[k].l}</div>`).join('')}</div>
           <div class="ch-wrap"><canvas id="ch-cmp"></canvas></div>
         </div>
       </div>
 
       <div class="card fu d3">
         <div class="card-hd">
-          <div><div class="card-title">HOURLY TABLE · WHERE MODELS DISAGREE</div><div class="card-sub">colored spread column: green=tight, yellow=moderate, red=wide</div></div>
-          <div class="card-badge">SPREAD</div>
+          <div><div class="card-title">HOURLY DIVERGENCE TABLE</div><div class="card-sub">colored spread: green=tight · yellow=moderate · red=wide</div></div>
         </div>
         <div class="card-body">
           <div class="div-table">
@@ -1835,108 +1455,86 @@ async function rCompare(sc){
           </div>
         </div>
       </div>
-
     </div>`;
 
   requestAnimationFrame(()=>{
-    const envMin = ref.map((_,i) => {
-      const vals = sel.map(k=>allD[k].values[i]).filter(v=>v!==null&&v!==undefined&&!Number.isNaN(v));
-      return vals.length ? Math.min(...vals) : null;
-    });
-    const envMax = ref.map((_,i) => {
-      const vals = sel.map(k=>allD[k].values[i]).filter(v=>v!==null&&v!==undefined&&!Number.isNaN(v));
-      return vals.length ? Math.max(...vals) : null;
-    });
-    const cmpDatasets = [
-      {label:'_high envelope', data:envMax, borderColor:'transparent', backgroundColor:'rgba(56,189,248,.08)', borderWidth:0, pointRadius:0, tension:.35, fill:'+1', spanGaps:true, order:99},
-      {label:'_low envelope', data:envMin, borderColor:'rgba(56,189,248,.10)', backgroundColor:'rgba(56,189,248,.08)', borderWidth:.5, pointRadius:0, tension:.35, fill:false, spanGaps:true, order:98},
+    const envMin=ref.map((_,i)=>{const v=sel.map(k=>allD[k].values[i]).filter(validNum);return v.length?Math.min(...v):null;});
+    const envMax=ref.map((_,i)=>{const v=sel.map(k=>allD[k].values[i]).filter(validNum);return v.length?Math.max(...v):null;});
+    const ds=[
+      {label:'_hi',data:envMax,borderColor:'transparent',backgroundColor:'rgba(56,189,248,.08)',borderWidth:0,pointRadius:0,tension:.35,fill:'+1',spanGaps:true,order:99},
+      {label:'_lo',data:envMin,borderColor:'rgba(56,189,248,.12)',backgroundColor:'transparent',borderWidth:.5,pointRadius:0,tension:.35,fill:false,spanGaps:true,order:98},
       ...sel.map(k=>({label:MODELS[k].l,data:ref.map((_,i)=>allD[k].values[i]??null),borderColor:MODELS[k].c,backgroundColor:'transparent',borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.35,spanGaps:true,order:1}))
     ];
-    mkChart('ch-cmp',ref,cmpDatasets,vi.u,260);
+    mkChart('ch-cmp',ref,ds,vi.u,260);
   });
 }
-/* ═══════════════════════════════════════
+
+/* ═══════════════════════════════════════════
    COMPARE RUNS
-═══════════════════════════════════════ */
+═══════════════════════════════════════════ */
 async function rRuns(sc){
   const vi=VARS[S.var],mod=MODELS[S.runModel];
-  const runs=RUNS[S.runModel],sel=S.cmpRuns;
-  const {lat,lon}=S.loc;
-
+  const runs=RUNS[S.runModel],sel=S.cmpRuns,{lat,lon}=S.loc;
   showLoading(sc,`LOADING ${sel.length} RUNS...`);
 
-  const [varResults,tempResults,precipResults]=await Promise.all([
+  const[varR,tR,pR]=await Promise.all([
     Promise.allSettled(sel.map(r=>fetchGrib(S.runModel,S.var,r,lat,lon))),
     Promise.allSettled(sel.map(r=>fetchGrib(S.runModel,'temp',r,lat,lon))),
     Promise.allSettled(sel.map(r=>fetchGrib(S.runModel,'precip',r,lat,lon))),
   ]);
 
-  const RD=sel.map((r,i)=>({run:r,d:varResults[i].status==='fulfilled'?varResults[i].value:{times:[],values:[]}}));
-  const tRD=sel.map((r,i)=>({run:r,d:tempResults[i].status==='fulfilled'?tempResults[i].value:{times:[],values:[]}}));
-  const pRD=sel.map((r,i)=>({run:r,d:precipResults[i].status==='fulfilled'?precipResults[i].value:{times:[],values:[]}}));
+  const RD=sel.map((r,i)=>({run:r,d:varR[i].status==='fulfilled'?varR[i].value:{times:[],values:[]}}));
+  const tRD=sel.map((r,i)=>({run:r,d:tR[i].status==='fulfilled'?tR[i].value:{times:[],values:[]}}));
+  const pRD=sel.map((r,i)=>({run:r,d:pR[i].status==='fulfilled'?pR[i].value:{times:[],values:[]}}));
 
-  // IMPORTANT: compare runs by VALID FORECAST TIME, not array index.
-  // Example: 12Z F006 and 06Z F012 can both verify at the same real clock hour.
+  // align by valid time
   function runMap(rd){
     const m=new Map();
     (rd.d.times||[]).forEach((t,i)=>{
       const v=rd.d.values[i];
-      if(t instanceof Date && v!==null && v!==undefined && !Number.isNaN(v)) m.set(t.getTime(),v);
+      if(t instanceof Date&&validNum(v))m.set(t.getTime(),v);
     });
     return m;
   }
-  function alignedPack(rows, hoursLimit=null){
+  function aligned(rows,limit=null){
     const maps=rows.map(runMap);
     const allTs=[...new Set(maps.flatMap(m=>[...m.keys()]))].sort((a,b)=>a-b);
-    const ts=allTs.filter(t=>maps.some(m=>m.has(t)) && maps.filter(m=>m.has(t)).length>=1);
-    const limited = hoursLimit ? ts.slice(0,hoursLimit) : ts;
-    return {
-      times: limited.map(t=>new Date(t)),
-      maps,
-      valuesFor: (i)=>limited.map(t=>maps[i].has(t)?maps[i].get(t):null),
-      spread: limited.map(t=>{
-        const vs=maps.map(m=>m.get(t)).filter(v=>v!==null&&v!==undefined&&!Number.isNaN(v));
-        return vs.length>=2 ? Math.max(...vs)-Math.min(...vs) : null;
+    const ts=limit?allTs.slice(0,limit):allTs;
+    return{
+      times:ts.map(t=>new Date(t)),
+      valuesFor:(i)=>ts.map(t=>maps[i].has(t)?maps[i].get(t):null),
+      spread:ts.map(t=>{
+        const vs=maps.map(m=>m.get(t)).filter(validNum);
+        return vs.length>=2?Math.max(...vs)-Math.min(...vs):null;
       }),
-      valuesAt: (t)=>maps.map(m=>m.get(t)).filter(v=>v!==null&&v!==undefined&&!Number.isNaN(v)),
     };
   }
-  const A=alignedPack(RD);
-  const PA=alignedPack(pRD,24);
+  const A=aligned(RD);
+  const PA=aligned(pRD,24);
 
-  const spH=A.spread;
-  const validSp=spH.filter(v=>v!==null);
-  const maxSp=Math.max(...validSp,1);
-  const B=Math.min(16,Math.max(1,A.times.length));
+  const spH=A.spread.filter(v=>v!==null);
+  const maxSp=Math.max(...spH,1);
+  const B=Math.min(14,A.times.length||1);
   const bs=Math.max(1,Math.ceil(A.times.length/B));
   const hmRows=Array.from({length:B},(_,b)=>{
-    const start=b*bs;
-    const sl=spH.slice(start,start+bs).filter(v=>v!==null);
-    if(!sl.length) return '';
+    const sl=A.spread.slice(b*bs,(b+1)*bs).filter(v=>v!==null);
+    if(!sl.length)return'';
     const avg=sl.reduce((a,v)=>a+v,0)/sl.length;
-    const t=A.times[start];
-    const lbl=t?t.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'+'+start+'h';
+    const t=A.times[b*bs];
+    const lbl=t?t.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'+'+b*bs+'h';
     const p=avg/maxSp;
-    const r=Math.round(p*248+(1-p)*52);
-    const g=Math.round(p*113+(1-p)*211);
-    const bv=Math.round(p*113+(1-p)*153);
+    const r=Math.round(p*248+(1-p)*52);const g=Math.round(p*113+(1-p)*211);const bv=Math.round(p*113+(1-p)*153);
     return`<div class="hrow"><div class="hlbl">${lbl}</div><div class="hcell" style="background:rgba(${r},${g},${bv},.6)">${avg.toFixed(1)}</div></div>`;
   }).join('');
 
-  const firstSharedIdx=A.spread.findIndex(v=>v!==null);
-  const firstSharedTime=firstSharedIdx>=0?A.times[firstSharedIdx]:A.times[0];
-  const firstSharedLabel=firstSharedTime?firstSharedTime.toLocaleString([],{weekday:'short',hour:'2-digit',minute:'2-digit'}):'FIRST VALID';
-
   sc.innerHTML=`
     <div class="pad">
-
       <div class="fu d1">
         <div class="slbl" style="margin-bottom:8px;">MODEL</div>
         <div style="display:flex;flex-wrap:wrap;gap:5px;">
           ${Object.entries(MODELS).map(([k,m])=>`
             <div class="mchip${S.runModel===k?' on':''}" style="--mc:${m.c}" onclick="selRunMod('${k}')">
-              <div class="mchip-l">${m.l}</div>
-              <div class="mchip-r">${m.r.split('·')[0]}</div>
+              <div class="mchip-l">${m.l}</div><div class="mchip-r">${m.r.split('·')[0]}</div>
             </div>`).join('')}
         </div>
       </div>
@@ -1956,87 +1554,66 @@ async function rRuns(sc){
 
       <div class="card fu d2">
         <div class="card-hd">
-          <div>
-            <div class="card-title">${vi.l} · RUN COMPARISON</div>
-            <div class="card-sub"><span class="sdot"></span>${mod.l} · aligned by valid forecast time · ${sel.length} RUNS</div>
-          </div>
+          <div><div class="card-title">${vi.l} · RUN COMPARISON</div><div class="card-sub"><span class="sdot"></span>${mod.l} · ${sel.length} runs · newest = solid</div></div>
           <div class="card-badge">${vi.u}</div>
         </div>
         <div class="card-body">
-          <div class="legend">
-            ${sel.map((r,i)=>`<div class="li"><div class="ll" style="background:${RC[i]}"></div>${r}</div>`).join('')}
-          </div>
+          <div class="legend">${sel.map((r,i)=>`<div class="li"><div class="ll" style="background:${RC[i]}"></div>${r}</div>`).join('')}</div>
           <div class="ch-wrap"><canvas id="ch-runs"></canvas></div>
         </div>
       </div>
 
       <div class="card fu d3">
         <div class="card-hd">
-          <div>
-            <div class="card-title">RUN DIVERGENCE OVER TIME</div>
-            <div class="card-sub">valid-time spread only · not forecast-hour/index spread</div>
-          </div>
+          <div><div class="card-title">RUN DIVERGENCE</div><div class="card-sub">spread aligned by valid forecast time</div></div>
           <div class="card-badge">${vi.u}</div>
         </div>
-        <div class="card-body">${hmRows || '<div class="es">Need at least two runs with overlapping valid times.</div>'}</div>
+        <div class="card-body">${hmRows||'<div class="es">Need ≥2 runs with overlapping valid times.</div>'}</div>
       </div>
 
       <div class="card fu d3">
         <div class="card-hd">
-          <div><div class="card-title">DAILY HIGH — RUN SHIFT</div><div class="card-sub">daily stats use each run's actual valid timestamps</div></div>
+          <div><div class="card-title">DAILY HIGH — RUN SHIFT</div><div class="card-sub">how each run's hi/lo forecast compares</div></div>
           <div class="card-badge">°F</div>
         </div>
         <div class="card-body">
-          <div class="legend">
-            ${sel.map((r,i)=>`<div class="li"><div class="ll" style="background:${RC[i]}"></div>${r}</div>`).join('')}
-          </div>
+          <div class="legend">${sel.map((r,i)=>`<div class="li"><div class="ll" style="background:${RC[i]}"></div>${r}</div>`).join('')}</div>
           <div class="ch-wrap"><canvas id="ch-rhilo"></canvas></div>
         </div>
       </div>
 
       <div class="card fu d4">
         <div class="card-hd">
-          <div><div class="card-title">PRECIP TIMING — RUN COMPARISON</div><div class="card-sub">first 24 valid forecast times, aligned by clock time</div></div>
+          <div><div class="card-title">PRECIP TIMING — RUN COMPARISON</div><div class="card-sub">where each run places the rain</div></div>
           <div class="card-badge">in</div>
         </div>
         <div class="card-body">
-          <div class="legend">
-            ${sel.map((r,i)=>`<div class="li"><div class="ll" style="background:${RC[i]}"></div>${r}</div>`).join('')}
-          </div>
+          <div class="legend">${sel.map((r,i)=>`<div class="li"><div class="ll" style="background:${RC[i]}"></div>${r}</div>`).join('')}</div>
           <div class="ch-wrap"><canvas id="ch-rprecip"></canvas></div>
         </div>
       </div>
 
       <div class="fu d5">
-        <div class="slbl" style="margin-bottom:8px;">${firstSharedLabel} · ${vi.l}</div>
+        <div class="slbl" style="margin-bottom:8px;">CURRENT HOUR · ${vi.l}</div>
         <div class="cv-grid">
           ${RD.slice(0,4).map((rd,i)=>{
-            const mv=runMap(rd);
-            const v=firstSharedTime?mv.get(firstSharedTime.getTime()):null;
-            return`
-            <div class="cvt" style="--tc:${RC[i]}">
+            const v=currentValue(rd.d);
+            return`<div class="cvt" style="--tc:${RC[i]}">
               <div class="cvt-l" style="color:${RC[i]}">${rd.run}</div>
-              <div class="cvt-v">${v!==null&&v!==undefined?Number(v).toFixed(1):'--'}</div>
+              <div class="cvt-v">${fmtVal(v,vi.u)}</div>
               <div class="cvt-u">${vi.u}</div>
             </div>`;
           }).join('')}
         </div>
       </div>
-
-    </div>
-  `;
+    </div>`;
 
   requestAnimationFrame(()=>{
     mkChart('ch-runs',A.times,RD.map((rd,i)=>({
       label:rd.run,data:A.valuesFor(i),
-      borderColor:RC[i],
-      backgroundColor: i===0 ? RC[i]+'18' : 'transparent',
-      borderWidth: i===0 ? 2.5 : 1.2,
-      borderDash: i===0 ? [] : [4,3],
-      pointRadius:0,pointHoverRadius:5,tension:.4,
-      fill: i===0,
-      spanGaps:true,
-      order: RD.length - i,
+      borderColor:RC[i],backgroundColor:i===0?RC[i]+'18':'transparent',
+      borderWidth:i===0?2.5:1.2,borderDash:i===0?[]:[4,3],
+      pointRadius:0,pointHoverRadius:5,tension:.4,fill:i===0,spanGaps:true,order:RD.length-i,
     })),vi.u,240);
 
     const dayLabels=['TODAY','D+1','D+2','D+3','D+4','D+5','D+6'];
@@ -2053,12 +1630,389 @@ async function rRuns(sc){
     })),'in',190);
   });
 }
-/* ═══════════════════════════════════════
+
+
+/* ═══════════════════════════════════════════
+   MAP TAB — GRID OVERLAY
+═══════════════════════════════════════════ */
+
+// Southeast US bounding box
+const MAP_BOUNDS = {
+  minLat: 24.0, maxLat: 37.5,
+  minLon: -92.0, maxLon: -75.0,
+};
+const MAP_STEP = 0.25; // degrees — ~27km grid, ~780 points
+
+// Map variable configs
+const MAP_VARS = {
+  temp: {
+    label:'TEMPERATURE', unit:'°F', grib:'TMP', level:'2 m above ground',
+    scale: [32,60,70,80,90,100,110],
+    colors:['#818cf8','#38bdf8','#34d399','#fbbf24','#fb923c','#f87171','#dc2626'],
+  },
+  precip: {
+    label:'PRECIP RATE', unit:'in/hr', grib:'APCP', level:'surface',
+    scale:[0,.005,.02,.05,.1,.25,.5],
+    colors:['transparent','#bfdbfe','#38bdf8','#818cf8','#a78bfa','#c026d3','#7c3aed'],
+    skipZero:true,
+  },
+  wind: {
+    label:'WIND SPEED', unit:'mph', grib:'WIND', level:'10 m above ground',
+    scale:[0,5,10,15,20,30,45],
+    colors:['transparent','#86efac','#34d399','#38bdf8','#fbbf24','#fb923c','#f87171'],
+  },
+  cape: {
+    label:'CAPE', unit:'J/kg', grib:'CAPE', level:'surface',
+    scale:[0,250,500,1000,2000,3000,4000],
+    colors:['transparent','#fef9c3','#fbbf24','#fb923c','#f87171','#dc2626','#7f1d1d'],
+    skipZero:true,
+  },
+  dewpoint: {
+    label:'DEWPOINT', unit:'°F', grib:'DPT', level:'2 m above ground',
+    scale:[30,45,55,60,65,68,72],
+    colors:['#fef3c7','#a3e635','#34d399','#38bdf8','#818cf8','#a78bfa','#7c3aed'],
+  },
+};
+
+// Map state
+const MS = {
+  var:'temp', model:'hrrr',
+  hourIdx:0, gridData:null,
+  hourSlots:[], playing:false, playTimer:null,
+  marker:null, overlayLayer:null,
+};
+
+let leafletMap = null;
+
+function interpColor(scale, colors, value) {
+  if (value === null || value === undefined || isNaN(value)) return null;
+  const n = scale.length;
+  if (value <= scale[0]) return colors[0];
+  if (value >= scale[n-1]) return colors[n-1];
+  for (let i = 0; i < n-1; i++) {
+    if (value >= scale[i] && value <= scale[i+1]) {
+      const t = (value - scale[i]) / (scale[i+1] - scale[i]);
+      return lerpColor(colors[i], colors[i+1], t);
+    }
+  }
+  return colors[n-1];
+}
+
+function lerpColor(a, b, t) {
+  if (a === 'transparent') a = '#00000000';
+  if (b === 'transparent') b = '#00000000';
+  const pa = parseHex(a), pb = parseHex(b);
+  const r = Math.round(pa[0] + (pb[0]-pa[0])*t);
+  const g = Math.round(pa[1] + (pb[1]-pa[1])*t);
+  const bv = Math.round(pa[2] + (pb[2]-pa[2])*t);
+  const av = Math.round((pa[3] + (pb[3]-pa[3])*t));
+  return `rgba(${r},${g},${bv},${(av/255).toFixed(2)})`;
+}
+
+function parseHex(hex) {
+  hex = hex.replace('#','');
+  if (hex.length === 8) return [parseInt(hex.slice(0,2),16),parseInt(hex.slice(2,4),16),parseInt(hex.slice(4,6),16),parseInt(hex.slice(6,8),16)];
+  if (hex.length === 6) return [parseInt(hex.slice(0,2),16),parseInt(hex.slice(2,4),16),parseInt(hex.slice(4,6),16),255];
+  return [128,128,128,255];
+}
+
+function normMapValue(grib, v) {
+  if (!validNum(v)) return null;
+  if ((grib==='TMP'||grib==='DPT') && v > 200) v = (v-273.15)*9/5+32;
+  if (grib==='WIND') v = v * 2.23694;
+  if (grib==='APCP') v = v * 0.0393701;
+  return +v.toFixed(3);
+}
+
+function setStatus(msg, fade=false) {
+  const el = document.getElementById('map-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.opacity = '1';
+  if (fade) setTimeout(()=>{ el.style.opacity='0'; }, 2000);
+}
+
+async function fetchGridData() {
+  const mv = MAP_VARS[MS.var];
+  const modelId = MODEL_IDS[MS.model] || MS.model;
+
+  setStatus(`FETCHING ${mv.label} · ${MS.model.toUpperCase()} GRID...`);
+
+  // Build 12 hourly slots from now
+  const now = new Date();
+  now.setMinutes(0,0,0);
+  const hours = MS.model==='hrrr' ? 12 : 12;
+  const slots = Array.from({length:hours},(_,i)=>new Date(now.getTime()+i*3.6e6));
+
+  const body = {
+    fromTime: slots[0].toISOString().replace('.000',''),
+    untilTime: slots[slots.length-1].toISOString().replace('.000',''),
+    grid: {
+      minLatitude:  MAP_BOUNDS.minLat,
+      maxLatitude:  MAP_BOUNDS.maxLat,
+      minLongitude: MAP_BOUNDS.minLon,
+      maxLongitude: MAP_BOUNDS.maxLon,
+      step: MAP_STEP,
+    },
+    variables: [{name: mv.grib, level: mv.level, info:''}],
+  };
+
+  const res = await fetch(`${WORKER}/${modelId}/timeseries`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json','Accept':'application/json'},
+    body: JSON.stringify(body),
+  });
+  const raw = await res.text();
+  if (!res.ok) throw new Error(`Grid fetch HTTP ${res.status}`);
+
+  let rows;
+  try {
+    const j = JSON.parse(raw);
+    rows = Array.isArray(j) ? j : (j.data || j.results || []);
+  } catch(e) { throw new Error('Grid bad JSON'); }
+
+  // key = "GRIB|level|"
+  const gribKey = `${mv.grib}|${mv.level}|`;
+
+  // Group by forecasted_time → Map<timeMs, Map<"lat,lon", value>>
+  const byTime = new Map();
+  rows.forEach(r => {
+    const t = new Date(r.forecasted_time || r.time);
+    const tk = Math.round(t.getTime()/3.6e6)*3.6e6; // round to hour
+    if (!byTime.has(tk)) byTime.set(tk, new Map());
+    const v = normMapValue(mv.grib, r[gribKey]);
+    if (v !== null) byTime.get(tk).set(`${r.lat},${r.lon}`, {lat:r.lat, lon:r.lon, v});
+  });
+
+  // Build ordered slots
+  const sortedTimes = [...byTime.keys()].sort((a,b)=>a-b).slice(0,12);
+  MS.hourSlots = sortedTimes.map(tk => ({
+    time: new Date(tk),
+    points: [...byTime.get(tk).values()],
+  }));
+  MS.hourIdx = 0;
+
+  // Update slider
+  const slider = document.getElementById('map-hour-slider');
+  if (slider) {
+    slider.max = Math.max(0, MS.hourSlots.length - 1);
+    slider.value = 0;
+  }
+
+  setStatus(`${mv.label} · ${MS.model.toUpperCase()} · ${MS.hourSlots.length} HOURS`, true);
+}
+
+function renderGridOverlay() {
+  if (!leafletMap || !MS.hourSlots.length) return;
+  const slot = MS.hourSlots[MS.hourIdx];
+  if (!slot) return;
+
+  const mv = MAP_VARS[MS.var];
+
+  // Remove old overlay
+  if (MS.overlayLayer) { leafletMap.removeLayer(MS.overlayLayer); MS.overlayLayer = null; }
+
+  // Build canvas overlay using Leaflet's SVG/Canvas renderer
+  // We use a canvas-based image overlay sized to the bounds
+  const bounds = [[MAP_BOUNDS.minLat, MAP_BOUNDS.minLon],[MAP_BOUNDS.maxLat, MAP_BOUNDS.maxLon]];
+
+  // Grid dimensions
+  const lats = [], lons = [];
+  slot.points.forEach(p => {
+    if (!lats.includes(p.lat)) lats.push(p.lat);
+    if (!lons.includes(p.lon)) lons.push(p.lon);
+  });
+  lats.sort((a,b)=>b-a); // descending (top to bottom)
+  lons.sort((a,b)=>a-b); // ascending (left to right)
+
+  const nLat = lats.length, nLon = lons.length;
+  if (!nLat || !nLon) return;
+
+  // Build lookup
+  const lookup = new Map();
+  slot.points.forEach(p => lookup.set(`${p.lat.toFixed(2)},${p.lon.toFixed(2)}`, p.v));
+
+  // Draw to off-screen canvas
+  const canvas = document.createElement('canvas');
+  canvas.width = nLon; canvas.height = nLat;
+  const ctx = canvas.getContext('2d');
+
+  for (let r = 0; r < nLat; r++) {
+    for (let c = 0; c < nLon; c++) {
+      const key = `${lats[r].toFixed(2)},${lons[c].toFixed(2)}`;
+      const v = lookup.get(key);
+      if (v === undefined || (mv.skipZero && v < mv.scale[1])) continue;
+      const col = interpColor(mv.scale, mv.colors, v);
+      if (!col || col === 'transparent') continue;
+      ctx.fillStyle = col;
+      ctx.fillRect(c, r, 1, 1);
+    }
+  }
+
+  // Add as image overlay with opacity
+  MS.overlayLayer = L.imageOverlay(canvas.toDataURL(), bounds, {opacity:0.72, interactive:false}).addTo(leafletMap);
+
+  // Update hour label
+  const lbl = document.getElementById('map-hour-lbl');
+  if (lbl) {
+    const t = slot.time;
+    const diffH = Math.round((t-new Date())/3.6e6);
+    lbl.textContent = diffH === 0 ? 'NOW' : `+${diffH}H · ${t.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`;
+  }
+}
+
+function drawLegend() {
+  const mv = MAP_VARS[MS.var];
+  const canvas = document.getElementById('legend-canvas');
+  const labEl = document.getElementById('legend-labels');
+  if (!canvas || !labEl) return;
+
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  const grad = ctx.createLinearGradient(0,0,w,0);
+  mv.colors.forEach((col,i) => {
+    if (col === 'transparent') col = 'rgba(255,255,255,0)';
+    grad.addColorStop(i/(mv.colors.length-1), col);
+  });
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,w,h);
+
+  // labels
+  labEl.innerHTML = mv.scale.map(v => {
+    const u = mv.unit==='°F'?'°':mv.unit==='J/kg'?'':mv.unit==='mph'?'':mv.unit==='in/hr'?'':'';
+    return `<span>${v}${u}</span>`;
+  }).join('');
+}
+
+function setMapVar(v, el) {
+  MS.var = v;
+  document.querySelectorAll('#mp-var .mc-pill').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');
+  loadGridAndRender();
+}
+
+function setMapModel(m, el) {
+  MS.model = m;
+  document.querySelectorAll('#mp-model .mc-pill').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');
+  loadGridAndRender();
+}
+
+function onHourSlide(val) {
+  MS.hourIdx = parseInt(val);
+  renderGridOverlay();
+}
+
+function togglePlay() {
+  const btn = document.getElementById('map-play-btn');
+  if (MS.playing) {
+    clearInterval(MS.playTimer);
+    MS.playing = false;
+    btn.textContent = '▶';
+    btn.classList.remove('playing');
+  } else {
+    MS.playing = true;
+    btn.textContent = '■';
+    btn.classList.add('playing');
+    MS.playTimer = setInterval(() => {
+      MS.hourIdx = (MS.hourIdx + 1) % Math.max(1, MS.hourSlots.length);
+      const slider = document.getElementById('map-hour-slider');
+      if (slider) slider.value = MS.hourIdx;
+      renderGridOverlay();
+    }, 900);
+  }
+}
+
+async function loadGridAndRender() {
+  drawLegend();
+  try {
+    await fetchGridData();
+    renderGridOverlay();
+  } catch(e) {
+    setStatus(`ERROR: ${e.message}`);
+  }
+}
+
+function initMap() {
+  if (leafletMap) {
+    // already initialized — just refresh data
+    leafletMap.invalidateSize();
+    if (!MS.gridData) loadGridAndRender();
+    return;
+  }
+
+  const mapEl = document.getElementById('leaflet-map');
+  leafletMap = L.map(mapEl, {
+    center: [30.5, -83.5], // center of SE US
+    zoom: 6,
+    zoomControl: true,
+    attributionControl: false,
+  });
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom:18, opacity:.9,
+  }).addTo(leafletMap);
+
+  // custom marker icon
+  const wxIcon = L.divIcon({
+    html:`<div style="width:28px;height:28px;border-radius:50%;background:rgba(13,24,41,.95);border:2px solid #38bdf8;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 0 12px rgba(56,189,248,.5);">📍</div>`,
+    className:'',iconSize:[28,28],iconAnchor:[14,14],
+  });
+
+  // tap on map → point popup
+  leafletMap.on('click', async(e) => {
+    const {lat, lng:lon} = e.latlng;
+    const name = `${lat.toFixed(3)}°N, ${Math.abs(lon).toFixed(3)}°W`;
+    if (MS.marker) MS.marker.remove();
+    MS.marker = L.marker([lat,lon],{icon:wxIcon}).addTo(leafletMap);
+    MS.marker.bindPopup(`<div class="map-pin-popup"><h3>${name}</h3><div class="mp-row"><span class="mp-lbl">LOADING...</span></div></div>`,{maxWidth:220,className:''}).openPopup();
+    // fetch point data
+    try {
+      const b = await fetchBundle('hrrr',['temp','wind','precip'],'12Z',lat,lon);
+      const t = currentValue(b.temp)!=null?Math.round(currentValue(b.temp))+'°F':'--';
+      const w = currentValue(b.wind)!=null?Math.round(currentValue(b.wind))+' mph':'--';
+      const pv = b.precip?.values?.slice(0,24)||[];
+      const pt = pv.reduce((a,v)=>a+(v||0),0);
+      const p = pt>.001?pt.toFixed(2)+'"':'None';
+      const html = `<div class="map-pin-popup">
+        <h3>${name}</h3>
+        <div class="mp-row"><span class="mp-lbl">TEMPERATURE</span><span class="mp-val">${t}</span></div>
+        <div class="mp-row"><span class="mp-lbl">WIND</span><span class="mp-val">${w}</span></div>
+        <div class="mp-row"><span class="mp-lbl">PRECIP 24H</span><span class="mp-val">${p}</span></div>
+        <button class="mp-goto" onclick="loadMapPoint(${lat},${lon},'${name.replace(/'/g,"\\'")}')" >VIEW FULL FORECAST →</button>
+      </div>`;
+      if (MS.marker) MS.marker.setPopupContent(html);
+    } catch(e) { /* leave loading state */ }
+  });
+
+  setTimeout(() => {
+    leafletMap.invalidateSize();
+    loadGridAndRender();
+  }, 150);
+}
+
+function loadMapPoint(lat, lon, name) {
+  S.loc = {lat, lon, name};
+  document.getElementById('loc').value = name;
+  S.loaded = true;
+  if (MS.playing) togglePlay();
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
+  document.querySelector('.nb').classList.add('on');
+  S.tab = 'forecast';
+  document.getElementById('map-wrap').classList.remove('active');
+  document.getElementById('scroll').style.display = '';
+  document.querySelector('.ctrl').style.display = '';
+  render();
+}
+
+/* ═══════════════════════════════════════════
    INIT
-═══════════════════════════════════════ */
-S.loc = PLACES["land o"];
-S.loaded = true;
+═══════════════════════════════════════════ */
+S.loc=PLACES['land o'];
+S.loaded=true;
 render();
+
 </script>
 </body>
 </html>
