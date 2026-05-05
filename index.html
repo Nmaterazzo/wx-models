@@ -521,8 +521,12 @@ function latestCycleTime(run){
   return d;
 }
 
-function normalizeValue(gv,v){
+function normalizeValue(gv, v, prevV){
   if(!validNum(v))return null;
+  // APCP is cumulative for GFS/ECMWF — diff to get hourly rate
+  if(gv.name==='APCP' && prevV !== undefined && validNum(prevV)){
+    v = Math.max(0, v - prevV);
+  }
   if((gv.name==='TMP'||gv.name==='DPT'||gv.name==='APTMP')&&v>200)v=(v-273.15)*9/5+32;
   if(gv.name==='WIND'||gv.name==='GUST')v=v*2.23694;
   if(gv.name==='APCP'||gv.name==='ASNOW')v=v*0.0393701;
@@ -564,12 +568,15 @@ async function fetchGrib(mkey,vkey,run,lat,lon){
 
   const seen=new Set();
   const times=[],values=[];
-  rows.forEach(r=>{
+  const isAccum = gv.name==='APCP'||gv.name==='ASNOW';
+  rows.forEach((r,i)=>{
     const t=new Date(r.forecasted_time);
     const tk=t.getTime();
     if(seen.has(tk))return;
     seen.add(tk);
-    const v=normalizeValue(gv,r[gribKey]);
+    const rawV = r[gribKey];
+    const rawPrev = i>0 ? rows[i-1][gribKey] : undefined;
+    const v = normalizeValue(gv, rawV, isAccum ? rawPrev : undefined);
     times.push(t);
     values.push(v);
   });
@@ -1374,42 +1381,44 @@ async function tabUpper(sc){
    COMPARE MODELS
 ═══════════════════════════════════════════ */
 async function rCompare(sc){
-  if(!TABS[S.tab]?.vars?.includes(S.var))S.var=TABS[S.tab]?.primary||'temp';
-  const vi=VARS[S.var],sel=S.cmpModels,{lat,lon}=S.loc;
+  const tabVars={forecast:'temp',temp:'temp',precip:'precip',wind:'wind',upper:'h500'};
+  const vkey=tabVars[S.tab]||'temp';
+  S.var=vkey;
+  const vi=VARS[vkey],sel=S.cmpModels,{lat,lon}=S.loc;
   showLoading(sc,`COMPARING ${vi.l.toUpperCase()} · ${sel.length} MODELS...`);
 
-  const results=await Promise.allSettled(sel.map(k=>fetchGrib(k,S.var,'12Z',lat,lon)));
+  const results=await Promise.allSettled(sel.map(k=>fetchGrib(k,vkey,'12Z',lat,lon)));
   const allD={};
   sel.forEach((k,i)=>{allD[k]=results[i].status==='fulfilled'?results[i].value:{times:[],values:[]};});
 
   const refKey=sel.find(k=>allD[k].times.length)||sel[0];
   const ref=allD[refKey].times||[];
-  const nowVals=sel.map(k=>allD[k].values?.[0]).filter(v=>validNum(v));
-  const spread=nowVals.length?+(Math.max(...nowVals)-Math.min(...nowVals)).toFixed(vi.u==='in'?3:1):0;
-  const cls=spreadClass(spread,vi.u);
-  const txt=cls==='lo'?'TIGHT AGREEMENT':cls==='md'?'MODEST DIVERGENCE':'WIDE DIVERGENCE';
-  const modelCols=sel.length;
-  const gridCols=`76px repeat(${modelCols},minmax(62px,1fr)) 70px`;
+  const n=Math.min(ref.length,48);
 
-  const rows=Array.from({length:Math.min(ref.length,36)},(_,i)=>{
+  const nowVals=sel.map(k=>currentValue(allD[k])).filter(validNum);
+  const nowSpread=nowVals.length>=2?+(Math.max(...nowVals)-Math.min(...nowVals)).toFixed(1):0;
+  const nowMean=nowVals.length?+(nowVals.reduce((a,b)=>a+b,0)/nowVals.length).toFixed(1):null;
+  const cls=spreadClass(nowSpread,vi.u);
+  const txt=cls==='lo'?'TIGHT AGREEMENT':cls==='md'?'MODERATE SPREAD':'HIGH UNCERTAINTY';
+
+  const matHours=Math.min(n,24);
+  const matRows=Array.from({length:matHours},(_,i)=>{
     const t=ref[i];
     const vals=sel.map(k=>allD[k].values?.[i]??null);
     const good=vals.filter(validNum);
-    const sp=good.length>=2?Math.max(...good)-Math.min(...good):null;
-    const spcls=sp==null?'lo':spreadClass(sp,vi.u);
+    const mean=good.length?good.reduce((a,b)=>a+b,0)/good.length:null;
+    const spread=good.length>=2?Math.max(...good)-Math.min(...good):null;
     const label=t?(i===0?'NOW':t.toLocaleString([],{weekday:'short',hour:'numeric'})):`+${i}h`;
-    return`<div class="div-row" style="grid-template-columns:${gridCols}">
-      <div class="div-time">${label}</div>
-      ${sel.map((k,j)=>`<div class="div-cell" style="border-color:${MODELS[k].c}55;color:${MODELS[k].c}">${fmtVal(vals[j],vi.u)}</div>`).join('')}
-      <div class="div-spread ${spcls}">${sp==null?'--':fmtVal(sp,vi.u)}</div>
-    </div>`;
-  }).join('');
+    return{label,vals,mean,spread};
+  });
+  const maxSpread=Math.max(...matRows.map(r=>r.spread||0),0.1);
+  const maxScales={'°F':15,'in':.25,'mph':20,'%':40,'gpm':100,'J/kg':3000,'m²/s²':300};
+  const spMax=maxScales[vi.u]||20;
 
   sc.innerHTML=`
-    ${compareVarTabs()}
     <div class="pad">
       <div class="fu d1">
-        <div class="slbl" style="margin-bottom:8px;">${S.tab.toUpperCase()} MODELS</div>
+        <div class="slbl" style="margin-bottom:8px;">MODELS — TAP TO TOGGLE</div>
         <div class="cpills">
           ${Object.entries(MODELS).map(([k,m])=>`
             <div class="cpill${sel.includes(k)?' on':''}" style="--mc:${m.c}" onclick="togCmp('${k}')">
@@ -1418,56 +1427,82 @@ async function rCompare(sc){
         </div>
       </div>
 
+      <div class="fu d1">
+        <div class="slbl" style="margin-bottom:8px;">NOW · ${vi.l.toUpperCase()}</div>
+        <div class="cv-grid">
+          ${sel.map(k=>{const v=currentValue(allD[k]);return`<div class="cvt" style="--tc:${MODELS[k].c}"><div class="cvt-l" style="color:${MODELS[k].c}">${MODELS[k].l}</div><div class="cvt-v">${fmtVal(v,vi.u)}</div><div class="cvt-u">${vi.u}</div></div>`;}).join('')}
+          ${nowMean!=null?`<div class="cvt" style="--tc:rgba(255,255,255,.15)"><div class="cvt-l">MEAN</div><div class="cvt-v">${fmtVal(nowMean,vi.u)}</div><div class="cvt-u">${vi.u}</div></div>`:''}
+        </div>
+      </div>
+
       <div class="card fu d2">
         <div class="card-hd">
-          <div><div class="card-title">${vi.l} · MODEL SPREAD</div><div class="card-sub">CURRENT HOUR · ${S.loc.name}</div></div>
+          <div><div class="card-title">MODEL SPREAD · NOW</div><div class="card-sub">${S.loc.name} · ${vi.l}</div></div>
           <div class="sp-txt ${cls==='lo'?'agree':cls==='md'?'warn':'bad'}">${txt}</div>
         </div>
         <div class="card-body">
           <div class="sp-row">
-            <div class="sp-track"><div class="sp-fill" style="width:${cls==='lo'?25:cls==='md'?60:95}%"></div></div>
-            <div class="sp-num">${fmtVal(spread,vi.u)} ${vi.u}</div>
+            <div class="sp-track"><div class="sp-fill" style="width:${Math.min(100,nowSpread/spMax*100).toFixed(0)}%"></div></div>
+            <div class="sp-num">${fmtVal(nowSpread,vi.u)} ${vi.u}</div>
           </div>
         </div>
       </div>
 
       <div class="card fu d2">
         <div class="card-hd">
-          <div><div class="card-title">${vi.l.toUpperCase()} · MODEL COMPARISON</div><div class="card-sub"><span class="sdot"></span>${S.loc.name} · ${sel.length} models · envelope shaded</div></div>
+          <div><div class="card-title">${vi.l} · MODEL SPAGHETTI</div><div class="card-sub"><span class="sdot"></span>${S.loc.name} · shaded = model envelope</div></div>
           <div class="card-badge">${vi.u}</div>
         </div>
         <div class="card-body">
           <div class="legend">${sel.map(k=>`<div class="li"><div class="ll" style="background:${MODELS[k].c}"></div>${MODELS[k].l}</div>`).join('')}</div>
-          <div class="ch-wrap"><canvas id="ch-cmp"></canvas></div>
+          <div class="ch-wrap"><canvas id="ch-cmp-main"></canvas></div>
         </div>
       </div>
 
       <div class="card fu d3">
         <div class="card-hd">
-          <div><div class="card-title">HOURLY DIVERGENCE TABLE</div><div class="card-sub">colored spread: green=tight · yellow=moderate · red=wide</div></div>
+          <div><div class="card-title">DIVERGENCE MATRIX</div><div class="card-sub">deviation from hourly mean · warm=above · cool=below · right col=spread</div></div>
         </div>
-        <div class="card-body">
-          <div class="div-table">
-            <div class="div-head" style="grid-template-columns:${gridCols}">
-              <div>Hour</div>${sel.map(k=>`<div style="text-align:center;color:${MODELS[k].c}">${MODELS[k].l}</div>`).join('')}<div style="text-align:center">Spread</div>
-            </div>
-            ${rows}
-          </div>
+        <div class="card-body" style="overflow-x:auto;padding:10px 8px 14px;">
+          <table style="border-collapse:collapse;width:100%;min-width:${sel.length*68+110}px;">
+            <thead><tr>
+              <th style="font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2);text-align:left;padding:3px 8px;font-weight:400;">HOUR</th>
+              ${sel.map(k=>`<th style="font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;color:${MODELS[k].c};text-align:center;padding:4px 6px;">${MODELS[k].l}</th>`).join('')}
+              <th style="font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2);text-align:center;padding:3px 6px;font-weight:400;">RANGE</th>
+            </tr></thead>
+            <tbody>
+              ${matRows.map(row=>{
+                const spPct=row.spread!=null?row.spread/maxSpread:0;
+                const spCol=spPct<.25?'#34d399':spPct<.6?'#fbbf24':'#f87171';
+                return`<tr style="border-bottom:1px solid rgba(255,255,255,.035)">
+                  <td style="font-family:'DM Mono',monospace;font-size:9px;color:var(--ink3);padding:4px 8px;white-space:nowrap;">${row.label}</td>
+                  ${sel.map((k,j)=>{
+                    const v=row.vals[j];
+                    const dev=(v!=null&&row.mean!=null)?v-row.mean:null;
+                    const devPct=dev!=null?Math.min(Math.abs(dev)/maxSpread,1):0;
+                    const bg=dev==null?'transparent':dev>0?`rgba(251,146,60,${(devPct*.65+.06).toFixed(2)})`:`rgba(56,189,248,${(devPct*.65+.06).toFixed(2)})`;
+                    return`<td style="text-align:center;padding:5px 6px;background:${bg};font-family:'DM Mono',monospace;font-size:10px;font-weight:500;color:${dev==null?'var(--ink2)':dev>0?'#fdba74':'#7dd3fc'}">${fmtVal(v,vi.u)}</td>`;
+                  }).join('')}
+                  <td style="text-align:center;padding:5px 6px;font-family:'DM Mono',monospace;font-size:10px;font-weight:700;color:${spCol}">${row.spread!=null?fmtVal(row.spread,vi.u):'—'}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>`;
 
   requestAnimationFrame(()=>{
-    const envMin=ref.map((_,i)=>{const v=sel.map(k=>allD[k].values[i]).filter(validNum);return v.length?Math.min(...v):null;});
-    const envMax=ref.map((_,i)=>{const v=sel.map(k=>allD[k].values[i]).filter(validNum);return v.length?Math.max(...v):null;});
-    const ds=[
-      {label:'_hi',data:envMax,borderColor:'transparent',backgroundColor:'rgba(56,189,248,.08)',borderWidth:0,pointRadius:0,tension:.35,fill:'+1',spanGaps:true,order:99},
-      {label:'_lo',data:envMin,borderColor:'rgba(56,189,248,.12)',backgroundColor:'transparent',borderWidth:.5,pointRadius:0,tension:.35,fill:false,spanGaps:true,order:98},
-      ...sel.map(k=>({label:MODELS[k].l,data:ref.map((_,i)=>allD[k].values[i]??null),borderColor:MODELS[k].c,backgroundColor:'transparent',borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.35,spanGaps:true,order:1}))
-    ];
-    mkChart('ch-cmp',ref,ds,vi.u,260);
+    const envMin=ref.slice(0,n).map((_,i)=>{const v=sel.map(k=>allD[k].values[i]).filter(validNum);return v.length?Math.min(...v):null;});
+    const envMax=ref.slice(0,n).map((_,i)=>{const v=sel.map(k=>allD[k].values[i]).filter(validNum);return v.length?Math.max(...v):null;});
+    mkChart('ch-cmp-main',ref.slice(0,n),[
+      {label:'_hi',data:envMax,borderColor:'transparent',backgroundColor:'rgba(56,189,248,.07)',borderWidth:0,pointRadius:0,tension:.35,fill:'+1',spanGaps:true,order:99},
+      {label:'_lo',data:envMin,borderColor:'rgba(56,189,248,.1)',backgroundColor:'transparent',borderWidth:.5,pointRadius:0,tension:.35,fill:false,spanGaps:true,order:98},
+      ...sel.map(k=>({label:MODELS[k].l,data:ref.slice(0,n).map((_,i)=>allD[k].values[i]??null),borderColor:MODELS[k].c,backgroundColor:'transparent',borderWidth:1.8,pointRadius:0,pointHoverRadius:5,tension:.35,spanGaps:true,order:1}))
+    ],vi.u,240);
   });
 }
+
 
 /* ═══════════════════════════════════════════
    COMPARE RUNS
@@ -1692,20 +1727,19 @@ function interpColor(scale, colors, value) {
   for (let i = 0; i < n-1; i++) {
     if (value >= scale[i] && value <= scale[i+1]) {
       const t = (value - scale[i]) / (scale[i+1] - scale[i]);
-      return lerpColor(colors[i], colors[i+1], t);
+      return lerpColorStr(colors[i], colors[i+1], t);
     }
   }
   return colors[n-1];
 }
 
-function lerpColor(a, b, t) {
-  if (a === 'transparent') a = '#00000000';
-  if (b === 'transparent') b = '#00000000';
-  const pa = parseHex(a), pb = parseHex(b);
-  const r = Math.round(pa[0] + (pb[0]-pa[0])*t);
-  const g = Math.round(pa[1] + (pb[1]-pa[1])*t);
-  const bv = Math.round(pa[2] + (pb[2]-pa[2])*t);
-  const av = Math.round((pa[3] + (pb[3]-pa[3])*t));
+function lerpColorStr(a, b, t) {
+  const pa = parseHex(a==='transparent'?'#00000000':a);
+  const pb = parseHex(b==='transparent'?'#00000000':b);
+  const r=Math.round(pa[0]+(pb[0]-pa[0])*t);
+  const g=Math.round(pa[1]+(pb[1]-pa[1])*t);
+  const bv=Math.round(pa[2]+(pb[2]-pa[2])*t);
+  const av=Math.round(pa[3]+(pb[3]-pa[3])*t);
   return `rgba(${r},${g},${bv},${(av/255).toFixed(2)})`;
 }
 
@@ -1805,60 +1839,110 @@ async function fetchGridData() {
 function renderGridOverlay() {
   if (!leafletMap || !MS.hourSlots.length) return;
   const slot = MS.hourSlots[MS.hourIdx];
-  if (!slot) return;
+  if (!slot || !slot.points.length) return;
 
   const mv = MAP_VARS[MS.var];
-
-  // Remove old overlay
   if (MS.overlayLayer) { leafletMap.removeLayer(MS.overlayLayer); MS.overlayLayer = null; }
 
-  // Build canvas overlay using Leaflet's SVG/Canvas renderer
-  // We use a canvas-based image overlay sized to the bounds
   const bounds = [[MAP_BOUNDS.minLat, MAP_BOUNDS.minLon],[MAP_BOUNDS.maxLat, MAP_BOUNDS.maxLon]];
 
-  // Grid dimensions
-  const lats = [], lons = [];
-  slot.points.forEach(p => {
-    if (!lats.includes(p.lat)) lats.push(p.lat);
-    if (!lons.includes(p.lon)) lons.push(p.lon);
-  });
-  lats.sort((a,b)=>b-a); // descending (top to bottom)
-  lons.sort((a,b)=>a-b); // ascending (left to right)
-
+  // Build sorted unique lat/lon arrays
+  const latSet = new Set(), lonSet = new Set();
+  slot.points.forEach(p => { latSet.add(+p.lat.toFixed(2)); lonSet.add(+p.lon.toFixed(2)); });
+  const lats = [...latSet].sort((a,b)=>b-a); // descending
+  const lons = [...lonSet].sort((a,b)=>a-b); // ascending
   const nLat = lats.length, nLon = lons.length;
   if (!nLat || !nLon) return;
 
-  // Build lookup
-  const lookup = new Map();
-  slot.points.forEach(p => lookup.set(`${p.lat.toFixed(2)},${p.lon.toFixed(2)}`, p.v));
+  // Build value grid (2D array)
+  const grid = Array.from({length:nLat}, ()=>new Array(nLon).fill(null));
+  const latIdx = new Map(lats.map((v,i)=>[v,i]));
+  const lonIdx = new Map(lons.map((v,i)=>[v,i]));
+  slot.points.forEach(p => {
+    const ri = latIdx.get(+p.lat.toFixed(2));
+    const ci = lonIdx.get(+p.lon.toFixed(2));
+    if (ri !== undefined && ci !== undefined) grid[ri][ci] = p.v;
+  });
 
-  // Draw to off-screen canvas
+  // Render to canvas at 4x resolution with bilinear interpolation
+  const SCALE = 4; // pixels per grid cell
   const canvas = document.createElement('canvas');
-  canvas.width = nLon; canvas.height = nLat;
+  canvas.width  = (nLon - 1) * SCALE + 1;
+  canvas.height = (nLat - 1) * SCALE + 1;
   const ctx = canvas.getContext('2d');
 
-  for (let r = 0; r < nLat; r++) {
-    for (let c = 0; c < nLon; c++) {
-      const key = `${lats[r].toFixed(2)},${lons[c].toFixed(2)}`;
-      const v = lookup.get(key);
-      if (v === undefined || (mv.skipZero && v < mv.scale[1])) continue;
-      const col = interpColor(mv.scale, mv.colors, v);
-      if (!col || col === 'transparent') continue;
-      ctx.fillStyle = col;
-      ctx.fillRect(c, r, 1, 1);
-    }
+  // Use imageData for speed
+  const imgData = ctx.createImageData(canvas.width, canvas.height);
+  const data = imgData.data;
+
+  function sampleBilinear(r, c) {
+    // r,c are fractional grid coords
+    const r0 = Math.floor(r), r1 = Math.min(r0+1, nLat-1);
+    const c0 = Math.floor(c), c1 = Math.min(c0+1, nLon-1);
+    const tr = r - r0, tc = c - c0;
+    const v00 = grid[r0][c0], v01 = grid[r0][c1];
+    const v10 = grid[r1][c0], v11 = grid[r1][c1];
+    // gather valid values
+    const vals = [v00,v01,v10,v11];
+    const valid = vals.filter(v=>v!==null);
+    if (!valid.length) return null;
+    // fill nulls with nearest valid
+    const fill = (v,fallback) => v!==null ? v : fallback;
+    const avg = valid.reduce((a,b)=>a+b,0)/valid.length;
+    const f00=fill(v00,avg), f01=fill(v01,avg), f10=fill(v10,avg), f11=fill(v11,avg);
+    return (f00*(1-tr)*(1-tc) + f01*(1-tr)*tc + f10*tr*(1-tc) + f11*tr*tc);
   }
 
-  // Add as image overlay with opacity
-  MS.overlayLayer = L.imageOverlay(canvas.toDataURL(), bounds, {opacity:0.72, interactive:false}).addTo(leafletMap);
+  for (let py = 0; py < canvas.height; py++) {
+    for (let px = 0; px < canvas.width; px++) {
+      const r = py / SCALE;
+      const c = px / SCALE;
+      const v = sampleBilinear(r, c);
+      if (v === null) continue;
+      if (mv.skipZero && v < mv.scale[1] * 0.5) continue;
+      const col = interpColorRGBA(mv.scale, mv.colors, v);
+      if (!col) continue;
+      const idx = (py * canvas.width + px) * 4;
+      data[idx]   = col[0];
+      data[idx+1] = col[1];
+      data[idx+2] = col[2];
+      data[idx+3] = col[3];
+    }
+  }
+  ctx.putImageData(imgData, 0, 0);
+
+  MS.overlayLayer = L.imageOverlay(canvas.toDataURL(), bounds, {
+    opacity: 0.75, interactive: false,
+  }).addTo(leafletMap);
 
   // Update hour label
   const lbl = document.getElementById('map-hour-lbl');
   if (lbl) {
     const t = slot.time;
-    const diffH = Math.round((t-new Date())/3.6e6);
-    lbl.textContent = diffH === 0 ? 'NOW' : `+${diffH}H · ${t.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`;
+    const diffH = Math.round((t - new Date()) / 3.6e6);
+    lbl.textContent = diffH <= 0 ? 'NOW' : `+${diffH}H · ${t.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`;
   }
+}
+
+// Returns [r,g,b,a] array (0-255)
+function interpColorRGBA(scale, colors, value) {
+  if (value === null || value === undefined || isNaN(value)) return null;
+  const n = scale.length;
+  if (value <= scale[0]) return parseHex(colors[0]);
+  if (value >= scale[n-1]) return parseHex(colors[n-1]);
+  for (let i = 0; i < n-1; i++) {
+    if (value >= scale[i] && value <= scale[i+1]) {
+      const t = (value - scale[i]) / (scale[i+1] - scale[i]);
+      const a = parseHex(colors[i]), b = parseHex(colors[i+1]);
+      return [
+        Math.round(a[0]+(b[0]-a[0])*t),
+        Math.round(a[1]+(b[1]-a[1])*t),
+        Math.round(a[2]+(b[2]-a[2])*t),
+        Math.round(a[3]+(b[3]-a[3])*t),
+      ];
+    }
+  }
+  return parseHex(colors[n-1]);
 }
 
 function drawLegend() {
