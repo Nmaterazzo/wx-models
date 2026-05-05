@@ -7,9 +7,7 @@
 <meta name="theme-color" content="#0d1829">
 <title>WXMODELS</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
 :root {
   --navy0:#080f1e; --navy1:#0d1829; --navy2:#111f35; --navy3:#162640; --navy4:#1c2f4e; --navy5:#243558;
@@ -286,47 +284,6 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
 .es{font-family:'DM Mono',monospace;font-size:10px;color:var(--ink1);text-align:center;line-height:2;}
 
 
-/* ── MAP TAB ── */
-#map-wrap{width:100%;height:100%;position:relative;display:none;flex-direction:column;}
-#map-wrap.active{display:flex;}
-#leaflet-map{flex:1;width:100%;min-height:0;}
-.leaflet-container{background:#060e1a!important;}
-.leaflet-tile-pane{filter:brightness(.55) saturate(.5) hue-rotate(185deg);}
-#map-controls{position:absolute;top:8px;left:8px;right:8px;z-index:500;
-  background:rgba(8,15,30,.93);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
-  border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px 12px;
-  display:flex;flex-direction:column;gap:8px;box-shadow:0 8px 32px rgba(0,0,0,.7);}
-.mc-row{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;}
-.mc-group{display:flex;flex-direction:column;gap:4px;}
-.mc-label{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1.5px;color:rgba(255,255,255,.3);text-transform:uppercase;}
-.mc-pills{display:flex;gap:4px;flex-wrap:wrap;}
-.mc-pill{font-family:'Outfit',sans-serif;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;cursor:pointer;border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.4);transition:all .15s;white-space:nowrap;}
-.mc-pill.on{background:var(--sky);border-color:var(--sky);color:#000;}
-.mc-pill:active{transform:scale(.94);}
-.mc-slider-row{display:flex;align-items:center;gap:8px;}
-.mc-slider-row .mc-label{white-space:nowrap;}
-#map-hour-slider{flex:1;-webkit-appearance:none;height:4px;background:rgba(255,255,255,.12);border-radius:2px;outline:none;cursor:pointer;}
-#map-hour-slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--sky);cursor:pointer;box-shadow:0 0 8px rgba(56,189,248,.6);}
-.mc-hour-lbl{font-family:'DM Mono',monospace;font-size:10px;color:var(--sky);white-space:nowrap;min-width:68px;text-align:right;}
-.mc-play{background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);color:var(--sky);border-radius:50%;width:28px;height:28px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;}
-.mc-play.playing{background:rgba(248,113,113,.15);border-color:rgba(248,113,113,.3);color:#f87171;}
-.mc-play:active{transform:scale(.9);}
-#map-legend{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);z-index:500;background:rgba(8,15,30,.92);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;box-shadow:0 4px 16px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:4px;align-items:center;}
-#legend-canvas{border-radius:3px;}
-#legend-labels{display:flex;justify-content:space-between;width:180px;font-family:'DM Mono',monospace;font-size:8px;color:rgba(255,255,255,.45);}
-#map-status{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);z-index:500;background:rgba(8,15,30,.9);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:5px 14px;font-family:'DM Mono',monospace;font-size:9px;color:rgba(255,255,255,.5);white-space:nowrap;pointer-events:none;transition:opacity .4s;}
-.map-pin-popup{background:rgba(13,24,41,.97);border:1px solid rgba(56,189,248,.3);border-radius:12px;padding:12px 14px;min-width:180px;box-shadow:0 12px 40px rgba(0,0,0,.8);}
-.map-pin-popup h3{font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;color:var(--sky);margin-bottom:7px;letter-spacing:.5px;}
-.map-pin-popup .mp-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.06);}
-.map-pin-popup .mp-row:last-of-type{border-bottom:none;}
-.map-pin-popup .mp-lbl{font-family:'DM Mono',monospace;font-size:9px;color:rgba(255,255,255,.35);}
-.map-pin-popup .mp-val{font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;color:var(--white);}
-.map-pin-popup .mp-goto{margin-top:9px;width:100%;background:var(--sky);color:#000;border:none;border-radius:20px;padding:7px 0;font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.5px;}
-.leaflet-popup-content-wrapper{background:transparent!important;box-shadow:none!important;padding:0!important;}
-.leaflet-popup-content{margin:0!important;}
-.leaflet-popup-tip-container{display:none;}
-.leaflet-popup-close-button{display:none;}
-
 /* ── ANIMATIONS ── */
 @keyframes fu{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
 .fu{animation:fu .25s ease forwards;}
@@ -356,68 +313,11 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
     </div>
   </div>
 
-  <!-- SCROLL AREA — hidden when map is active -->
-  <div class="scroll" id="scroll" style="flex:1;overflow-y:auto;">
+  <div class="scroll" id="scroll">
     <div class="empty">
       <div class="eg">WX</div>
       <div class="et">LOADING...</div>
     </div>
-  </div>
-
-  <!-- MAP WRAP — shown when map tab active -->
-  <div id="map-wrap">
-    <div id="leaflet-map"></div>
-
-    <!-- top control bar -->
-    <div id="map-controls">
-      <div class="mc-row">
-        <!-- variable -->
-        <div class="mc-group">
-          <div class="mc-label">LAYER</div>
-          <div class="mc-pills" id="mp-var">
-            <div class="mc-pill on" data-v="temp"     onclick="setMapVar('temp',this)">TEMP</div>
-            <div class="mc-pill"    data-v="precip"   onclick="setMapVar('precip',this)">PRECIP</div>
-            <div class="mc-pill"    data-v="wind"     onclick="setMapVar('wind',this)">WIND</div>
-            <div class="mc-pill"    data-v="cape"     onclick="setMapVar('cape',this)">CAPE</div>
-            <div class="mc-pill"    data-v="dewpoint" onclick="setMapVar('dewpoint',this)">DEW</div>
-          </div>
-        </div>
-        <!-- model -->
-        <div class="mc-group">
-          <div class="mc-label">MODEL</div>
-          <div class="mc-pills" id="mp-model">
-            <div class="mc-pill on" data-m="hrrr" onclick="setMapModel('hrrr',this)">HRRR</div>
-            <div class="mc-pill"    data-m="gfs"  onclick="setMapModel('gfs',this)">GFS</div>
-            <div class="mc-pill"    data-m="nbm"  onclick="setMapModel('nbm',this)">NBM</div>
-          </div>
-        </div>
-        <!-- run -->
-        <div class="mc-group">
-          <div class="mc-label">RUN</div>
-          <div class="mc-pills" id="mp-run">
-            <div class="mc-pill on" data-r="12Z" onclick="setMapRun('12Z',this)">12Z</div>
-            <div class="mc-pill"    data-r="06Z" onclick="setMapRun('06Z',this)">06Z</div>
-            <div class="mc-pill"    data-r="00Z" onclick="setMapRun('00Z',this)">00Z</div>
-          </div>
-        </div>
-      </div>
-      <!-- hour slider -->
-      <div class="mc-slider-row">
-        <div class="mc-label">HOUR</div>
-        <input type="range" id="map-hour-slider" min="0" max="11" value="0" step="1" oninput="onHourSlide(this.value)">
-        <div class="mc-hour-lbl" id="map-hour-lbl">NOW</div>
-        <button class="mc-play" id="map-play-btn" onclick="togglePlay()">▶</button>
-      </div>
-    </div>
-
-    <!-- legend -->
-    <div id="map-legend">
-      <canvas id="legend-canvas" width="180" height="14"></canvas>
-      <div id="legend-labels"></div>
-    </div>
-
-    <!-- status -->
-    <div id="map-status">LOADING GRID...</div>
   </div>
 
   <nav class="bot">
@@ -426,7 +326,6 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
     <button class="nb"     onclick="setTab('precip',this)"><span class="ni">🌧</span><span class="nl">PRECIP</span></button>
     <button class="nb"     onclick="setTab('wind',this)"><span class="ni">💨</span><span class="nl">WIND</span></button>
     <button class="nb"     onclick="setTab('upper',this)"><span class="ni">🔼</span><span class="nl">UPPER</span></button>
-    <button class="nb"     onclick="setTab('map',this)"><span class="ni">🗺️</span><span class="nl">MAP</span></button>
   </nav>
 </div>
 
@@ -494,7 +393,7 @@ const S={
   cmpModels:['hrrr','gfs','nbm'],
   runModel:'hrrr',cmpRuns:['12Z','06Z','00Z'],
 };
-let CH={}, leafletMap=null;
+let CH={};
 
 /* ═══════════════════════════════════════════
    API
@@ -543,56 +442,118 @@ function normalizeValue(gv, v, prevV){
   return +v.toFixed(3);
 }
 
-async function fetchGrib(mkey,vkey,run,lat,lon){
-  const cycle=latestCycleTime(run);
-  const cycleISO=isoNoMs(cycle);
-  const cacheKey=`${mkey}|${vkey}|${cycleISO}|${lat.toFixed(4)}|${lon.toFixed(4)}`;
-  if(CACHE[cacheKey])return CACHE[cacheKey];
+// Models that support the /runs endpoint (cycle-specific)
+const RUNS_ENDPOINT = new Set(['hrrr','rap','rrfs','nbm']);
+// Models that use /timeseries (no cycle pinning)
+const TIMESERIES_ENDPOINT = new Set(['gfs','ecmwf','graphcast']);
 
-  const gv=GRIB_VARS[vkey];
-  if(!gv)throw new Error(`No GRIB mapping for ${vkey}`);
-  const modelId=MODEL_IDS[mkey];
-  const hours=MODEL_HOURS[mkey]||48;
-  const body={
-    forecastedFrom:cycleISO,forecastedUntil:cycleISO,
-    minLeadTime:'0h',maxLeadTime:`${hours}h`,
-    coordinates:[{lat,lon,name:'loc'}],
-    variables:[{name:gv.name,level:gv.level,info:''}],
-  };
-
-  const res=await fetch(`${WORKER}/${modelId}/runs`,{
-    method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},
-    body:JSON.stringify(body),
+// Simple concurrency limiter — max 2 at once to avoid 429
+let _inflight = 0;
+const _queue = [];
+function _limitedFetch(url, opts) {
+  return new Promise((res, rej) => {
+    _queue.push({url, opts, res, rej});
+    _pump();
   });
-  const rawText=await res.text();
-  if(!res.ok)throw new Error(`${mkey}/${vkey} HTTP ${res.status}`);
+}
+function _pump() {
+  while (_inflight < 2 && _queue.length) {
+    const {url, opts, res, rej} = _queue.shift();
+    _inflight++;
+    fetch(url, opts)
+      .then(r  => { _inflight--; _pump(); res(r); })
+      .catch(e => { _inflight--; _pump(); rej(e); });
+  }
+}
 
-  let rows;
-  try{const j=JSON.parse(rawText);rows=Array.isArray(j)?j:(j.data||j.results||[]);}
-  catch(e){throw new Error(`${mkey}/${vkey} bad JSON`);}
-  if(!rows.length)throw new Error(`${mkey}/${vkey} empty`);
+// In-flight dedup — same cache key → same promise
+const IN_FLIGHT = {};
 
-  const gribKey=valueKey(gv);
-  rows.sort((a,b)=>new Date(a.forecasted_time)-new Date(b.forecasted_time));
+async function fetchGrib(mkey, vkey, run, lat, lon) {
+  const gv = GRIB_VARS[vkey];
+  if (!gv) throw new Error(`No GRIB mapping for ${vkey}`);
 
-  const seen=new Set();
-  const times=[],values=[];
-  const isAccum = gv.name==='APCP'||gv.name==='ASNOW';
-  rows.forEach((r,i)=>{
-    const t=new Date(r.forecasted_time);
-    const tk=t.getTime();
-    if(seen.has(tk))return;
-    seen.add(tk);
-    const rawV = r[gribKey];
-    const rawPrev = i>0 ? rows[i-1][gribKey] : undefined;
-    const v = normalizeValue(gv, rawV, isAccum ? rawPrev : undefined);
-    times.push(t);
-    values.push(v);
-  });
+  const modelId = MODEL_IDS[mkey];
+  const hours   = MODEL_HOURS[mkey] || 48;
+  const isAccum = gv.name === 'APCP' || gv.name === 'ASNOW';
 
-  const result={times,values};
-  CACHE[cacheKey]=result;
-  return result;
+  // Build cache key — timeseries models don't need cycle
+  const useRuns = RUNS_ENDPOINT.has(mkey);
+  const cycle   = latestCycleTime(run);
+  const cycleISO = isoNoMs(cycle);
+  const cacheKey = `${mkey}|${vkey}|${useRuns ? cycleISO : run}|${lat.toFixed(4)}|${lon.toFixed(4)}`;
+
+  if (CACHE[cacheKey]) return CACHE[cacheKey];
+  if (IN_FLIGHT[cacheKey]) return IN_FLIGHT[cacheKey];
+
+  const promise = (async () => {
+    let body, endpoint;
+
+    if (useRuns) {
+      // /runs — pin to exact model cycle
+      endpoint = `${modelId}/runs`;
+      body = {
+        forecastedFrom:  cycleISO,
+        forecastedUntil: cycleISO,
+        minLeadTime: '0h',
+        maxLeadTime: `${hours}h`,
+        coordinates: [{lat, lon, name:'loc'}],
+        variables: [{name: gv.name, level: gv.level, info:''}],
+      };
+    } else {
+      // /timeseries — latest available data
+      const now = new Date();
+      now.setUTCMinutes(0,0,0);
+      const until = new Date(now.getTime() + hours * 3.6e6);
+      endpoint = `${modelId}/timeseries`;
+      body = {
+        fromTime:  isoNoMs(now),
+        untilTime: isoNoMs(until),
+        coordinates: [{lat, lon, name:'loc'}],
+        variables: [{name: gv.name, level: gv.level, info:''}],
+      };
+    }
+
+    const res = await _limitedFetch(`${WORKER}/${endpoint}`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','Accept':'application/json'},
+      body: JSON.stringify(body),
+    });
+    const rawText = await res.text();
+    if (!res.ok) throw new Error(`${mkey}/${vkey} HTTP ${res.status}`);
+
+    let rows;
+    try {
+      const j = JSON.parse(rawText);
+      rows = Array.isArray(j) ? j : (j.data || j.results || []);
+    } catch(e) { throw new Error(`${mkey}/${vkey} bad JSON`); }
+    if (!rows.length) throw new Error(`${mkey}/${vkey} empty`);
+
+    const gribKey = valueKey(gv);
+    rows.sort((a,b) => new Date(a.forecasted_time||a.time) - new Date(b.forecasted_time||b.time));
+
+    const seen = new Set();
+    const times = [], values = [];
+    rows.forEach((r, i) => {
+      const t = new Date(r.forecasted_time || r.time);
+      const tk = t.getTime();
+      if (seen.has(tk)) return;
+      seen.add(tk);
+      const rawV    = r[gribKey];
+      const rawPrev = i > 0 ? rows[i-1][gribKey] : undefined;
+      const v = normalizeValue(gv, rawV, isAccum ? rawPrev : undefined);
+      times.push(t);
+      values.push(v);
+    });
+
+    const result = {times, values};
+    CACHE[cacheKey] = result;
+    delete IN_FLIGHT[cacheKey];
+    return result;
+  })();
+
+  IN_FLIGHT[cacheKey] = promise;
+  return promise;
 }
 
 async function fetchBundle(mkey,vkeys,run,lat,lon){
@@ -808,23 +769,7 @@ function setTab(t,el){
   if(TABS[t]?.primary)S.var=TABS[t].primary;
   document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
   el.classList.add('on');
-
-  // show/hide map vs scroll
-  const mapWrap=document.getElementById('map-wrap');
-  const scroll=document.getElementById('scroll');
-  const ctrl=document.querySelector('.ctrl');
-  if(t==='map'){
-    scroll.style.display='none';
-    mapWrap.classList.add('active');
-    ctrl.style.display='none';
-    initMap();
-  } else {
-    scroll.style.display='';
-    mapWrap.classList.remove('active');
-    ctrl.style.display='';
-    if(MS.playing) togglePlay();
-    render();
-  }
+  render();
 }
 
 function modelRunHTML(mod,runs){
@@ -1917,476 +1862,6 @@ async function rRuns(sc){
 ═══════════════════════════════════════════ */
 
 // Southeast US bounding box
-const MAP_BOUNDS = {
-  minLat: 24.0, maxLat: 37.5,
-  minLon: -92.0, maxLon: -75.0,
-};
-const MAP_STEP = 0.25; // degrees — ~27km grid, ~780 points
-
-// Map variable configs
-const MAP_VARS = {
-  temp: {
-    label:'TEMPERATURE', unit:'°F', grib:'TMP', level:'2 m above ground',
-    scale: [32,60,70,80,90,100,110],
-    colors:['#818cf8','#38bdf8','#34d399','#fbbf24','#fb923c','#f87171','#dc2626'],
-  },
-  precip: {
-    label:'PRECIP RATE', unit:'in/hr', grib:'APCP', level:'surface',
-    scale:[0,.005,.02,.05,.1,.25,.5],
-    colors:['transparent','#bfdbfe','#38bdf8','#818cf8','#a78bfa','#c026d3','#7c3aed'],
-    skipZero:true,
-  },
-  wind: {
-    label:'WIND SPEED', unit:'mph', grib:'WIND', level:'10 m above ground',
-    scale:[0,5,10,15,20,30,45],
-    colors:['transparent','#86efac','#34d399','#38bdf8','#fbbf24','#fb923c','#f87171'],
-  },
-  cape: {
-    label:'CAPE', unit:'J/kg', grib:'CAPE', level:'surface',
-    scale:[0,250,500,1000,2000,3000,4000],
-    colors:['transparent','#fef9c3','#fbbf24','#fb923c','#f87171','#dc2626','#7f1d1d'],
-    skipZero:true,
-  },
-  dewpoint: {
-    label:'DEWPOINT', unit:'°F', grib:'DPT', level:'2 m above ground',
-    scale:[30,45,55,60,65,68,72],
-    colors:['#fef3c7','#a3e635','#34d399','#38bdf8','#818cf8','#a78bfa','#7c3aed'],
-  },
-};
-
-// Map state
-const MS = {
-  var:'temp', model:'hrrr', run:'12Z',
-  hourIdx:0, gridData:null,
-  hourSlots:[], playing:false, playTimer:null,
-  marker:null, overlayLayer:null,
-};
-
-
-
-function interpColor(scale, colors, value) {
-  if (value === null || value === undefined || isNaN(value)) return null;
-  const n = scale.length;
-  if (value <= scale[0]) return colors[0];
-  if (value >= scale[n-1]) return colors[n-1];
-  for (let i = 0; i < n-1; i++) {
-    if (value >= scale[i] && value <= scale[i+1]) {
-      const t = (value - scale[i]) / (scale[i+1] - scale[i]);
-      return lerpColorStr(colors[i], colors[i+1], t);
-    }
-  }
-  return colors[n-1];
-}
-
-function lerpColorStr(a, b, t) {
-  const pa = parseHex(a==='transparent'?'#00000000':a);
-  const pb = parseHex(b==='transparent'?'#00000000':b);
-  const r=Math.round(pa[0]+(pb[0]-pa[0])*t);
-  const g=Math.round(pa[1]+(pb[1]-pa[1])*t);
-  const bv=Math.round(pa[2]+(pb[2]-pa[2])*t);
-  const av=Math.round(pa[3]+(pb[3]-pa[3])*t);
-  return `rgba(${r},${g},${bv},${(av/255).toFixed(2)})`;
-}
-
-function parseHex(hex) {
-  hex = hex.replace('#','');
-  if (hex.length === 8) return [parseInt(hex.slice(0,2),16),parseInt(hex.slice(2,4),16),parseInt(hex.slice(4,6),16),parseInt(hex.slice(6,8),16)];
-  if (hex.length === 6) return [parseInt(hex.slice(0,2),16),parseInt(hex.slice(2,4),16),parseInt(hex.slice(4,6),16),255];
-  return [128,128,128,255];
-}
-
-function normMapValue(grib, v) {
-  if (!validNum(v)) return null;
-  if ((grib==='TMP'||grib==='DPT') && v > 200) v = (v-273.15)*9/5+32;
-  if (grib==='WIND') v = v * 2.23694;
-  if (grib==='APCP') v = v * 0.0393701;
-  return +v.toFixed(3);
-}
-
-function setStatus(msg, fade=false) {
-  const el = document.getElementById('map-status');
-  if (!el) return;
-  el.textContent = msg;
-  el.style.opacity = '1';
-  if (fade) setTimeout(()=>{ el.style.opacity='0'; }, 2000);
-}
-
-async function fetchGridData() {
-  const mv = MAP_VARS[MS.var];
-  const modelId = MODEL_IDS[MS.model] || MS.model;
-  const isAccum = mv.grib === 'APCP' || mv.grib === 'ASNOW';
-
-  setStatus(`FETCHING ${mv.label} · ${MS.model.toUpperCase()} ${MS.run}...`);
-
-  // Use the selected run cycle
-  const cycle = latestCycleTime(MS.run);
-  const hours = MS.model==='hrrr' ? 12 : 12;
-  const untilTime = new Date(cycle.getTime() + hours * 3.6e6);
-
-  const body = {
-    forecastedFrom:  cycle.toISOString().replace('.000',''),
-    forecastedUntil: cycle.toISOString().replace('.000',''),
-    minLeadTime: '0h',
-    maxLeadTime: `${hours}h`,
-    grid: {
-      minLatitude:  MAP_BOUNDS.minLat,
-      maxLatitude:  MAP_BOUNDS.maxLat,
-      minLongitude: MAP_BOUNDS.minLon,
-      maxLongitude: MAP_BOUNDS.maxLon,
-      step: MAP_STEP,
-    },
-    variables: [{name: mv.grib, level: mv.level, info:''}],
-  };
-
-  const res = await fetch(`${WORKER}/${modelId}/runs`, {
-    method:'POST',
-    headers:{'Content-Type':'application/json','Accept':'application/json'},
-    body: JSON.stringify(body),
-  });
-  const raw = await res.text();
-  if (!res.ok) throw new Error(`Grid fetch HTTP ${res.status}: ${raw.slice(0,120)}`);
-
-  let rows;
-  try {
-    const j = JSON.parse(raw);
-    rows = Array.isArray(j) ? j : (j.data || j.results || []);
-  } catch(e) { throw new Error('Grid bad JSON'); }
-
-  const gribKey = `${mv.grib}|${mv.level}|`;
-
-  // For accumulated vars: group by lat/lon first, sort by time, then diff
-  // For instantaneous: just group by time
-  if (isAccum) {
-    // Group by point key → sorted time series
-    const byPoint = new Map();
-    rows.forEach(r => {
-      const pk = `${(+r.lat).toFixed(2)},${(+r.lon).toFixed(2)}`;
-      if (!byPoint.has(pk)) byPoint.set(pk, []);
-      byPoint.get(pk).push({t: new Date(r.forecasted_time||r.time), raw: r[gribKey], lat:r.lat, lon:r.lon});
-    });
-
-    // Build hourly diff values per time slot
-    const byTime = new Map();
-    byPoint.forEach((series, pk) => {
-      series.sort((a,b)=>a.t-b.t);
-      series.forEach((item, i) => {
-        const tk = Math.round(item.t.getTime()/3.6e6)*3.6e6;
-        if (!byTime.has(tk)) byTime.set(tk, new Map());
-        const rawV = item.raw;
-        const rawPrev = i > 0 ? series[i-1].raw : null;
-        let v = null;
-        if (validNum(rawV)) {
-          // diff for accum
-          const diff = (rawPrev !== null && validNum(rawPrev)) ? Math.max(0, rawV - rawPrev) : rawV;
-          v = +(diff * 0.0393701).toFixed(4); // kg/m² → inches
-          if (v < 0.001) v = null; // hide trace
-        }
-        if (v !== null) byTime.get(tk).set(pk, {lat:item.lat, lon:item.lon, v});
-      });
-    });
-
-    const sortedTimes = [...byTime.keys()].sort((a,b)=>a-b).slice(0,12);
-    MS.hourSlots = sortedTimes.map(tk => ({
-      time: new Date(tk),
-      points: [...byTime.get(tk).values()],
-    }));
-  } else {
-    // Instantaneous — simple group by time
-    const byTime = new Map();
-    rows.forEach(r => {
-      const t = new Date(r.forecasted_time || r.time);
-      const tk = Math.round(t.getTime()/3.6e6)*3.6e6;
-      if (!byTime.has(tk)) byTime.set(tk, new Map());
-      const v = normMapValue(mv.grib, r[gribKey]);
-      if (v !== null) byTime.get(tk).set(`${(+r.lat).toFixed(2)},${(+r.lon).toFixed(2)}`, {lat:r.lat, lon:r.lon, v});
-    });
-
-    const sortedTimes = [...byTime.keys()].sort((a,b)=>a-b).slice(0,12);
-    MS.hourSlots = sortedTimes.map(tk => ({
-      time: new Date(tk),
-      points: [...byTime.get(tk).values()],
-    }));
-  }
-
-  MS.hourIdx = 0;
-  const slider = document.getElementById('map-hour-slider');
-  if (slider) { slider.max = Math.max(0, MS.hourSlots.length - 1); slider.value = 0; }
-  setStatus(`${mv.label} · ${MS.model.toUpperCase()} ${MS.run} · ${MS.hourSlots.length} HRS`, true);
-}
-
-function renderGridOverlay() {
-  if (!leafletMap || !MS.hourSlots.length) return;
-  const slot = MS.hourSlots[MS.hourIdx];
-  if (!slot || !slot.points.length) return;
-
-  const mv = MAP_VARS[MS.var];
-  if (MS.overlayLayer) { leafletMap.removeLayer(MS.overlayLayer); MS.overlayLayer = null; }
-
-  const bounds = [[MAP_BOUNDS.minLat, MAP_BOUNDS.minLon],[MAP_BOUNDS.maxLat, MAP_BOUNDS.maxLon]];
-
-  // Build sorted unique lat/lon arrays
-  const latSet = new Set(), lonSet = new Set();
-  slot.points.forEach(p => { latSet.add(+p.lat.toFixed(2)); lonSet.add(+p.lon.toFixed(2)); });
-  const lats = [...latSet].sort((a,b)=>b-a); // descending
-  const lons = [...lonSet].sort((a,b)=>a-b); // ascending
-  const nLat = lats.length, nLon = lons.length;
-  if (!nLat || !nLon) return;
-
-  // Build value grid (2D array)
-  const grid = Array.from({length:nLat}, ()=>new Array(nLon).fill(null));
-  const latIdx = new Map(lats.map((v,i)=>[v,i]));
-  const lonIdx = new Map(lons.map((v,i)=>[v,i]));
-  slot.points.forEach(p => {
-    const ri = latIdx.get(+p.lat.toFixed(2));
-    const ci = lonIdx.get(+p.lon.toFixed(2));
-    if (ri !== undefined && ci !== undefined) grid[ri][ci] = p.v;
-  });
-
-  // Render to canvas at 4x resolution with bilinear interpolation
-  const SCALE = 4; // pixels per grid cell
-  const canvas = document.createElement('canvas');
-  canvas.width  = (nLon - 1) * SCALE + 1;
-  canvas.height = (nLat - 1) * SCALE + 1;
-  const ctx = canvas.getContext('2d');
-
-  // Use imageData for speed
-  const imgData = ctx.createImageData(canvas.width, canvas.height);
-  const data = imgData.data;
-
-  function sampleBilinear(r, c) {
-    // r,c are fractional grid coords
-    const r0 = Math.floor(r), r1 = Math.min(r0+1, nLat-1);
-    const c0 = Math.floor(c), c1 = Math.min(c0+1, nLon-1);
-    const tr = r - r0, tc = c - c0;
-    const v00 = grid[r0][c0], v01 = grid[r0][c1];
-    const v10 = grid[r1][c0], v11 = grid[r1][c1];
-    // gather valid values
-    const vals = [v00,v01,v10,v11];
-    const valid = vals.filter(v=>v!==null);
-    if (!valid.length) return null;
-    // fill nulls with nearest valid
-    const fill = (v,fallback) => v!==null ? v : fallback;
-    const avg = valid.reduce((a,b)=>a+b,0)/valid.length;
-    const f00=fill(v00,avg), f01=fill(v01,avg), f10=fill(v10,avg), f11=fill(v11,avg);
-    return (f00*(1-tr)*(1-tc) + f01*(1-tr)*tc + f10*tr*(1-tc) + f11*tr*tc);
-  }
-
-  for (let py = 0; py < canvas.height; py++) {
-    for (let px = 0; px < canvas.width; px++) {
-      const r = py / SCALE;
-      const c = px / SCALE;
-      const v = sampleBilinear(r, c);
-      if (v === null) continue;
-      if (mv.skipZero && v < mv.scale[1] * 0.5) continue;
-      const col = interpColorRGBA(mv.scale, mv.colors, v);
-      if (!col) continue;
-      const idx = (py * canvas.width + px) * 4;
-      data[idx]   = col[0];
-      data[idx+1] = col[1];
-      data[idx+2] = col[2];
-      data[idx+3] = col[3];
-    }
-  }
-  ctx.putImageData(imgData, 0, 0);
-
-  MS.overlayLayer = L.imageOverlay(canvas.toDataURL(), bounds, {
-    opacity: 0.75, interactive: false,
-  }).addTo(leafletMap);
-
-  // Update hour label
-  const lbl = document.getElementById('map-hour-lbl');
-  if (lbl) {
-    const t = slot.time;
-    const diffH = Math.round((t - new Date()) / 3.6e6);
-    lbl.textContent = diffH <= 0 ? 'NOW' : `+${diffH}H · ${t.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`;
-  }
-}
-
-// Returns [r,g,b,a] array (0-255)
-function interpColorRGBA(scale, colors, value) {
-  if (value === null || value === undefined || isNaN(value)) return null;
-  const n = scale.length;
-  if (value <= scale[0]) return parseHex(colors[0]);
-  if (value >= scale[n-1]) return parseHex(colors[n-1]);
-  for (let i = 0; i < n-1; i++) {
-    if (value >= scale[i] && value <= scale[i+1]) {
-      const t = (value - scale[i]) / (scale[i+1] - scale[i]);
-      const a = parseHex(colors[i]), b = parseHex(colors[i+1]);
-      return [
-        Math.round(a[0]+(b[0]-a[0])*t),
-        Math.round(a[1]+(b[1]-a[1])*t),
-        Math.round(a[2]+(b[2]-a[2])*t),
-        Math.round(a[3]+(b[3]-a[3])*t),
-      ];
-    }
-  }
-  return parseHex(colors[n-1]);
-}
-
-function drawLegend() {
-  const mv = MAP_VARS[MS.var];
-  const canvas = document.getElementById('legend-canvas');
-  const labEl = document.getElementById('legend-labels');
-  if (!canvas || !labEl) return;
-
-  const ctx = canvas.getContext('2d');
-  const w = canvas.width, h = canvas.height;
-  const grad = ctx.createLinearGradient(0,0,w,0);
-  mv.colors.forEach((col,i) => {
-    if (col === 'transparent') col = 'rgba(255,255,255,0)';
-    grad.addColorStop(i/(mv.colors.length-1), col);
-  });
-  ctx.clearRect(0,0,w,h);
-  ctx.fillStyle = grad;
-  ctx.fillRect(0,0,w,h);
-
-  // labels
-  labEl.innerHTML = mv.scale.map(v => {
-    const u = mv.unit==='°F'?'°':mv.unit==='J/kg'?'':mv.unit==='mph'?'':mv.unit==='in/hr'?'':'';
-    return `<span>${v}${u}</span>`;
-  }).join('');
-}
-
-function setMapVar(v, el) {
-  MS.var = v;
-  document.querySelectorAll('#mp-var .mc-pill').forEach(p=>p.classList.remove('on'));
-  el.classList.add('on');
-  loadGridAndRender();
-}
-
-function setMapModel(m, el) {
-  MS.model = m;
-  document.querySelectorAll('#mp-model .mc-pill').forEach(p=>p.classList.remove('on'));
-  el.classList.add('on');
-  // update run pills to match model's available runs
-  const modelRuns = RUNS[m] || ['12Z','06Z','00Z'];
-  const runEl = document.getElementById('mp-run');
-  if (runEl) {
-    runEl.innerHTML = modelRuns.slice(0,4).map((r,i)=>
-      `<div class="mc-pill${(i===0?' on':'')}" data-r="${r}" onclick="setMapRun('${r}',this)">${r}</div>`
-    ).join('');
-    MS.run = modelRuns[0];
-  }
-  loadGridAndRender();
-}
-
-function setMapRun(r, el) {
-  MS.run = r;
-  document.querySelectorAll('#mp-run .mc-pill').forEach(p=>p.classList.remove('on'));
-  el.classList.add('on');
-  loadGridAndRender();
-}
-
-function onHourSlide(val) {
-  MS.hourIdx = parseInt(val);
-  renderGridOverlay();
-}
-
-function togglePlay() {
-  const btn = document.getElementById('map-play-btn');
-  if (MS.playing) {
-    clearInterval(MS.playTimer);
-    MS.playing = false;
-    btn.textContent = '▶';
-    btn.classList.remove('playing');
-  } else {
-    MS.playing = true;
-    btn.textContent = '■';
-    btn.classList.add('playing');
-    MS.playTimer = setInterval(() => {
-      MS.hourIdx = (MS.hourIdx + 1) % Math.max(1, MS.hourSlots.length);
-      const slider = document.getElementById('map-hour-slider');
-      if (slider) slider.value = MS.hourIdx;
-      renderGridOverlay();
-    }, 900);
-  }
-}
-
-async function loadGridAndRender() {
-  drawLegend();
-  try {
-    await fetchGridData();
-    renderGridOverlay();
-  } catch(e) {
-    setStatus(`ERROR: ${e.message}`);
-  }
-}
-
-function initMap() {
-  if (leafletMap) {
-    // already initialized — just refresh data
-    leafletMap.invalidateSize();
-    if (!MS.gridData) loadGridAndRender();
-    return;
-  }
-
-  const mapEl = document.getElementById('leaflet-map');
-  leafletMap = L.map(mapEl, {
-    center: [30.5, -83.5], // center of SE US
-    zoom: 6,
-    zoomControl: true,
-    attributionControl: false,
-  });
-
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom:18, opacity:.9,
-  }).addTo(leafletMap);
-
-  // custom marker icon
-  const wxIcon = L.divIcon({
-    html:`<div style="width:28px;height:28px;border-radius:50%;background:rgba(13,24,41,.95);border:2px solid #38bdf8;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 0 12px rgba(56,189,248,.5);">📍</div>`,
-    className:'',iconSize:[28,28],iconAnchor:[14,14],
-  });
-
-  // tap on map → point popup
-  leafletMap.on('click', async(e) => {
-    const {lat, lng:lon} = e.latlng;
-    const name = `${lat.toFixed(3)}°N, ${Math.abs(lon).toFixed(3)}°W`;
-    if (MS.marker) MS.marker.remove();
-    MS.marker = L.marker([lat,lon],{icon:wxIcon}).addTo(leafletMap);
-    MS.marker.bindPopup(`<div class="map-pin-popup"><h3>${name}</h3><div class="mp-row"><span class="mp-lbl">LOADING...</span></div></div>`,{maxWidth:220,className:''}).openPopup();
-    // fetch point data
-    try {
-      const b = await fetchBundle('hrrr',['temp','wind','precip'],'12Z',lat,lon);
-      const t = currentValue(b.temp)!=null?Math.round(currentValue(b.temp))+'°F':'--';
-      const w = currentValue(b.wind)!=null?Math.round(currentValue(b.wind))+' mph':'--';
-      const pv = b.precip?.values?.slice(0,24)||[];
-      const pt = pv.reduce((a,v)=>a+(v||0),0);
-      const p = pt>.001?pt.toFixed(2)+'"':'None';
-      const html = `<div class="map-pin-popup">
-        <h3>${name}</h3>
-        <div class="mp-row"><span class="mp-lbl">TEMPERATURE</span><span class="mp-val">${t}</span></div>
-        <div class="mp-row"><span class="mp-lbl">WIND</span><span class="mp-val">${w}</span></div>
-        <div class="mp-row"><span class="mp-lbl">PRECIP 24H</span><span class="mp-val">${p}</span></div>
-        <button class="mp-goto" onclick="loadMapPoint(${lat},${lon},'${name.replace(/'/g,"\\'")}')" >VIEW FULL FORECAST →</button>
-      </div>`;
-      if (MS.marker) MS.marker.setPopupContent(html);
-    } catch(e) { /* leave loading state */ }
-  });
-
-  setTimeout(() => {
-    leafletMap.invalidateSize();
-    loadGridAndRender();
-  }, 150);
-}
-
-function loadMapPoint(lat, lon, name) {
-  S.loc = {lat, lon, name};
-  document.getElementById('loc').value = name;
-  S.loaded = true;
-  if (MS.playing) togglePlay();
-  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
-  document.querySelector('.nb').classList.add('on');
-  S.tab = 'forecast';
-  document.getElementById('map-wrap').classList.remove('active');
-  document.getElementById('scroll').style.display = '';
-  document.querySelector('.ctrl').style.display = '';
-  render();
-}
-
-/* ═══════════════════════════════════════════
-   INIT
-═══════════════════════════════════════════ */
 S.loc=PLACES['land o'];
 S.loaded=true;
 render();
