@@ -375,10 +375,10 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
         <div class="mc-group">
           <div class="mc-label">LAYER</div>
           <div class="mc-pills" id="mp-var">
-            <div class="mc-pill on" data-v="temp"   onclick="setMapVar('temp',this)">TEMP</div>
-            <div class="mc-pill"    data-v="precip" onclick="setMapVar('precip',this)">PRECIP</div>
-            <div class="mc-pill"    data-v="wind"   onclick="setMapVar('wind',this)">WIND</div>
-            <div class="mc-pill"    data-v="cape"   onclick="setMapVar('cape',this)">CAPE</div>
+            <div class="mc-pill on" data-v="temp"     onclick="setMapVar('temp',this)">TEMP</div>
+            <div class="mc-pill"    data-v="precip"   onclick="setMapVar('precip',this)">PRECIP</div>
+            <div class="mc-pill"    data-v="wind"     onclick="setMapVar('wind',this)">WIND</div>
+            <div class="mc-pill"    data-v="cape"     onclick="setMapVar('cape',this)">CAPE</div>
             <div class="mc-pill"    data-v="dewpoint" onclick="setMapVar('dewpoint',this)">DEW</div>
           </div>
         </div>
@@ -389,6 +389,15 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
             <div class="mc-pill on" data-m="hrrr" onclick="setMapModel('hrrr',this)">HRRR</div>
             <div class="mc-pill"    data-m="gfs"  onclick="setMapModel('gfs',this)">GFS</div>
             <div class="mc-pill"    data-m="nbm"  onclick="setMapModel('nbm',this)">NBM</div>
+          </div>
+        </div>
+        <!-- run -->
+        <div class="mc-group">
+          <div class="mc-label">RUN</div>
+          <div class="mc-pills" id="mp-run">
+            <div class="mc-pill on" data-r="12Z" onclick="setMapRun('12Z',this)">12Z</div>
+            <div class="mc-pill"    data-r="06Z" onclick="setMapRun('06Z',this)">06Z</div>
+            <div class="mc-pill"    data-r="00Z" onclick="setMapRun('00Z',this)">00Z</div>
           </div>
         </div>
       </div>
@@ -1377,6 +1386,9 @@ async function tabUpper(sc){
   });
 }
 
+
+
+
 /* ═══════════════════════════════════════════
    COMPARE MODELS
 ═══════════════════════════════════════════ */
@@ -1401,22 +1413,25 @@ async function rCompare(sc){
   const cls=spreadClass(nowSpread,vi.u);
   const txt=cls==='lo'?'TIGHT AGREEMENT':cls==='md'?'MODERATE SPREAD':'HIGH UNCERTAINTY';
 
-  const matHours=Math.min(n,24);
-  const matRows=Array.from({length:matHours},(_,i)=>{
-    const t=ref[i];
-    const vals=sel.map(k=>allD[k].values?.[i]??null);
-    const good=vals.filter(validNum);
-    const mean=good.length?good.reduce((a,b)=>a+b,0)/good.length:null;
-    const spread=good.length>=2?Math.max(...good)-Math.min(...good):null;
-    const label=t?(i===0?'NOW':t.toLocaleString([],{weekday:'short',hour:'numeric'})):`+${i}h`;
-    return{label,vals,mean,spread};
+  // Per-hour stats for envelope + divergence matrix
+  const hourStats=Array.from({length:n},(_,i)=>{
+    const vals=sel.map(k=>allD[k].values?.[i]??null).filter(validNum);
+    const mean=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
+    const mn=vals.length?Math.min(...vals):null;
+    const mx=vals.length?Math.max(...vals):null;
+    return{mean,min:mn,max:mx,spread:mx!=null&&mn!=null?mx-mn:null};
   });
-  const maxSpread=Math.max(...matRows.map(r=>r.spread||0),0.1);
-  const maxScales={'°F':15,'in':.25,'mph':20,'%':40,'gpm':100,'J/kg':3000,'m²/s²':300};
-  const spMax=maxScales[vi.u]||20;
+  const maxSpread=Math.max(...hourStats.map(r=>r.spread||0),0.1);
+  const spMax={'°F':15,'in':.25,'mph':20,'%':40,'gpm':100,'J/kg':3000,'m²/s²':300}[vi.u]||20;
+  const matHours=Math.min(n,24);
+
+  // Is this a precip comparison? render swim lanes instead of fan
+  const isPrecip = vkey==='precip';
 
   sc.innerHTML=`
     <div class="pad">
+
+      <!-- model toggles -->
       <div class="fu d1">
         <div class="slbl" style="margin-bottom:8px;">MODELS — TAP TO TOGGLE</div>
         <div class="cpills">
@@ -1427,6 +1442,7 @@ async function rCompare(sc){
         </div>
       </div>
 
+      <!-- NOW tiles -->
       <div class="fu d1">
         <div class="slbl" style="margin-bottom:8px;">NOW · ${vi.l.toUpperCase()}</div>
         <div class="cv-grid">
@@ -1435,6 +1451,7 @@ async function rCompare(sc){
         </div>
       </div>
 
+      <!-- spread meter -->
       <div class="card fu d2">
         <div class="card-hd">
           <div><div class="card-title">MODEL SPREAD · NOW</div><div class="card-sub">${S.loc.name} · ${vi.l}</div></div>
@@ -1448,61 +1465,289 @@ async function rCompare(sc){
         </div>
       </div>
 
+      ${isPrecip ? `
+      <!-- PRECIP SWIM LANES -->
       <div class="card fu d2">
         <div class="card-hd">
-          <div><div class="card-title">${vi.l} · MODEL SPAGHETTI</div><div class="card-sub"><span class="sdot"></span>${S.loc.name} · shaded = model envelope</div></div>
+          <div><div class="card-title">PRECIPITATION · MODEL SWIM LANES</div>
+          <div class="card-sub">each row = one model · height = intensity · tap for value</div></div>
+          <div class="card-badge">in/hr</div>
+        </div>
+        <div class="card-body">
+          <div id="swim-lanes"></div>
+          <!-- timing dots row -->
+          <div style="margin-top:14px;">
+            <div class="slbl" style="margin-bottom:6px;">RAIN EVENT TIMING</div>
+            <div id="timing-dots"></div>
+          </div>
+        </div>
+      </div>
+      ` : `
+      <!-- FAN CHART / SPAGHETTI -->
+      <div class="card fu d2">
+        <div class="card-hd">
+          <div><div class="card-title">${vi.l} · ENSEMBLE FAN</div>
+          <div class="card-sub"><span class="sdot"></span>bands = model spread · thick line = mean · thin = each model</div></div>
           <div class="card-badge">${vi.u}</div>
         </div>
         <div class="card-body">
-          <div class="legend">${sel.map(k=>`<div class="li"><div class="ll" style="background:${MODELS[k].c}"></div>${MODELS[k].l}</div>`).join('')}</div>
-          <div class="ch-wrap"><canvas id="ch-cmp-main"></canvas></div>
+          <div class="legend">${sel.map(k=>`<div class="li"><div class="ll" style="background:${MODELS[k].c}"></div>${MODELS[k].l}</div>`).join('')}
+            <div class="li"><div class="ll" style="background:rgba(255,255,255,.4);height:3px"></div>MEAN</div>
+          </div>
+          <div class="ch-wrap"><canvas id="ch-fan"></canvas></div>
         </div>
       </div>
+      `}
 
+      <!-- DIVERGENCE MATRIX -->
       <div class="card fu d3">
         <div class="card-hd">
-          <div><div class="card-title">DIVERGENCE MATRIX</div><div class="card-sub">deviation from hourly mean · warm=above · cool=below · right col=spread</div></div>
+          <div><div class="card-title">DIVERGENCE MATRIX</div>
+          <div class="card-sub">cell color = deviation from hourly mean · right = hourly spread</div></div>
         </div>
-        <div class="card-body" style="overflow-x:auto;padding:10px 8px 14px;">
-          <table style="border-collapse:collapse;width:100%;min-width:${sel.length*68+110}px;">
+        <div class="card-body" style="overflow-x:auto;padding:10px 6px 14px;">
+          <table style="border-collapse:collapse;width:100%;min-width:${sel.length*70+110}px;">
             <thead><tr>
-              <th style="font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2);text-align:left;padding:3px 8px;font-weight:400;">HOUR</th>
+              <th style="font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2);text-align:left;padding:3px 8px;font-weight:400;white-space:nowrap;">HOUR</th>
               ${sel.map(k=>`<th style="font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;color:${MODELS[k].c};text-align:center;padding:4px 6px;">${MODELS[k].l}</th>`).join('')}
-              <th style="font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2);text-align:center;padding:3px 6px;font-weight:400;">RANGE</th>
+              <th style="font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2);text-align:center;padding:3px 6px;font-weight:400;">SPREAD</th>
             </tr></thead>
             <tbody>
-              ${matRows.map(row=>{
-                const spPct=row.spread!=null?row.spread/maxSpread:0;
+              ${Array.from({length:matHours},(_,i)=>{
+                const t=ref[i];
+                const vals=sel.map(k=>allD[k].values?.[i]??null);
+                const good=vals.filter(validNum);
+                const mean=good.length?good.reduce((a,b)=>a+b,0)/good.length:null;
+                const spread=good.length>=2?Math.max(...good)-Math.min(...good):null;
+                const spPct=spread!=null?spread/maxSpread:0;
                 const spCol=spPct<.25?'#34d399':spPct<.6?'#fbbf24':'#f87171';
+                const label=t?(i===0?'NOW':t.toLocaleString([],{weekday:'short',hour:'numeric'})):`+${i}h`;
                 return`<tr style="border-bottom:1px solid rgba(255,255,255,.035)">
-                  <td style="font-family:'DM Mono',monospace;font-size:9px;color:var(--ink3);padding:4px 8px;white-space:nowrap;">${row.label}</td>
+                  <td style="font-family:'DM Mono',monospace;font-size:9px;color:var(--ink3);padding:4px 8px;white-space:nowrap;">${label}</td>
                   ${sel.map((k,j)=>{
-                    const v=row.vals[j];
-                    const dev=(v!=null&&row.mean!=null)?v-row.mean:null;
+                    const v=vals[j];
+                    const dev=(v!=null&&mean!=null)?v-mean:null;
                     const devPct=dev!=null?Math.min(Math.abs(dev)/maxSpread,1):0;
-                    const bg=dev==null?'transparent':dev>0?`rgba(251,146,60,${(devPct*.65+.06).toFixed(2)})`:`rgba(56,189,248,${(devPct*.65+.06).toFixed(2)})`;
+                    const bg=dev==null?'transparent':dev>0?`rgba(251,146,60,${(devPct*.7+.07).toFixed(2)})`:`rgba(56,189,248,${(devPct*.7+.07).toFixed(2)})`;
                     return`<td style="text-align:center;padding:5px 6px;background:${bg};font-family:'DM Mono',monospace;font-size:10px;font-weight:500;color:${dev==null?'var(--ink2)':dev>0?'#fdba74':'#7dd3fc'}">${fmtVal(v,vi.u)}</td>`;
                   }).join('')}
-                  <td style="text-align:center;padding:5px 6px;font-family:'DM Mono',monospace;font-size:10px;font-weight:700;color:${spCol}">${row.spread!=null?fmtVal(row.spread,vi.u):'—'}</td>
+                  <td style="text-align:center;padding:5px 6px;font-family:'DM Mono',monospace;font-size:10px;font-weight:700;color:${spCol}">${spread!=null?fmtVal(spread,vi.u):'—'}</td>
                 </tr>`;
               }).join('')}
             </tbody>
           </table>
         </div>
       </div>
+
     </div>`;
 
   requestAnimationFrame(()=>{
-    const envMin=ref.slice(0,n).map((_,i)=>{const v=sel.map(k=>allD[k].values[i]).filter(validNum);return v.length?Math.min(...v):null;});
-    const envMax=ref.slice(0,n).map((_,i)=>{const v=sel.map(k=>allD[k].values[i]).filter(validNum);return v.length?Math.max(...v):null;});
-    mkChart('ch-cmp-main',ref.slice(0,n),[
-      {label:'_hi',data:envMax,borderColor:'transparent',backgroundColor:'rgba(56,189,248,.07)',borderWidth:0,pointRadius:0,tension:.35,fill:'+1',spanGaps:true,order:99},
-      {label:'_lo',data:envMin,borderColor:'rgba(56,189,248,.1)',backgroundColor:'transparent',borderWidth:.5,pointRadius:0,tension:.35,fill:false,spanGaps:true,order:98},
-      ...sel.map(k=>({label:MODELS[k].l,data:ref.slice(0,n).map((_,i)=>allD[k].values[i]??null),borderColor:MODELS[k].c,backgroundColor:'transparent',borderWidth:1.8,pointRadius:0,pointHoverRadius:5,tension:.35,spanGaps:true,order:1}))
-    ],vi.u,240);
+    if(isPrecip){
+      buildSwimLanes(sel,allD,ref,n);
+    } else {
+      buildFanChart(sel,allD,ref,n,hourStats,vi);
+    }
   });
 }
 
+function buildFanChart(sel,allD,ref,n,hourStats,vi){
+  const el=document.getElementById('ch-fan');if(!el)return;
+  el.style.height='280px';
+
+  const meanData=hourStats.slice(0,n).map(h=>h.mean);
+  const minData=hourStats.slice(0,n).map(h=>h.min);
+  const maxData=hourStats.slice(0,n).map(h=>h.max);
+
+  // inner band (25-75 percentile approximation from 2 closest models)
+  const innerMin=ref.slice(0,n).map((_,i)=>{
+    const vals=sel.map(k=>allD[k].values?.[i]??null).filter(validNum).sort((a,b)=>a-b);
+    if(vals.length<2)return null;
+    const q=Math.floor(vals.length*.25);
+    return vals[q];
+  });
+  const innerMax=ref.slice(0,n).map((_,i)=>{
+    const vals=sel.map(k=>allD[k].values?.[i]??null).filter(validNum).sort((a,b)=>a-b);
+    if(vals.length<2)return null;
+    const q=Math.floor(vals.length*.75);
+    return vals[Math.min(q,vals.length-1)];
+  });
+
+  killC('ch-fan');
+  const canvas=el;
+
+  CH['ch-fan']=new Chart(canvas,{
+    type:'line',
+    data:{labels:ref.slice(0,n),datasets:[
+      // outer envelope max
+      {label:'_outerMax',data:maxData,borderColor:'rgba(56,189,248,.15)',
+        backgroundColor(ctx3){
+          const{ctx:c,chartArea}=ctx3.chart;
+          if(!chartArea)return'rgba(56,189,248,.08)';
+          const g=c.createLinearGradient(0,chartArea.top,0,chartArea.bottom);
+          g.addColorStop(0,'rgba(56,189,248,.13)');g.addColorStop(1,'rgba(56,189,248,.04)');
+          return g;
+        },
+        borderWidth:.5,borderDash:[2,3],pointRadius:0,tension:.35,fill:'+1',spanGaps:true,order:10},
+      // inner band max
+      {label:'_innerMax',data:innerMax,borderColor:'transparent',
+        backgroundColor(ctx3){
+          const{ctx:c,chartArea}=ctx3.chart;
+          if(!chartArea)return'rgba(56,189,248,.22)';
+          const g=c.createLinearGradient(0,chartArea.top,0,chartArea.bottom);
+          g.addColorStop(0,'rgba(56,189,248,.32)');g.addColorStop(1,'rgba(56,189,248,.12)');
+          return g;
+        },
+        borderWidth:0,pointRadius:0,tension:.35,fill:'+1',spanGaps:true,order:9},
+      // inner band min
+      {label:'_innerMin',data:innerMin,borderColor:'rgba(56,189,248,.2)',backgroundColor:'transparent',borderWidth:.5,pointRadius:0,tension:.35,fill:false,spanGaps:true,order:8},
+      // outer envelope min
+      {label:'_outerMin',data:minData,borderColor:'rgba(56,189,248,.15)',backgroundColor:'transparent',borderWidth:.5,borderDash:[2,3],pointRadius:0,tension:.35,fill:false,spanGaps:true,order:7},
+      // individual model lines
+      ...sel.map(k=>({
+        label:MODELS[k].l,
+        data:ref.slice(0,n).map((_,i)=>allD[k].values[i]??null),
+        borderColor:MODELS[k].c+'c0',backgroundColor:'transparent',
+        borderWidth:1.2,pointRadius:0,pointHoverRadius:5,
+        tension:.35,spanGaps:true,order:3,
+      })),
+      // MEAN — thick white on top
+      {label:'MEAN',data:meanData,borderColor:'rgba(255,255,255,.85)',backgroundColor:'transparent',
+        borderWidth:2.5,pointRadius:0,pointHoverRadius:6,tension:.35,spanGaps:true,order:1},
+    ]},
+    plugins:[nowLinePlug],
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      layout:{padding:{top:18,right:8,bottom:8,left:2}},
+      plugins:{
+        legend:{display:false},
+        tooltip:{enabled:false,external(ctx){showTip(ctx,ref.slice(0,n),vi.u);}}
+      },
+      scales:{
+        x:{ticks:{color:'#2e4870',font:{family:'DM Mono',size:8},maxRotation:0,autoSkip:true,maxTicksLimit:7,
+          callback(v,i){const l=ref[i];if(!(l instanceof Date))return l;
+            if(l.getHours()===0)return l.toLocaleDateString([],{weekday:'short',month:'numeric',day:'numeric'});
+            if(l.getHours()%6===0)return l.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+            return'';}},
+          grid:{color:'rgba(255,255,255,.025)'},border:{color:'rgba(255,255,255,.04)'}},
+        y:{ticks:{color:'#2e4870',font:{family:'DM Mono',size:8}},
+          grid:{color:'rgba(255,255,255,.025)'},border:{color:'rgba(255,255,255,.04)'},
+          afterDataLimits(s){const p=(s.max-s.min||1)*.08;s.max+=p;s.min-=p;}}
+      }
+    }
+  });
+}
+
+function buildSwimLanes(sel,allD,ref,n){
+  const lanes=document.getElementById('swim-lanes');
+  const dots=document.getElementById('timing-dots');
+  if(!lanes||!dots)return;
+
+  const limit=Math.min(n,36);
+  const times=ref.slice(0,limit);
+  const LANE_H=52;
+
+  // for each model: one canvas swim lane
+  lanes.innerHTML=sel.map(k=>`
+    <div style="margin-bottom:6px;">
+      <div style="font-family:'Outfit',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;
+        color:${MODELS[k].c};margin-bottom:3px;">${MODELS[k].l} · ${MODELS[k].n}</div>
+      <div style="position:relative;height:${LANE_H}px;background:rgba(255,255,255,.03);border-radius:6px;overflow:hidden;">
+        <canvas id="swim-${k}" style="display:block;width:100%;height:${LANE_H}px;"></canvas>
+      </div>
+    </div>`).join('');
+
+  // timing dot strip — one row per model, dots where rain > threshold
+  const RAIN_THRESH=0.005;
+  dots.innerHTML=`<div style="display:flex;flex-direction:column;gap:4px;">
+    ${sel.map(k=>{
+      const vals=allD[k].values?.slice(0,limit)||[];
+      return`<div style="display:flex;align-items:center;gap:6px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:1px;
+          color:${MODELS[k].c};width:52px;flex-shrink:0;">${MODELS[k].l}</div>
+        <div style="flex:1;display:flex;gap:2px;align-items:center;">
+          ${vals.map((v,i)=>{
+            const raining=(v||0)>RAIN_THRESH;
+            const heavy=(v||0)>0.05;
+            const t=times[i];
+            const lbl=t?t.toLocaleTimeString([],{hour:'numeric'}):'';
+            return`<div title="${lbl}: ${(v||0).toFixed(3)}&quot;" style="
+              flex:1;height:10px;border-radius:3px;
+              background:${raining?(heavy?'#a78bfa':'#38bdf8'):'rgba(255,255,255,.05)'};
+              box-shadow:${raining?('0 0 4px '+(heavy?'#a78bfa40':'#38bdf840')):'none'};
+              transition:transform .1s;cursor:pointer;" 
+              onmouseenter="this.style.transform='scaleY(1.4)'" 
+              onmouseleave="this.style.transform='scaleY(1)'">
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    }).join('')}
+    <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
+      <div style="width:52px;flex-shrink:0;"></div>
+      <div style="flex:1;display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2);">
+        <span>NOW</span><span>+6H</span><span>+12H</span><span>+18H</span><span>+24H</span>
+        ${limit>24?`<span>+30H</span><span>+36H</span>`:''}
+      </div>
+    </div>
+  </div>`;
+
+  // draw each swim lane canvas — use setTimeout to let DOM lay out first
+  setTimeout(()=>{
+    sel.forEach(k=>{
+      const cv=document.getElementById(`swim-${k}`);if(!cv)return;
+      const container=cv.parentElement;
+      const W=container?container.offsetWidth||300:300;
+      cv.width=W;
+      cv.height=LANE_H;
+      const ctx2=cv.getContext('2d');
+      const vals=(allD[k].values?.slice(0,limit)||[]).map(v=>v===null?null:Number(v));
+      const maxV=Math.max(...vals.filter(validNum),.001);
+
+      const grad=ctx2.createLinearGradient(0,0,0,LANE_H);
+      grad.addColorStop(0,MODELS[k].c+'dd');grad.addColorStop(1,MODELS[k].c+'22');
+
+      ctx2.clearRect(0,0,W,LANE_H);
+      if(vals.length<2)return;
+      const step=W/(vals.length-1);
+
+      // filled area
+      ctx2.beginPath();
+      ctx2.moveTo(0,LANE_H);
+      vals.forEach((v,i)=>{
+        const x=i*step;
+        const y=v!=null?LANE_H-(v/maxV)*(LANE_H-4)-2:LANE_H;
+        if(i===0)ctx2.lineTo(x,y);else ctx2.lineTo(x,y);
+      });
+      ctx2.lineTo((vals.length-1)*step,LANE_H);
+      ctx2.closePath();
+      ctx2.fillStyle=grad;
+      ctx2.fill();
+
+      // top line
+      ctx2.beginPath();
+      ctx2.strokeStyle=MODELS[k].c;
+      ctx2.lineWidth=1.5;
+      vals.forEach((v,i)=>{
+        const x=i*step;
+        const y=v!=null?LANE_H-(v/maxV)*(LANE_H-4)-2:null;
+        if(y===null){ctx2.beginPath();return;}
+        if(i===0)ctx2.moveTo(x,y);else ctx2.lineTo(x,y);
+      });
+      ctx2.stroke();
+
+      // rain threshold line
+      ctx2.beginPath();
+      ctx2.strokeStyle='rgba(255,255,255,.1)';
+      ctx2.lineWidth=.5;
+      ctx2.setLineDash([3,3]);
+      const ty=LANE_H-(RAIN_THRESH/maxV)*(LANE_H-4)-2;
+      ctx2.moveTo(0,ty);ctx2.lineTo(W,ty);
+      ctx2.stroke();
+      ctx2.setLineDash([]);
+    });
+  },200);
+}
 
 /* ═══════════════════════════════════════════
    COMPARE RUNS
@@ -1711,7 +1956,7 @@ const MAP_VARS = {
 
 // Map state
 const MS = {
-  var:'temp', model:'hrrr',
+  var:'temp', model:'hrrr', run:'12Z',
   hourIdx:0, gridData:null,
   hourSlots:[], playing:false, playTimer:null,
   marker:null, overlayLayer:null,
@@ -1769,18 +2014,20 @@ function setStatus(msg, fade=false) {
 async function fetchGridData() {
   const mv = MAP_VARS[MS.var];
   const modelId = MODEL_IDS[MS.model] || MS.model;
+  const isAccum = mv.grib === 'APCP' || mv.grib === 'ASNOW';
 
-  setStatus(`FETCHING ${mv.label} · ${MS.model.toUpperCase()} GRID...`);
+  setStatus(`FETCHING ${mv.label} · ${MS.model.toUpperCase()} ${MS.run}...`);
 
-  // Build 12 hourly slots from now
-  const now = new Date();
-  now.setMinutes(0,0,0);
+  // Use the selected run cycle
+  const cycle = latestCycleTime(MS.run);
   const hours = MS.model==='hrrr' ? 12 : 12;
-  const slots = Array.from({length:hours},(_,i)=>new Date(now.getTime()+i*3.6e6));
+  const untilTime = new Date(cycle.getTime() + hours * 3.6e6);
 
   const body = {
-    fromTime: slots[0].toISOString().replace('.000',''),
-    untilTime: slots[slots.length-1].toISOString().replace('.000',''),
+    forecastedFrom:  cycle.toISOString().replace('.000',''),
+    forecastedUntil: cycle.toISOString().replace('.000',''),
+    minLeadTime: '0h',
+    maxLeadTime: `${hours}h`,
     grid: {
       minLatitude:  MAP_BOUNDS.minLat,
       maxLatitude:  MAP_BOUNDS.maxLat,
@@ -1791,13 +2038,13 @@ async function fetchGridData() {
     variables: [{name: mv.grib, level: mv.level, info:''}],
   };
 
-  const res = await fetch(`${WORKER}/${modelId}/timeseries`, {
+  const res = await fetch(`${WORKER}/${modelId}/runs`, {
     method:'POST',
     headers:{'Content-Type':'application/json','Accept':'application/json'},
     body: JSON.stringify(body),
   });
   const raw = await res.text();
-  if (!res.ok) throw new Error(`Grid fetch HTTP ${res.status}`);
+  if (!res.ok) throw new Error(`Grid fetch HTTP ${res.status}: ${raw.slice(0,120)}`);
 
   let rows;
   try {
@@ -1805,35 +2052,66 @@ async function fetchGridData() {
     rows = Array.isArray(j) ? j : (j.data || j.results || []);
   } catch(e) { throw new Error('Grid bad JSON'); }
 
-  // key = "GRIB|level|"
   const gribKey = `${mv.grib}|${mv.level}|`;
 
-  // Group by forecasted_time → Map<timeMs, Map<"lat,lon", value>>
-  const byTime = new Map();
-  rows.forEach(r => {
-    const t = new Date(r.forecasted_time || r.time);
-    const tk = Math.round(t.getTime()/3.6e6)*3.6e6; // round to hour
-    if (!byTime.has(tk)) byTime.set(tk, new Map());
-    const v = normMapValue(mv.grib, r[gribKey]);
-    if (v !== null) byTime.get(tk).set(`${r.lat},${r.lon}`, {lat:r.lat, lon:r.lon, v});
-  });
+  // For accumulated vars: group by lat/lon first, sort by time, then diff
+  // For instantaneous: just group by time
+  if (isAccum) {
+    // Group by point key → sorted time series
+    const byPoint = new Map();
+    rows.forEach(r => {
+      const pk = `${(+r.lat).toFixed(2)},${(+r.lon).toFixed(2)}`;
+      if (!byPoint.has(pk)) byPoint.set(pk, []);
+      byPoint.get(pk).push({t: new Date(r.forecasted_time||r.time), raw: r[gribKey], lat:r.lat, lon:r.lon});
+    });
 
-  // Build ordered slots
-  const sortedTimes = [...byTime.keys()].sort((a,b)=>a-b).slice(0,12);
-  MS.hourSlots = sortedTimes.map(tk => ({
-    time: new Date(tk),
-    points: [...byTime.get(tk).values()],
-  }));
-  MS.hourIdx = 0;
+    // Build hourly diff values per time slot
+    const byTime = new Map();
+    byPoint.forEach((series, pk) => {
+      series.sort((a,b)=>a.t-b.t);
+      series.forEach((item, i) => {
+        const tk = Math.round(item.t.getTime()/3.6e6)*3.6e6;
+        if (!byTime.has(tk)) byTime.set(tk, new Map());
+        const rawV = item.raw;
+        const rawPrev = i > 0 ? series[i-1].raw : null;
+        let v = null;
+        if (validNum(rawV)) {
+          // diff for accum
+          const diff = (rawPrev !== null && validNum(rawPrev)) ? Math.max(0, rawV - rawPrev) : rawV;
+          v = +(diff * 0.0393701).toFixed(4); // kg/m² → inches
+          if (v < 0.001) v = null; // hide trace
+        }
+        if (v !== null) byTime.get(tk).set(pk, {lat:item.lat, lon:item.lon, v});
+      });
+    });
 
-  // Update slider
-  const slider = document.getElementById('map-hour-slider');
-  if (slider) {
-    slider.max = Math.max(0, MS.hourSlots.length - 1);
-    slider.value = 0;
+    const sortedTimes = [...byTime.keys()].sort((a,b)=>a-b).slice(0,12);
+    MS.hourSlots = sortedTimes.map(tk => ({
+      time: new Date(tk),
+      points: [...byTime.get(tk).values()],
+    }));
+  } else {
+    // Instantaneous — simple group by time
+    const byTime = new Map();
+    rows.forEach(r => {
+      const t = new Date(r.forecasted_time || r.time);
+      const tk = Math.round(t.getTime()/3.6e6)*3.6e6;
+      if (!byTime.has(tk)) byTime.set(tk, new Map());
+      const v = normMapValue(mv.grib, r[gribKey]);
+      if (v !== null) byTime.get(tk).set(`${(+r.lat).toFixed(2)},${(+r.lon).toFixed(2)}`, {lat:r.lat, lon:r.lon, v});
+    });
+
+    const sortedTimes = [...byTime.keys()].sort((a,b)=>a-b).slice(0,12);
+    MS.hourSlots = sortedTimes.map(tk => ({
+      time: new Date(tk),
+      points: [...byTime.get(tk).values()],
+    }));
   }
 
-  setStatus(`${mv.label} · ${MS.model.toUpperCase()} · ${MS.hourSlots.length} HOURS`, true);
+  MS.hourIdx = 0;
+  const slider = document.getElementById('map-hour-slider');
+  if (slider) { slider.max = Math.max(0, MS.hourSlots.length - 1); slider.value = 0; }
+  setStatus(`${mv.label} · ${MS.model.toUpperCase()} ${MS.run} · ${MS.hourSlots.length} HRS`, true);
 }
 
 function renderGridOverlay() {
@@ -1979,6 +2257,22 @@ function setMapVar(v, el) {
 function setMapModel(m, el) {
   MS.model = m;
   document.querySelectorAll('#mp-model .mc-pill').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');
+  // update run pills to match model's available runs
+  const modelRuns = RUNS[m] || ['12Z','06Z','00Z'];
+  const runEl = document.getElementById('mp-run');
+  if (runEl) {
+    runEl.innerHTML = modelRuns.slice(0,4).map((r,i)=>
+      `<div class="mc-pill${(i===0?' on':'')}" data-r="${r}" onclick="setMapRun('${r}',this)">${r}</div>`
+    ).join('');
+    MS.run = modelRuns[0];
+  }
+  loadGridAndRender();
+}
+
+function setMapRun(r, el) {
+  MS.run = r;
+  document.querySelectorAll('#mp-run .mc-pill').forEach(p=>p.classList.remove('on'));
   el.classList.add('on');
   loadGridAndRender();
 }
