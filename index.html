@@ -309,6 +309,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
     </div>
     <button class="locbtn" onclick="useMyLoc()" title="Use my location">📍</button>
     <button class="gobtn" onclick="go()">GO</button>
+    <div id="cred-counter" style="font-family:'DM Mono',monospace;font-size:8px;color:rgba(255,255,255,.25);white-space:nowrap;margin-left:4px;" title="API credits used this session">0cr</div>
   </header>
 
   <div class="ctrl">
@@ -438,7 +439,11 @@ const ECMWF_VARS={
 // RRFS uses surface dataset (rrfs), not pressure level (rrfsprslev)
 
 const MODEL_IDS={hrrr:'hrrr',gfs:'gfs',nbm:'nbm',rap:'rap',ecmwf:'ifsoper',graphcast:'graphcast'};
-const MODEL_HOURS={hrrr:48,gfs:168,nbm:168,rap:51,ecmwf:144,graphcast:240};
+// Default hours fetched per model — kept low to conserve API credits
+// GribStream charges per valid_time returned, so fewer hours = fewer credits
+const MODEL_HOURS={hrrr:48,gfs:72,nbm:72,rap:48,ecmwf:72,graphcast:72};
+// Extended hours for tabs that need longer range (temp/upper/wind detail tabs)
+const MODEL_HOURS_EXTENDED={hrrr:48,gfs:168,nbm:168,rap:48,ecmwf:144,graphcast:240};
 // Data points per hour each model produces (affects completion % and day qualification)
 const MODEL_INTERVAL={hrrr:1,gfs:1,nbm:1,rap:1,ecmwf:3,graphcast:6};
 // Expected data points for a full run
@@ -596,13 +601,21 @@ async function _runQueue() {
 // In-flight dedup — same cache key → same promise
 const IN_FLIGHT = {};
 
-async function fetchGrib(mkey, vkey, run, lat, lon) {
+// Credit tracking (GribStream charges per valid_time returned)
+let _creditsUsed = 0;
+function trackCredits(times, params) {
+  _creditsUsed += times * params;
+  const el = document.getElementById('cred-counter');
+  if (el) el.textContent = _creditsUsed + 'cr';
+}
+
+async function fetchGrib(mkey, vkey, run, lat, lon, extended=false) {
   // Use ECMWF-specific variable names if applicable
   const gv = (mkey === 'ecmwf' && ECMWF_VARS[vkey]) ? ECMWF_VARS[vkey] : GRIB_VARS[vkey];
   if (!gv) throw new Error(`No GRIB mapping for ${vkey}`);
 
   const modelId = MODEL_IDS[mkey];
-  const hours   = MODEL_HOURS[mkey] || 48;
+  const hours = (extended ? MODEL_HOURS_EXTENDED : MODEL_HOURS)[mkey] || 48;
 
   // ECMWF precip (tp) is accumulated in metres, needs conversion and diffing
   const isAccum = gv.name === 'APCP' || gv.name === 'ASNOW' || gv.name === 'tp' || gv.name === 'sf';
@@ -668,6 +681,7 @@ async function fetchGrib(mkey, vkey, run, lat, lon) {
       });
       const result = {times, values};
       CACHE[cacheKey] = result;
+      trackCredits(times.length, 1);
       return result;
     } finally {
       delete IN_FLIGHT[cacheKey];
@@ -678,8 +692,8 @@ async function fetchGrib(mkey, vkey, run, lat, lon) {
   return promise;
 }
 
-async function fetchBundle(mkey,vkeys,run,lat,lon){
-  const results=await Promise.allSettled(vkeys.map(vk=>fetchGrib(mkey,vk,run,lat,lon)));
+async function fetchBundle(mkey,vkeys,run,lat,lon,extended=false){
+  const results=await Promise.allSettled(vkeys.map(vk=>fetchGrib(mkey,vk,run,lat,lon,extended)));
   const out={};
   vkeys.forEach((vk,i)=>{
     const raw=results[i].status==='fulfilled'?results[i].value:null;
@@ -1308,7 +1322,7 @@ async function tabTemp(sc){
   const mod=MODELS[S.model],runs=RUNS[S.model],{lat,lon}=S.loc;
   showLoading(sc,`LOADING TEMPERATURE · ${mod.l}...`);
   let b;
-  try{b=await fetchBundle(S.model,['temp','dewpoint','t850'],S.run,lat,lon);}
+  try{b=await fetchBundle(S.model,['temp','dewpoint','t850'],S.run,lat,lon,true);}
   catch(e){showError(sc,e.message);return;}
 
   const td=b.temp||{times:[],values:[]};
@@ -1410,7 +1424,7 @@ async function tabPrecip(sc){
   const mod=MODELS[S.model],runs=RUNS[S.model],{lat,lon}=S.loc;
   showLoading(sc,`LOADING PRECIP · ${mod.l}...`);
   let b;
-  try{b=await fetchBundle(S.model,['precip','snow'],S.run,lat,lon);}
+  try{b=await fetchBundle(S.model,['precip','snow'],S.run,lat,lon,true);}
   catch(e){showError(sc,e.message);return;}
 
   const pd=b.precip||{times:[],values:[]};
@@ -1496,7 +1510,7 @@ async function tabWind(sc){
   const mod=MODELS[S.model],runs=RUNS[S.model],{lat,lon}=S.loc;
   showLoading(sc,`LOADING WIND · ${mod.l}...`);
   let b;
-  try{b=await fetchBundle(S.model,['wind','gust'],S.run,lat,lon);}
+  try{b=await fetchBundle(S.model,['wind','gust'],S.run,lat,lon,true);}
   catch(e){showError(sc,e.message);return;}
 
   const wd=b.wind||{times:[],values:[]};
@@ -1593,7 +1607,7 @@ async function tabUpper(sc){
   const mod=MODELS[S.model],runs=RUNS[S.model],{lat,lon}=S.loc;
   showLoading(sc,`LOADING UPPER AIR · ${mod.l}...`);
   let b;
-  try{b=await fetchBundle(S.model,['h500','rh700','t850'],S.run,lat,lon);}
+  try{b=await fetchBundle(S.model,['h500','rh700','t850'],S.run,lat,lon,true);}
   catch(e){showError(sc,e.message);return;}
 
   const h5=b.h500||{times:[],values:[]};
