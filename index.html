@@ -309,7 +309,12 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
     </div>
     <button class="locbtn" onclick="useMyLoc()" title="Use my location">📍</button>
     <button class="gobtn" onclick="go()">GO</button>
-    <div id="cred-counter" style="font-family:'DM Mono',monospace;font-size:8px;color:rgba(255,255,255,.25);white-space:nowrap;margin-left:4px;" title="API credits used this session">0cr</div>
+    <div id="cred-counter" title="API credits used this session" style="
+      font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.5px;
+      color:var(--sky);background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.2);
+      border-radius:20px;padding:3px 9px;white-space:nowrap;cursor:default;flex-shrink:0;">
+      0 cr
+    </div>
   </header>
 
   <div class="ctrl">
@@ -394,8 +399,9 @@ const S={
   mode:'single',tab:'forecast',var:'temp',
   model:'hrrr',run:'12Z',
   loc:null,loaded:false,
+  fcstModels:['hrrr','gfs','nbm','rap','ecmwf','graphcast'], // all models
   cmpModels:['hrrr','gfs','nbm'],
-  cmpModelRuns:{},  // per-model run override for compare mode, key=modelKey
+  cmpModelRuns:{},
   runModel:'hrrr',cmpRuns:['12Z','06Z','00Z'],
 };
 let CH={};
@@ -439,11 +445,8 @@ const ECMWF_VARS={
 // RRFS uses surface dataset (rrfs), not pressure level (rrfsprslev)
 
 const MODEL_IDS={hrrr:'hrrr',gfs:'gfs',nbm:'nbm',rap:'rap',ecmwf:'ifsoper',graphcast:'graphcast'};
-// Default hours fetched per model — kept low to conserve API credits
-// GribStream charges per valid_time returned, so fewer hours = fewer credits
-const MODEL_HOURS={hrrr:48,gfs:72,nbm:72,rap:48,ecmwf:72,graphcast:72};
-// Extended hours for tabs that need longer range (temp/upper/wind detail tabs)
-const MODEL_HOURS_EXTENDED={hrrr:48,gfs:168,nbm:168,rap:48,ecmwf:144,graphcast:240};
+const MODEL_HOURS={hrrr:48,gfs:168,nbm:168,rap:51,ecmwf:144,graphcast:240};
+const MODEL_HOURS_EXTENDED={hrrr:48,gfs:168,nbm:168,rap:51,ecmwf:144,graphcast:240};
 // Data points per hour each model produces (affects completion % and day qualification)
 const MODEL_INTERVAL={hrrr:1,gfs:1,nbm:1,rap:1,ecmwf:3,graphcast:6};
 // Expected data points for a full run
@@ -467,7 +470,45 @@ function expectedPoints(mkey, run){
 function minDayPoints(mkey){
   return 2;
 }
-const CACHE={};
+// Persistent cache — survives page reloads within the same hour
+// Keyed by cache key, value = {data, ts} where ts is the hour bucket
+const CACHE = {};
+const CACHE_LS_KEY = 'wxmdl_cache_v2';
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+(function loadCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_LS_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    const now = Date.now();
+    let kept = 0;
+    Object.entries(saved).forEach(([k, entry]) => {
+      if (now - entry.ts < CACHE_TTL_MS) {
+        // Rehydrate Date objects from ISO strings
+        CACHE[k] = {
+          times: entry.times.map(t => new Date(t)),
+          values: entry.values,
+        };
+        kept++;
+      }
+    });
+    if (kept > 0) console.log(`[wxmdl] Restored ${kept} cached fetches from localStorage`);
+  } catch(e) { /* localStorage unavailable */ }
+})();
+
+function saveCache() {
+  try {
+    const now = Date.now();
+    const toSave = {};
+    Object.entries(CACHE).forEach(([k, v]) => {
+      if (v && v.times && v.values) {
+        toSave[k] = { times: v.times.map(t => t.toISOString()), values: v.values, ts: now };
+      }
+    });
+    localStorage.setItem(CACHE_LS_KEY, JSON.stringify(toSave));
+  } catch(e) { /* storage full or unavailable */ }
+}
 
 function isoNoMs(d){return d.toISOString().replace('.000','');}
 function validNum(v){return v!==null&&v!==undefined&&typeof v==='number'&&!Number.isNaN(v);}
@@ -562,40 +603,36 @@ function latestModelCycle(mkey, run) {
 }
 
 // Simple concurrency limiter — max 2 at once to avoid 429
-// Simple sequential request queue — one at a time, 300ms between requests
-// This is the only reliable way to avoid 429s from GribStream
+// Request queue — max 3 concurrent, retry on 429
 const _queue = [];
-let _running = false;
+let _active = 0;
+const _MAX = 3;
 
 function _limitedFetch(url, opts) {
   return new Promise((resolve, reject) => {
     _queue.push({ url, opts, resolve, reject, attempts: 0 });
-    _runQueue();
+    _pump();
   });
 }
 
-async function _runQueue() {
-  if (_running || !_queue.length) return;
-  _running = true;
-  while (_queue.length) {
+function _pump() {
+  while (_active < _MAX && _queue.length) {
     const item = _queue.shift();
-    try {
-      const r = await fetch(item.url, item.opts);
-      if (r.status === 429 && item.attempts < 3) {
-        item.attempts++;
-        const wait = item.attempts * 8000; // 8s, 16s, 24s
-        await new Promise(res => setTimeout(res, wait));
-        _queue.unshift(item); // retry at front
-        continue;
-      }
-      item.resolve(r);
-    } catch(e) {
-      item.reject(e);
-    }
-    // Mandatory gap between requests
-    if (_queue.length) await new Promise(res => setTimeout(res, 300));
+    _active++;
+    fetch(item.url, item.opts)
+      .then(r => {
+        if (r.status === 429 && item.attempts < 3) {
+          item.attempts++;
+          _active--;
+          setTimeout(() => { _queue.push(item); _pump(); }, item.attempts * 3000);
+        } else {
+          _active--;
+          _pump();
+          item.resolve(r);
+        }
+      })
+      .catch(e => { _active--; _pump(); item.reject(e); });
   }
-  _running = false;
 }
 
 // In-flight dedup — same cache key → same promise
@@ -603,10 +640,27 @@ const IN_FLIGHT = {};
 
 // Credit tracking (GribStream charges per valid_time returned)
 let _creditsUsed = 0;
+// Restore session credit count (resets with cache TTL)
+try {
+  const saved = localStorage.getItem('wxmdl_credits');
+  if (saved) {
+    const { count, ts } = JSON.parse(saved);
+    if (Date.now() - ts < CACHE_TTL_MS) _creditsUsed = count || 0;
+  }
+} catch(e) {}
 function trackCredits(times, params) {
   _creditsUsed += times * params;
   const el = document.getElementById('cred-counter');
-  if (el) el.textContent = _creditsUsed + 'cr';
+  if (!el) return;
+  const k = _creditsUsed >= 1000 ? (_creditsUsed/1000).toFixed(1)+'k' : _creditsUsed;
+  const pct = _creditsUsed / 48000;
+  const col = pct < 0.3 ? 'var(--sky)' : pct < 0.7 ? '#fbbf24' : '#f87171';
+  el.textContent = k + ' cr';
+  el.style.color = col;
+  el.style.borderColor = col.replace('var(--sky)', 'rgba(56,189,248,.2)').replace('#fbbf24','rgba(251,191,36,.3)').replace('#f87171','rgba(248,113,113,.3)');
+  el.style.background = col.replace('var(--sky)','rgba(56,189,248,.1)').replace('#fbbf24','rgba(251,191,36,.1)').replace('#f87171','rgba(248,113,113,.1)');
+  el.title = `${_creditsUsed.toLocaleString()} / 48,000 credits used this session`;
+  try { localStorage.setItem('wxmdl_credits', JSON.stringify({count:_creditsUsed, ts:Date.now()})); } catch(e) {}
 }
 
 async function fetchGrib(mkey, vkey, run, lat, lon, extended=false) {
@@ -682,6 +736,7 @@ async function fetchGrib(mkey, vkey, run, lat, lon, extended=false) {
       const result = {times, values};
       CACHE[cacheKey] = result;
       trackCredits(times.length, 1);
+      saveCache(); // persist so reloads don't re-fetch
       return result;
     } finally {
       delete IN_FLIGHT[cacheKey];
@@ -970,6 +1025,14 @@ function compareVarTabs(){
   return`<div class="vtabs fu d1">${allowed.map(v=>`<button class="vt${S.var===v?' on':''}" onclick="selVar('${v}')">${VARS[v].l}</button>`).join('')}</div>`;
 }
 function selVar(v){S.var=v;render();}
+function toggleFcstModel(k){
+  if(S.fcstModels.includes(k)){
+    if(S.fcstModels.length>1) S.fcstModels=S.fcstModels.filter(m=>m!==k);
+  } else {
+    S.fcstModels=[...S.fcstModels,k];
+  }
+  render();
+}
 function selModel(k){S.model=k;S.run=availableRuns(k)[0];render();}
 function selRun(r){S.run=r;render();}
 function selRunMod(k){S.runModel=k;S.cmpRuns=availableRuns(k).slice(0,3);render();}
@@ -1120,7 +1183,8 @@ async function rSingle(sc){
 async function tabForecast(sc){
   const {lat,lon}=S.loc;
   const now=new Date();
-  const modelKeys=Object.keys(MODELS);
+  const allModelKeys=Object.keys(MODELS);
+  const modelKeys=S.fcstModels.filter(k=>MODELS[k]); // only fetch selected models
   // For the Forecast tab we want the latest FULLY COMPLETE run per model.
   // Strategy: try the latest available run, if it has <70% of expected hours,
   // fall back to the previous run. We do this by fetching temp only first.
@@ -1160,7 +1224,23 @@ async function tabForecast(sc){
   let absHi=95, absLo=55, fullR=40;
 
   // Render the page shell with skeleton cards immediately
+  // Credit estimate: 48hrs avg × models selected
+  const credEst = modelKeys.length * 48;
   sc.innerHTML=`
+    <div style="padding:10px 16px 4px;">
+      <div class="slbl" style="margin-bottom:6px;">MODELS · <span style="color:var(--sky)">~${credEst} credits</span></div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;">
+        ${allModelKeys.map(k=>`
+          <div onclick="toggleFcstModel('${k}')"
+            style="font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;
+            padding:5px 12px;border-radius:20px;cursor:pointer;transition:all .15s;
+            border:1px solid ${S.fcstModels.includes(k)?MODELS[k].c+'80':'rgba(255,255,255,.1)'};
+            background:${S.fcstModels.includes(k)?MODELS[k].c+'18':'transparent'};
+            color:${S.fcstModels.includes(k)?MODELS[k].c:'var(--ink2)'};">
+            ${MODELS[k].l}
+          </div>`).join('')}
+      </div>
+    </div>
     <div class="hero" id="fc-hero">
       <div class="hero-top">
         <div>
@@ -1168,7 +1248,7 @@ async function tabForecast(sc){
           <div class="hero-date">${now.toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'})}</div>
         </div>
         <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--ink2);text-align:right;line-height:2;">
-          ALL MODELS<br>${now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} LOCAL
+          ${modelKeys.length} MODEL${modelKeys.length!==1?'S':''}<br>${now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} LOCAL
         </div>
       </div>
       <div id="fc-now-row" style="display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px;">
