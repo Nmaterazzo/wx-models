@@ -1,0 +1,2379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0d1829">
+<title>WXMODELS</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --navy0:#080f1e; --navy1:#0d1829; --navy2:#111f35; --navy3:#162640; --navy4:#1c2f4e; --navy5:#243558;
+  --glass:rgba(255,255,255,.04); --glass2:rgba(255,255,255,.07);
+  --rim:rgba(255,255,255,.08); --rim2:rgba(255,255,255,.14);
+  --ink0:#1e3050; --ink1:#2e4870; --ink2:#4a6a90; --ink3:#7090b8; --ink4:#9ab4d0; --ink5:#c4d8ec;
+  --white:#e8f2fc;
+  --sky:#38bdf8; --sky2:#0ea5e9; --gold:#f5c030; --ember:#f07020;
+  --jade:#34d399; --violet:#a78bfa; --rose:#f472b6; --teal:#2dd4bf;
+  --r0:#38bdf8; --r1:#f07020; --r2:#34d399; --r3:#a78bfa;
+  --HDR:56px; --BOT:60px; --R:16px; --Rsm:10px;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html{height:100%;}
+body{min-height:100%;height:100%;background:var(--navy0);color:var(--ink4);font-family:'Outfit',sans-serif;font-size:14px;}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(56,189,248,.08) 0%,transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 100%,rgba(167,139,250,.05) 0%,transparent 50%),
+    linear-gradient(180deg,var(--navy1) 0%,var(--navy0) 100%);}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.25;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='.03'/%3E%3C/svg%3E");}
+
+#shell{display:flex;flex-direction:column;height:100dvh;position:relative;z-index:1;overflow:hidden;}
+
+/* ── HEADER ── */
+.hdr{height:var(--HDR);flex-shrink:0;background:rgba(13,24,41,.92);backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--rim);
+  display:flex;align-items:center;gap:10px;padding:0 14px;position:relative;z-index:20;}
+.hdr::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(56,189,248,.5),transparent);}
+.logo{font-family:'Outfit',sans-serif;font-size:18px;font-weight:800;letter-spacing:-.5px;color:var(--white);flex-shrink:0;line-height:1;text-shadow:0 0 20px rgba(56,189,248,.5);}
+.logo b{color:var(--sky);font-weight:800;}
+.sbox{flex:1;display:flex;align-items:center;background:rgba(255,255,255,.05);border:1px solid var(--rim2);border-radius:100px;height:36px;overflow:hidden;transition:border-color .2s,background .2s;}
+.sbox:focus-within{border-color:rgba(56,189,248,.5);background:rgba(56,189,248,.06);}
+.sbox-ico{width:34px;display:flex;align-items:center;justify-content:center;color:var(--ink2);font-size:13px;flex-shrink:0;}
+.sbox input{flex:1;background:none;border:none;outline:none;font-family:'DM Mono',monospace;font-size:11px;color:var(--white);padding-right:10px;letter-spacing:.3px;}
+.sbox input::placeholder{color:var(--ink1);}
+.locbtn{height:36px;width:36px;border:none;cursor:pointer;flex-shrink:0;background:rgba(255,255,255,.07);border:1px solid var(--rim2);font-size:16px;border-radius:100px;transition:all .15s;display:flex;align-items:center;justify-content:center;}
+.locbtn:hover{background:rgba(255,255,255,.12);}
+.locbtn:active{transform:scale(.9);}
+.gobtn{height:36px;padding:0 16px;border:none;cursor:pointer;flex-shrink:0;background:var(--sky);color:#000;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;letter-spacing:.5px;border-radius:100px;transition:all .15s;box-shadow:0 0 20px rgba(56,189,248,.3);}
+.gobtn:hover{background:#7dd3fc;box-shadow:0 0 28px rgba(56,189,248,.5);}
+.gobtn:active{transform:scale(.95);}
+
+/* ── CONTROLS ── */
+.ctrl{flex-shrink:0;background:rgba(11,20,34,.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--rim);}
+.mtabs{display:flex;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--rim);padding:0 6px;}
+.mtabs::-webkit-scrollbar{display:none;}
+.mt{font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;letter-spacing:.5px;color:var(--ink2);padding:10px 14px;cursor:pointer;white-space:nowrap;flex-shrink:0;border:none;background:none;border-bottom:2px solid transparent;transition:all .2s;}
+.mt:hover{color:var(--ink4);}
+.mt.on{color:var(--sky);border-bottom-color:var(--sky);}
+.vtabs{display:flex;overflow-x:auto;scrollbar-width:none;padding:2px 6px 0;}
+.vtabs::-webkit-scrollbar{display:none;}
+.vt{font-family:'Outfit',sans-serif;font-size:12px;font-weight:500;color:var(--ink2);padding:6px 10px;cursor:pointer;white-space:nowrap;flex-shrink:0;border:none;background:none;border-bottom:2px solid transparent;transition:all .15s;}
+.vt:hover{color:var(--ink4);}
+.vt.on{color:var(--white);border-bottom-color:rgba(255,255,255,.25);}
+
+/* ── SCROLL ── */
+.scroll{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
+.scroll::-webkit-scrollbar{width:3px;}
+.scroll::-webkit-scrollbar-thumb{background:var(--navy5);border-radius:2px;}
+
+/* ── BOTTOM NAV ── */
+.bot{
+  height:calc(var(--BOT) + env(safe-area-inset-bottom,0px));
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  flex-shrink:0;background:rgba(11,20,34,.98);
+  backdrop-filter:blur(20px);border-top:1px solid var(--rim);
+  display:flex;z-index:10;position:relative;
+}
+.nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:var(--ink2);transition:color .15s;background:none;border:none;position:relative;min-height:var(--BOT);padding:0;}
+.nb.on{color:var(--sky);}
+.nb.on::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:24px;height:2px;border-radius:0 0 3px 3px;background:var(--sky);box-shadow:0 0 10px var(--sky);}
+.ni{font-size:18px;line-height:1;}
+.nl{font-family:'Outfit',sans-serif;font-size:10px;font-weight:600;letter-spacing:.5px;}
+
+/* ── CARDS ── */
+.pad{padding:12px;display:flex;flex-direction:column;gap:12px;}
+.card{background:linear-gradient(145deg,rgba(22,38,64,.9) 0%,rgba(17,31,53,.9) 100%);border:1px solid var(--rim);border-radius:var(--R);overflow:hidden;position:relative;box-shadow:0 4px 24px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.06);}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);pointer-events:none;}
+.card-hd{padding:14px 16px 0;display:flex;align-items:flex-start;justify-content:space-between;}
+.card-title{font-family:'Outfit',sans-serif;font-weight:700;font-size:13px;letter-spacing:.3px;color:var(--white);text-transform:uppercase;}
+.card-sub{font-family:'DM Mono',monospace;font-size:9px;color:var(--ink2);margin-top:3px;letter-spacing:.3px;}
+.card-badge{font-family:'DM Mono',monospace;font-size:9px;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.25);color:var(--sky);padding:3px 9px;border-radius:100px;white-space:nowrap;}
+.card-body{padding:12px 16px 16px;}
+.ch-wrap{position:relative;}
+.ch-wrap canvas{display:block;width:100%!important;}
+
+/* ── SECTION LABEL ── */
+.slbl{font-family:'Outfit',sans-serif;font-size:10px;font-weight:600;letter-spacing:1.5px;color:var(--ink2);text-transform:uppercase;display:flex;align-items:center;gap:8px;}
+.slbl::after{content:'';flex:1;height:1px;background:var(--rim);}
+
+/* ── HERO ── */
+.hero{background:linear-gradient(165deg,rgba(22,38,64,.95) 0%,rgba(13,24,41,.98) 100%);border-bottom:1px solid var(--rim);padding:18px 16px 0;position:relative;overflow:hidden;}
+.hero::after{content:'';position:absolute;top:-60px;right:-40px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(56,189,248,.08) 0%,transparent 65%);pointer-events:none;}
+.hero-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;}
+.hero-loc{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.8px;color:var(--sky);font-weight:400;}
+.hero-date{font-family:'Outfit',sans-serif;font-size:12px;color:var(--ink3);margin-top:3px;font-weight:400;}
+.model-badge{font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;padding:4px 12px;border-radius:100px;border:1px solid;background:rgba(0,0,0,.3);text-align:center;}
+.run-badge{font-family:'DM Mono',monospace;font-size:9px;color:var(--ink2);margin-top:4px;text-align:right;}
+.hero-temp-row{display:flex;align-items:flex-start;gap:0;margin-bottom:14px;}
+.hero-temp{font-family:'Outfit',sans-serif;font-weight:900;font-size:96px;line-height:.85;letter-spacing:-5px;transition:color .4s;}
+.hero-deg{font-family:'Outfit',sans-serif;font-size:28px;font-weight:300;color:var(--ink3);margin-top:8px;margin-left:2px;}
+.hero-aside{margin-left:16px;margin-top:6px;display:flex;flex-direction:column;gap:5px;}
+.hero-lohi{display:flex;align-items:center;gap:8px;font-family:'Outfit',sans-serif;font-weight:600;font-size:18px;}
+.hero-lo{color:var(--sky);}
+.hero-hi{color:var(--ember);}
+.hero-sep{color:var(--ink2);font-size:14px;font-weight:300;}
+.hero-feels{font-family:'DM Mono',monospace;font-size:10px;color:var(--ink3);line-height:2;}
+.hero-stats{display:flex;gap:0;background:rgba(0,0,0,.3);border-top:1px solid var(--rim);margin:0 -16px;}
+.hstat{flex:1;padding:10px 6px;text-align:center;border-right:1px solid var(--rim);}
+.hstat:last-child{border-right:none;}
+.hstat-v{font-family:'Outfit',sans-serif;font-weight:800;font-size:20px;color:var(--white);line-height:1;}
+.hstat-l{font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2);margin-top:3px;letter-spacing:.5px;}
+
+/* ── MODEL / RUN STRIPS ── */
+.mstrip{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:10px 12px;background:rgba(11,20,34,.8);border-bottom:1px solid var(--rim);}
+.mstrip::-webkit-scrollbar{display:none;}
+.mchip{flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding:8px 12px;border:1px solid var(--rim);background:var(--glass);border-radius:var(--Rsm);cursor:pointer;transition:all .2s;min-width:58px;text-align:center;position:relative;overflow:hidden;}
+.mchip::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:var(--Rsm) var(--Rsm) 0 0;background:var(--mc);box-shadow:0 0 10px var(--mc);opacity:0;transition:opacity .2s;}
+.mchip.on{border-color:color-mix(in srgb,var(--mc) 40%,transparent);background:color-mix(in srgb,var(--mc) 8%,var(--navy3));}
+.mchip.on::before{opacity:1;}
+.mchip:active{transform:scale(.93);}
+.mchip-l{font-family:'Outfit',sans-serif;font-size:13px;font-weight:800;letter-spacing:.5px;color:var(--mc);line-height:1;}
+.mchip-r{font-family:'DM Mono',monospace;font-size:7px;color:var(--ink2);margin-top:3px;}
+.rstrip{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:8px 12px;background:rgba(11,20,34,.6);border-bottom:1px solid var(--rim);}
+.rstrip::-webkit-scrollbar{display:none;}
+.rchip{flex-shrink:0;display:flex;flex-direction:column;align-items:center;border:1px solid var(--rim);background:var(--glass);padding:6px 14px;border-radius:100px;cursor:pointer;transition:all .2s;}
+.rchip-t{font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;color:var(--ink3);display:block;line-height:1;}
+.rchip-a{font-family:'DM Mono',monospace;font-size:8px;color:var(--ink1);display:block;margin-top:2px;}
+.rchip.on{border-color:rgba(56,189,248,.6);background:rgba(56,189,248,.1);box-shadow:0 0 16px rgba(56,189,248,.15);}
+.rchip.on .rchip-t{color:var(--sky);text-shadow:0 0 12px rgba(56,189,248,.6);}
+.rchip:active{transform:scale(.93);}
+
+/* ── 7-DAY ── */
+.dayrow{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;}
+.dayrow::-webkit-scrollbar{display:none;}
+.dtile{flex-shrink:0;width:72px;background:linear-gradient(160deg,rgba(22,38,64,.8),rgba(17,31,53,.9));border:1px solid var(--rim);border-radius:var(--Rsm);padding:10px 6px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.3);}
+.dtile.today{border-color:rgba(56,189,248,.4);background:linear-gradient(160deg,rgba(56,189,248,.08),rgba(14,165,233,.04));box-shadow:0 0 20px rgba(56,189,248,.1);}
+.dtile-dow{font-family:'Outfit',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;color:var(--ink3);text-transform:uppercase;}
+.dtile.today .dtile-dow{color:var(--sky);}
+.dtile-ico{font-size:20px;margin:5px 0 3px;line-height:1;}
+.dtile-hi{font-family:'Outfit',sans-serif;font-weight:800;font-size:22px;line-height:1;}
+.dtile-lo{font-family:'DM Mono',monospace;font-size:11px;color:var(--ink3);margin-top:2px;}
+.dtile-bar{height:4px;background:rgba(255,255,255,.07);border-radius:2px;margin:6px 4px 5px;position:relative;overflow:hidden;}
+.dtile-bar-f{position:absolute;top:0;height:100%;border-radius:2px;}
+.dtile-pop{font-family:'DM Mono',monospace;font-size:9px;margin-top:4px;}
+
+/* ── TEMP RANGE ── */
+.trange-track{height:10px;background:rgba(255,255,255,.07);border-radius:5px;position:relative;margin:10px 0 6px;}
+.trange-fill{position:absolute;top:0;height:100%;border-radius:5px;}
+.trange-now{position:absolute;top:-5px;width:4px;height:20px;background:var(--white);border-radius:2px;transform:translateX(-50%);box-shadow:0 0 10px rgba(255,255,255,.8),0 0 20px rgba(255,255,255,.4);}
+.trange-lbls{display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2);}
+
+/* ── ANOMALY BARS ── */
+.anom-bars{display:flex;flex-direction:column;gap:2px;margin-top:4px;}
+.anom-bar-row{display:flex;align-items:center;gap:6px;}
+.anom-bar-time{font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2);width:30px;flex-shrink:0;text-align:right;}
+.anom-bar-track{flex:1;height:14px;position:relative;display:flex;align-items:center;}
+.anom-bar-center{position:absolute;left:50%;width:1px;height:100%;background:rgba(255,255,255,.15);}
+.anom-bar-fill{position:absolute;height:10px;border-radius:2px;top:50%;transform:translateY(-50%);}
+.anom-bar-warm{background:linear-gradient(90deg,rgba(245,192,48,.3),rgba(240,112,32,.8));left:50%;}
+.anom-bar-cool{background:linear-gradient(270deg,rgba(56,189,248,.3),rgba(56,189,248,.9));right:50%;}
+.anom-bar-val{font-family:'DM Mono',monospace;font-size:8px;width:28px;flex-shrink:0;}
+
+/* ── PRECIP ── */
+.pbar{flex:1;border-radius:3px 3px 0 0;min-height:3px;cursor:pointer;transition:filter .15s,transform .15s;position:relative;}
+.pbar:hover{filter:brightness(1.4);transform:scaleY(1.05);transform-origin:bottom;}
+.pbar.dry{background:rgba(255,255,255,.06);}
+.pbar.light{background:linear-gradient(to top,#0ea5e9,#38bdf8);}
+.pbar.mod{background:linear-gradient(to top,#6366f1,#818cf8);}
+.pbar.heavy{background:linear-gradient(to top,#c026d3,#e879f9);}
+.precip-axis{display:flex;justify-content:space-between;margin-top:5px;font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2);}
+.precip-leg{display:flex;gap:12px;margin-top:8px;flex-wrap:wrap;align-items:center;}
+.pleg{display:flex;align-items:center;gap:5px;font-family:'DM Mono',monospace;font-size:9px;color:var(--ink3);}
+.pleg-dot{width:10px;height:10px;border-radius:3px;}
+
+/* ── WIND ── */
+.wind-grid{display:grid;grid-template-columns:1fr 88px;gap:10px;align-items:center;}
+.wind-big{font-family:'Outfit',sans-serif;font-weight:900;font-size:64px;color:var(--white);line-height:.85;letter-spacing:-3px;}
+.wind-unit{font-family:'DM Mono',monospace;font-size:10px;color:var(--ink2);margin-top:2px;}
+.wind-dir{font-family:'Outfit',sans-serif;font-size:16px;font-weight:700;color:var(--sky);margin-top:6px;letter-spacing:1px;}
+.wind-gust{font-family:'DM Mono',monospace;font-size:10px;color:var(--ink3);margin-top:3px;}
+.compass{width:88px;height:88px;border-radius:50%;border:1px solid rgba(255,255,255,.1);background:radial-gradient(circle,rgba(22,38,64,.8),rgba(11,20,34,.95));display:flex;align-items:center;justify-content:center;position:relative;box-shadow:0 0 0 4px rgba(56,189,248,.05),inset 0 0 20px rgba(0,0,0,.4);}
+.comp-d{position:absolute;font-family:'Outfit',sans-serif;font-weight:700;font-size:10px;color:var(--ink2);line-height:1;}
+.comp-d.cN{top:5px;left:50%;transform:translateX(-50%);color:var(--sky);font-size:11px;}
+.comp-d.cS{bottom:5px;left:50%;transform:translateX(-50%);}
+.comp-d.cE{right:6px;top:50%;transform:translateY(-50%);}
+.comp-d.cW{left:6px;top:50%;transform:translateY(-50%);}
+.comp-arrow{position:absolute;bottom:50%;left:50%;width:3px;height:30px;border-radius:3px 3px 0 0;background:linear-gradient(to top,transparent,var(--sky));transform-origin:bottom center;margin-left:-1.5px;box-shadow:0 0 10px rgba(56,189,248,.7);}
+
+/* ── COMPARE PILLS ── */
+.cpills{display:flex;flex-wrap:wrap;gap:6px;}
+.cpill{display:flex;align-items:center;gap:6px;border:1px solid var(--rim);background:var(--glass);padding:6px 13px 6px 10px;border-radius:100px;cursor:pointer;transition:all .2s;font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;color:var(--ink2);}
+.cpill-dot{width:8px;height:8px;border-radius:50%;background:var(--mc,var(--ink2));flex-shrink:0;transition:box-shadow .2s;}
+.cpill.on{border-color:color-mix(in srgb,var(--mc) 50%,transparent);color:var(--white);}
+.cpill.on .cpill-dot{box-shadow:0 0 8px var(--mc,transparent);}
+.cpill:active{transform:scale(.94);}
+
+/* ── SPREAD ── */
+.sp-row{display:flex;align-items:center;gap:10px;}
+.sp-track{flex:1;height:6px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden;}
+.sp-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#34d399,#fbbf24,#f87171);transition:width .5s cubic-bezier(.4,0,.2,1);}
+.sp-num{font-family:'DM Mono',monospace;font-size:12px;color:var(--white);white-space:nowrap;font-weight:500;}
+.sp-txt{font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;white-space:nowrap;}
+.agree{color:#34d399;} .warn{color:#fbbf24;} .bad{color:#f87171;}
+
+/* ── CV GRID ── */
+.cv-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;}
+@media(min-width:360px){.cv-grid{grid-template-columns:repeat(3,1fr);}}
+@media(min-width:520px){.cv-grid{grid-template-columns:repeat(4,1fr);}}
+.cvt{background:linear-gradient(145deg,rgba(22,38,64,.8),rgba(17,31,53,.8));border:1px solid var(--rim);border-radius:var(--Rsm);padding:12px 12px;position:relative;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.3);}
+.cvt::before{content:'';position:absolute;top:0;left:0;bottom:0;width:3px;background:var(--tc,var(--rim));border-radius:var(--Rsm) 0 0 var(--Rsm);box-shadow:1px 0 8px var(--tc,transparent);}
+.cvt-l{font-family:'Outfit',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;color:var(--ink2);text-transform:uppercase;}
+.cvt-v{font-family:'Outfit',sans-serif;font-weight:800;font-size:30px;color:var(--white);line-height:1;margin-top:3px;}
+.cvt-u{font-family:'DM Mono',monospace;font-size:9px;color:var(--ink2);}
+
+/* ── RUN COMPARE ── */
+.rcpills{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;}
+.rcpills::-webkit-scrollbar{display:none;}
+.rcpill{flex-shrink:0;border:1px solid var(--rim);background:var(--glass);padding:6px 14px;border-radius:100px;cursor:pointer;transition:all .2s;text-align:center;}
+.rcpill-t{font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;color:var(--ink3);display:block;line-height:1;}
+.rcpill-a{font-family:'DM Mono',monospace;font-size:8px;color:var(--ink1);display:block;margin-top:2px;}
+.ra0{border-color:rgba(56,189,248,.5)!important;box-shadow:0 0 12px rgba(56,189,248,.15);}
+.ra0 .rcpill-t{color:var(--r0)!important;text-shadow:0 0 10px rgba(56,189,248,.5);}
+.ra1{border-color:rgba(240,112,32,.5)!important;box-shadow:0 0 12px rgba(240,112,32,.15);}
+.ra1 .rcpill-t{color:var(--r1)!important;text-shadow:0 0 10px rgba(240,112,32,.5);}
+.ra2{border-color:rgba(52,211,153,.5)!important;box-shadow:0 0 12px rgba(52,211,153,.15);}
+.ra2 .rcpill-t{color:var(--r2)!important;text-shadow:0 0 10px rgba(52,211,153,.5);}
+.ra3{border-color:rgba(167,139,250,.5)!important;box-shadow:0 0 12px rgba(167,139,250,.15);}
+.ra3 .rcpill-t{color:var(--r3)!important;text-shadow:0 0 10px rgba(167,139,250,.5);}
+.rcpill:active{transform:scale(.93);}
+
+/* ── LEGEND ── */
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+.li{display:flex;align-items:center;gap:5px;font-family:'DM Mono',monospace;font-size:9px;color:var(--ink3);}
+.ll{width:18px;height:2px;border-radius:1px;}
+
+/* ── HEATMAP ── */
+.hrow{display:flex;gap:3px;align-items:center;margin-bottom:3px;}
+.hlbl{font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2);width:34px;flex-shrink:0;}
+.hcell{flex:1;height:24px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:9px;color:rgba(255,255,255,.7);font-weight:500;}
+
+/* ── DIVERGENCE TABLE ── */
+.div-table{display:flex;flex-direction:column;gap:4px;overflow-x:auto;padding-bottom:2px;}
+.div-head,.div-row{display:grid;align-items:center;gap:4px;min-width:620px;}
+.div-head{font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2);letter-spacing:.4px;text-transform:uppercase;}
+.div-row{min-height:30px;}
+.div-time{font-family:'DM Mono',monospace;font-size:9px;color:var(--ink3);white-space:nowrap;}
+.div-cell{font-family:'DM Mono',monospace;font-size:10px;color:var(--white);text-align:center;padding:6px 4px;border:1px solid var(--rim);border-radius:6px;background:rgba(255,255,255,.035);}
+.div-spread{font-family:'DM Mono',monospace;font-size:10px;font-weight:700;text-align:center;padding:6px 4px;border-radius:6px;background:rgba(255,255,255,.055);}
+.div-spread.lo{color:#34d399;} .div-spread.md{color:#fbbf24;} .div-spread.hi{color:#f87171;}
+
+/* ── STATUS DOT ── */
+.sdot{width:7px;height:7px;border-radius:50%;background:var(--jade);box-shadow:0 0 8px var(--jade);display:inline-block;margin-right:6px;animation:dp 2.5s ease-in-out infinite;}
+@keyframes dp{0%,100%{opacity:1;}50%{opacity:.2;}}
+
+/* ── TOOLTIP — dismissable on mobile ── */
+#tip{
+  position:fixed;
+  background:linear-gradient(145deg,rgba(22,38,64,.98),rgba(17,31,53,.98));
+  border:1px solid var(--rim2);border-top:2px solid var(--sky);
+  padding:10px 14px;
+  /* pointer-events ENABLED so tap-to-dismiss works */
+  pointer-events:auto;
+  display:none;z-index:500;
+  font-family:'DM Mono',monospace;font-size:10px;
+  min-width:148px;border-radius:var(--Rsm);
+  box-shadow:0 20px 50px rgba(0,0,0,.8),0 0 0 1px rgba(56,189,248,.08);
+  cursor:pointer;
+}
+#tip::after{content:'✕';position:absolute;top:8px;right:10px;font-size:10px;color:var(--ink2);opacity:.6;}
+#tip-t{font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:var(--sky);margin-bottom:6px;letter-spacing:.3px;padding-right:14px;}
+#tip-v{line-height:2.2;}
+
+/* ── EMPTY ── */
+.empty{min-height:60vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:40px;}
+.eg{font-family:'Outfit',sans-serif;font-weight:900;font-size:72px;color:rgba(255,255,255,.04);letter-spacing:-3px;line-height:1;}
+.et{font-family:'Outfit',sans-serif;font-size:18px;font-weight:700;letter-spacing:1px;color:var(--ink2);}
+.es{font-family:'DM Mono',monospace;font-size:10px;color:var(--ink1);text-align:center;line-height:2;}
+
+
+/* ── ANIMATIONS ── */
+@keyframes fu{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+.fu{animation:fu .25s ease forwards;}
+.d1{animation-delay:.04s;opacity:0;} .d2{animation-delay:.09s;opacity:0;}
+.d3{animation-delay:.14s;opacity:0;} .d4{animation-delay:.19s;opacity:0;}
+.d5{animation-delay:.24s;opacity:0;}
+@keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+<div id="shell">
+  <header class="hdr">
+    <div class="logo">WX<b>MDL</b></div>
+    <div class="sbox">
+      <div class="sbox-ico">◎</div>
+      <input id="loc" type="text" placeholder="city or lat, lon" autocomplete="off" spellcheck="false" value="Land O' Lakes, FL">
+    </div>
+    <button class="locbtn" onclick="useMyLoc()" title="Use my location">📍</button>
+    <button class="gobtn" onclick="go()">GO</button>
+    <div id="cred-counter" style="font-family:'DM Mono',monospace;font-size:8px;color:rgba(255,255,255,.25);white-space:nowrap;margin-left:4px;" title="API credits used this session">0cr</div>
+  </header>
+
+  <div class="ctrl">
+    <div class="mtabs">
+      <button class="mt on"  onclick="setMode('single',this)">SINGLE</button>
+      <button class="mt"     onclick="setMode('compare',this)">COMPARE MODELS</button>
+      <button class="mt"     onclick="setMode('runs',this)">COMPARE RUNS</button>
+    </div>
+  </div>
+
+  <div class="scroll" id="scroll">
+    <div class="empty">
+      <div class="eg">WX</div>
+      <div class="et">LOADING...</div>
+    </div>
+  </div>
+
+  <nav class="bot">
+    <button class="nb on"  onclick="setTab('forecast',this)"><span class="ni">📈</span><span class="nl">FCST</span></button>
+    <button class="nb"     onclick="setTab('temp',this)"><span class="ni">🌡</span><span class="nl">TEMP</span></button>
+    <button class="nb"     onclick="setTab('precip',this)"><span class="ni">🌧</span><span class="nl">PRECIP</span></button>
+    <button class="nb"     onclick="setTab('wind',this)"><span class="ni">💨</span><span class="nl">WIND</span></button>
+    <button class="nb"     onclick="setTab('upper',this)"><span class="ni">🔼</span><span class="nl">UPPER</span></button>
+  </nav>
+</div>
+
+<!-- Tooltip — tap anywhere on it or outside to dismiss -->
+<div id="tip" onclick="hideTip()"><div id="tip-t"></div><div id="tip-v"></div></div>
+<!-- tap outside charts to dismiss tooltip -->
+<div id="tip-dismiss" style="display:none;position:fixed;inset:0;z-index:499;" onclick="hideTip()"></div>
+
+<script>
+/* ═══════════════════════════════════════════
+   CONFIG
+═══════════════════════════════════════════ */
+const MODELS={
+  hrrr:    {l:'HRRR', n:'Hi-Res Rapid Refresh',  r:'3km·48hr',    c:'#38bdf8'},
+  gfs:     {l:'GFS',  n:'Global Forecast System', r:'0.25°·384hr', c:'#fb923c'},
+  nbm:     {l:'NBM',  n:'Natl Blend of Models',   r:'2.5km·264hr', c:'#34d399'},
+  rap:     {l:'RAP',  n:'Rapid Refresh',           r:'13km·51hr',   c:'#a78bfa'},
+  ecmwf:   {l:'ECMWF',n:'IFS Operational',        r:'0.25°·240hr', c:'#f472b6'},
+  graphcast:{l:'GCAST',n:'GraphCast AI',           r:'0.25°·384hr', c:'#fbbf24'},
+};
+const RUNS={
+  hrrr:['12Z','11Z','10Z','09Z','08Z','06Z','00Z'],
+  gfs:['12Z','06Z','00Z','18Z'],
+  nbm:['12Z','11Z','10Z','09Z','08Z'],
+  rap:['12Z','11Z','10Z','09Z'],
+  ecmwf:['12Z','00Z'],
+  graphcast:['12Z','06Z'],
+};
+const TABS={
+  forecast:{primary:'temp'},
+  temp:    {primary:'temp', vars:['temp','feels','dewpoint','t850']},
+  precip:  {primary:'precip',vars:['precip','snow','preciprate']},
+  wind:    {primary:'wind', vars:['wind','gust']},
+  upper:   {primary:'h500', vars:['h500','rh700','t850']},
+};
+const VARS={
+  temp:      {l:'Temperature',u:'°F',  c:'#fb923c'},
+  dewpoint:  {l:'Dewpoint',   u:'°F',  c:'#38bdf8'},
+  feels:     {l:'Feels Like', u:'°F',  c:'#fbbf24'},
+  precip:    {l:'Precip',     u:'in',  c:'#38bdf8'},
+  snow:      {l:'Snow',       u:'in',  c:'#bfdbfe'},
+  preciprate:{l:'Precip Rate',u:'in/hr',c:'#818cf8'},
+  wind:      {l:'Wind Speed', u:'mph', c:'#2dd4bf'},
+  gust:      {l:'Wind Gust',  u:'mph', c:'#67e8f9'},
+  winddir:   {l:'Wind Dir',   u:'°',   c:'#a5f3fc'},
+  h500:      {l:'500mb Hgt',  u:'gpm', c:'#86efac'},
+  rh700:     {l:'700mb RH',   u:'%',   c:'#6ee7b7'},
+  t850:      {l:'850mb Temp', u:'°F',  c:'#fdba74'},
+};
+const RC=['#38bdf8','#fb923c','#34d399','#a78bfa'];
+const DAYS=['SUN','MON','TUE','WED','THU','FRI','SAT'];
+const ICONS=['☀️','⛅','🌤','🌧','⛈','🌦','☀️'];
+const DIRS=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+
+/* ═══════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════ */
+const S={
+  mode:'single',tab:'forecast',var:'temp',
+  model:'hrrr',run:'12Z',
+  loc:null,loaded:false,
+  cmpModels:['hrrr','gfs','nbm'],
+  cmpModelRuns:{},  // per-model run override for compare mode, key=modelKey
+  runModel:'hrrr',cmpRuns:['12Z','06Z','00Z'],
+};
+let CH={};
+
+/* ═══════════════════════════════════════════
+   API
+═══════════════════════════════════════════ */
+const WORKER='https://gribstream-proxy.nmaterazzo2435.workers.dev';
+// Variable definitions per model family
+// NOAA models (HRRR, GFS, NBM, RAP, RRFS) use standard GRIB2 names
+// ECMWF uses ECMWF-specific names and 'sfc' level
+const GRIB_VARS={
+  temp:      {name:'TMP',  level:'2 m above ground'},
+  dewpoint:  {name:'DPT',  level:'2 m above ground'},
+  feels:     {name:'APTMP',level:'2 m above ground'},
+  precip:    {name:'APCP', level:'surface'},
+  snow:      {name:'ASNOW',level:'surface'},
+  preciprate:{name:'PRATE',level:'surface'},
+  wind:      {name:'WIND', level:'10 m above ground'},
+  gust:      {name:'GUST', level:'surface'},
+  winddir:   {name:'WDIR', level:'10 m above ground'},
+  h500:      {name:'HGT',  level:'500 mb'},
+  rh700:     {name:'RH',   level:'700 mb'},
+  t850:      {name:'TMP',  level:'850 mb'},
+};
+// ECMWF-specific variable overrides
+const ECMWF_VARS={
+  temp:      {name:'2t',   level:'sfc'},
+  dewpoint:  {name:'2d',   level:'sfc'},
+  feels:     {name:'2t',   level:'sfc'}, // no feels-like, use temp
+  precip:    {name:'tp',   level:'sfc'},
+  snow:      {name:'sf',   level:'sfc'},
+  preciprate:{name:'tp',   level:'sfc'},
+  wind:      {name:'10u',  level:'sfc'}, // u-component, we'll magnitude it
+  gust:      {name:'10fg', level:'sfc'},
+  winddir:   {name:'10v',  level:'sfc'},
+  h500:      {name:'z',    level:'500 hPa'},
+  rh700:     {name:'r',    level:'700 hPa'},
+  t850:      {name:'t',    level:'850 hPa'},
+};
+// RRFS uses surface dataset (rrfs), not pressure level (rrfsprslev)
+
+const MODEL_IDS={hrrr:'hrrr',gfs:'gfs',nbm:'nbm',rap:'rap',ecmwf:'ifsoper',graphcast:'graphcast'};
+// Default hours fetched per model — kept low to conserve API credits
+// GribStream charges per valid_time returned, so fewer hours = fewer credits
+const MODEL_HOURS={hrrr:48,gfs:72,nbm:72,rap:48,ecmwf:72,graphcast:72};
+// Extended hours for tabs that need longer range (temp/upper/wind detail tabs)
+const MODEL_HOURS_EXTENDED={hrrr:48,gfs:168,nbm:168,rap:48,ecmwf:144,graphcast:240};
+// Data points per hour each model produces (affects completion % and day qualification)
+const MODEL_INTERVAL={hrrr:1,gfs:1,nbm:1,rap:1,ecmwf:3,graphcast:6};
+// Expected data points for a full run
+function expectedPoints(mkey, run){
+  // Some models have shorter runs for non-00/06/12/18Z cycles
+  let hours = MODEL_HOURS[mkey] || 48;
+  if (mkey === 'hrrr' && run) {
+    // HRRR: 00/06/12/18Z go 48h, all others go 18h
+    const h = parseInt(run);
+    if (!isNaN(h) && h % 6 !== 0) hours = 18;
+  }
+  if (mkey === 'rap' && run) {
+    // RAP: 00/03/06/09/12/15/18/21Z go 51h, others go 21h  
+    const h = parseInt(run);
+    if (!isNaN(h) && h % 3 !== 0) hours = 21;
+  }
+  return Math.max(1, Math.ceil(hours / (MODEL_INTERVAL[mkey]||1)));
+}
+// Minimum points to consider a day "complete enough" to show
+// Just need at least 2 points (for a hi and lo) regardless of interval
+function minDayPoints(mkey){
+  return 2;
+}
+const CACHE={};
+
+function isoNoMs(d){return d.toISOString().replace('.000','');}
+function validNum(v){return v!==null&&v!==undefined&&typeof v==='number'&&!Number.isNaN(v);}
+function valueKey(gv){return `${gv.name}|${gv.level}|`;}
+
+function latestCycleTime(run){
+  const runZ=parseInt(run,10);
+  const d=new Date();
+  d.setUTCHours(runZ,0,0,0);
+  if(d.getTime()>Date.now())d.setUTCDate(d.getUTCDate()-1);
+  return d;
+}
+
+function normalizeValue(gv, v, prevV){
+  if(!validNum(v))return null;
+  // Accumulated precip — diff consecutive values
+  const isAccumField = gv.name==='APCP'||gv.name==='ASNOW'||gv.name==='tp'||gv.name==='sf';
+  if(isAccumField && prevV !== undefined && validNum(prevV)){
+    v = Math.max(0, v - prevV);
+  }
+  // Kelvin → °F
+  if((gv.name==='TMP'||gv.name==='DPT'||gv.name==='APTMP'||gv.name==='2t'||gv.name==='2d'||gv.name==='t')&&v>200)
+    v=(v-273.15)*9/5+32;
+  // Wind m/s → mph
+  if(gv.name==='WIND'||gv.name==='GUST'||gv.name==='10u'||gv.name==='10v'||gv.name==='10fg'||gv.name==='u'||gv.name==='v')
+    v=v*2.23694;
+  // NOAA precip kg/m² → inches
+  if(gv.name==='APCP'||gv.name==='ASNOW')v=v*0.0393701;
+  // ECMWF precip metres → inches
+  if(gv.name==='tp'||gv.name==='sf')v=v*39.3701;
+  // Precip rate kg/m²/s → in/hr
+  if(gv.name==='PRATE')v=v*141.732;
+  // ECMWF geopotential (m²/s²) → gpm
+  if(gv.name==='z')v=v/9.80665;
+  return +v.toFixed(3);
+}
+
+// Models that support the /runs endpoint (cycle-specific)
+// /runs = cycle-pinned (HRRR, RAP, RRFS only)
+// /timeseries = best value per valid time (GFS, NBM, ECMWF, GraphCast)
+const RUNS_MODELS = new Set(['hrrr','rap']); // RRFS uses /timeseries
+
+// Processing latency per model (hours after cycle init before data is available)
+const MODEL_LATENCY = {
+  hrrr: 1,       // ~45 min, round to 1hr
+  rap:  1,
+  nbm:  1,
+  gfs:  4,       // GFS takes 3-5 hrs to process
+  ecmwf:6,       // ECMWF operational is delayed ~6hrs
+  graphcast:4,
+};
+
+function latestModelCycle(mkey, run) {
+  // If an explicit run string was requested (e.g. "06Z"), honour it
+  if (run && typeof run === 'string' && /^\d{2}Z$/.test(run)) return latestCycleTime(run);
+
+  const latency = MODEL_LATENCY[mkey] || 2;
+  // "Available now" = current UTC minus latency
+  const availableAt = new Date(Date.now() - latency * 3.6e6);
+
+  if (mkey === 'ecmwf') {
+    // ECMWF open data: 00Z/06Z/12Z/18Z (6hr latency each)
+    const h = availableAt.getUTCHours();
+    const cycle = h >= 18 ? 18 : h >= 12 ? 12 : h >= 6 ? 6 : 0;
+    const d = new Date(availableAt);
+    d.setUTCHours(cycle, 0, 0, 0);
+    return d;
+  }
+  if (mkey === 'graphcast') {
+    // GraphCast: 00Z and 12Z only
+    const h = availableAt.getUTCHours();
+    const d = new Date(availableAt);
+    d.setUTCMinutes(0,0,0);
+    d.setUTCHours(h >= 12 ? 12 : 0, 0, 0, 0);
+    return d;
+  }
+
+  if (mkey === 'gfs') {
+    // GFS: 00Z/06Z/12Z/18Z
+    const h = availableAt.getUTCHours();
+    const cycle = h >= 18 ? 18 : h >= 12 ? 12 : h >= 6 ? 6 : 0;
+    const d = new Date(availableAt);
+    d.setUTCHours(cycle, 0, 0, 0);
+    return d;
+  }
+
+  // HRRR, RAP, NBM, RRFS — run every hour or every few hours
+  // Just use the top of the most recent available hour
+  const d = new Date(availableAt);
+  d.setUTCMinutes(0, 0, 0);
+  return d;
+}
+
+// Simple concurrency limiter — max 2 at once to avoid 429
+// Simple sequential request queue — one at a time, 300ms between requests
+// This is the only reliable way to avoid 429s from GribStream
+const _queue = [];
+let _running = false;
+
+function _limitedFetch(url, opts) {
+  return new Promise((resolve, reject) => {
+    _queue.push({ url, opts, resolve, reject, attempts: 0 });
+    _runQueue();
+  });
+}
+
+async function _runQueue() {
+  if (_running || !_queue.length) return;
+  _running = true;
+  while (_queue.length) {
+    const item = _queue.shift();
+    try {
+      const r = await fetch(item.url, item.opts);
+      if (r.status === 429 && item.attempts < 3) {
+        item.attempts++;
+        const wait = item.attempts * 8000; // 8s, 16s, 24s
+        await new Promise(res => setTimeout(res, wait));
+        _queue.unshift(item); // retry at front
+        continue;
+      }
+      item.resolve(r);
+    } catch(e) {
+      item.reject(e);
+    }
+    // Mandatory gap between requests
+    if (_queue.length) await new Promise(res => setTimeout(res, 300));
+  }
+  _running = false;
+}
+
+// In-flight dedup — same cache key → same promise
+const IN_FLIGHT = {};
+
+// Credit tracking (GribStream charges per valid_time returned)
+let _creditsUsed = 0;
+function trackCredits(times, params) {
+  _creditsUsed += times * params;
+  const el = document.getElementById('cred-counter');
+  if (el) el.textContent = _creditsUsed + 'cr';
+}
+
+async function fetchGrib(mkey, vkey, run, lat, lon, extended=false) {
+  // Use ECMWF-specific variable names if applicable
+  const gv = (mkey === 'ecmwf' && ECMWF_VARS[vkey]) ? ECMWF_VARS[vkey] : GRIB_VARS[vkey];
+  if (!gv) throw new Error(`No GRIB mapping for ${vkey}`);
+
+  const modelId = MODEL_IDS[mkey];
+  const hours = (extended ? MODEL_HOURS_EXTENDED : MODEL_HOURS)[mkey] || 48;
+
+  // ECMWF precip (tp) is accumulated in metres, needs conversion and diffing
+  const isAccum = gv.name === 'APCP' || gv.name === 'ASNOW' || gv.name === 'tp' || gv.name === 'sf';
+  const useRuns = RUNS_MODELS.has(mkey);
+  const cycle    = latestModelCycle(mkey, useRuns ? run : null);
+  // Guard against NaN cycle (shouldn't happen after fix but just in case)
+  if (isNaN(cycle.getTime())) throw new Error(`${mkey}: invalid cycle time`);
+  const cycleISO = isoNoMs(cycle);
+  // For timeseries models, round cache key to nearest hour so same-hour fetches hit cache
+  const cacheHour = useRuns ? cycleISO : new Date(Math.floor(Date.now()/3.6e6)*3.6e6).toISOString().slice(0,13)+'Z';
+  const cacheKey = `${mkey}|${vkey}|${cacheHour}|${lat.toFixed(4)}|${lon.toFixed(4)}`;
+
+  if (CACHE[cacheKey]) return CACHE[cacheKey];
+  if (IN_FLIGHT[cacheKey]) return IN_FLIGHT[cacheKey];
+
+  const promise = (async () => {
+    try {
+      let body, endpoint;
+      if (useRuns) {
+        endpoint = `${modelId}/runs`;
+        body = {
+          forecastedFrom:  cycleISO, forecastedUntil: cycleISO,
+          minLeadTime: '0h', maxLeadTime: `${hours}h`,
+          coordinates: [{lat, lon, name:'loc'}],
+          variables: [{name: gv.name, level: gv.level, info:''}],
+        };
+      } else {
+        const now = new Date(); now.setUTCMinutes(0,0,0);
+        const until = new Date(now.getTime() + hours * 3.6e6);
+        endpoint = `${modelId}/timeseries`;
+        body = {
+          fromTime: isoNoMs(now), untilTime: isoNoMs(until),
+          minLeadTime: '0h', maxLeadTime: `${hours}h`,
+          coordinates: [{lat, lon, name:'loc'}],
+          variables: [{name: gv.name, level: gv.level, info:''}],
+        };
+      }
+      const res = await _limitedFetch(`${WORKER}/${endpoint}`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','Accept':'application/json'},
+        body: JSON.stringify(body),
+      });
+      const rawText = await res.text();
+      if (!res.ok) throw new Error(`${mkey}/${vkey} HTTP ${res.status}`);
+      let rows;
+      try {
+        const j = JSON.parse(rawText);
+        rows = Array.isArray(j) ? j : (j.data || j.results || []);
+      } catch(e) { throw new Error(`${mkey}/${vkey} bad JSON`); }
+      if (!rows.length) throw new Error(`${mkey}/${vkey} empty`);
+      const gribKey = valueKey(gv);
+      rows.sort((a,b) => new Date(a.forecasted_time||a.time) - new Date(b.forecasted_time||b.time));
+      const seen = new Set(), times = [], values = [];
+      rows.forEach((r, i) => {
+        const t = new Date(r.forecasted_time || r.time);
+        const tk = t.getTime();
+        if (seen.has(tk)) return;
+        seen.add(tk);
+        const rawV = r[gribKey];
+        const rawPrev = i > 0 ? rows[i-1][gribKey] : undefined;
+        times.push(t);
+        values.push(normalizeValue(gv, rawV, isAccum ? rawPrev : undefined));
+      });
+      const result = {times, values};
+      CACHE[cacheKey] = result;
+      trackCredits(times.length, 1);
+      return result;
+    } finally {
+      delete IN_FLIGHT[cacheKey];
+    }
+  })();
+
+  IN_FLIGHT[cacheKey] = promise;
+  return promise;
+}
+
+async function fetchBundle(mkey,vkeys,run,lat,lon,extended=false){
+  const results=await Promise.allSettled(vkeys.map(vk=>fetchGrib(mkey,vk,run,lat,lon,extended)));
+  const out={};
+  vkeys.forEach((vk,i)=>{
+    const raw=results[i].status==='fulfilled'?results[i].value:null;
+    out[vk]=raw?interpolateHourly(raw):null;
+  });
+  return out;
+}
+
+// Linearly interpolate sparse data to hourly resolution
+// Fills gaps between data points, doesn't extrapolate beyond last point
+function interpolateHourly(data) {
+  if (!data?.times?.length) return data;
+  const interval = data.times.length > 1
+    ? Math.round((data.times[1].getTime() - data.times[0].getTime()) / 3.6e6)
+    : 1;
+  if (interval <= 1) return data; // already hourly
+
+  const outTimes = [], outValues = [];
+  for (let i = 0; i < data.times.length - 1; i++) {
+    const t0 = data.times[i].getTime(), t1 = data.times[i+1].getTime();
+    const v0 = data.values[i], v1 = data.values[i+1];
+    const steps = Math.round((t1 - t0) / 3.6e6);
+    for (let s = 0; s < steps; s++) {
+      const t = new Date(t0 + s * 3.6e6);
+      const frac = s / steps;
+      const v = (v0 !== null && v1 !== null) ? v0 + (v1 - v0) * frac : (v0 ?? v1);
+      outTimes.push(t);
+      outValues.push(v !== null ? +v.toFixed(3) : null);
+    }
+  }
+  // Push last point
+  outTimes.push(data.times[data.times.length - 1]);
+  outValues.push(data.values[data.values.length - 1]);
+  return {times: outTimes, values: outValues};
+}
+
+function dailyStats(times,vals){
+  const map={};
+  times.forEach((t,i)=>{
+    if(vals[i]===null)return;
+    const k=t.toDateString();
+    if(!map[k])map[k]={date:t,hi:-999,lo:999};
+    map[k].hi=Math.max(map[k].hi,vals[i]);
+    map[k].lo=Math.min(map[k].lo,vals[i]);
+  });
+  return Object.values(map).slice(0,7);
+}
+
+function currentValue(data){
+  if(!data||!data.times||!data.times.length)return null;
+  const now=Date.now();
+  let best=0,bestDist=Infinity;
+  data.times.forEach((t,i)=>{
+    const d=Math.abs(new Date(t).getTime()-now);
+    if(d<bestDist){best=i;bestDist=d;}
+  });
+  return data.values[best]??null;
+}
+
+// FIXED fmtVal — single definition, handles all cases
+function fmtVal(v,unit=''){
+  if(v===null||v===undefined||Number.isNaN(v))return'--';
+  const n=Number(v);
+  if(unit==='in'||unit==='in/hr')return n.toFixed(3);
+  if(unit==='gpm')return n.toFixed(0);
+  if(Math.abs(n)>=100)return n.toFixed(0);
+  return n.toFixed(1);
+}
+
+function tCol(t){
+  if(t>=100)return'#f87171';if(t>=90)return'#fb923c';if(t>=80)return'#fbbf24';
+  if(t>=70)return'#a3e635';if(t>=60)return'#34d399';if(t>=50)return'#38bdf8';
+  if(t>=32)return'#818cf8';return'#c7d2fe';
+}
+
+/* ── LOADING / ERROR ── */
+function showLoading(sc,msg='FETCHING MODEL DATA'){
+  sc.innerHTML=`<div class="empty">
+    <div style="width:32px;height:32px;border:2px solid rgba(255,255,255,.1);border-top-color:var(--sky);
+      border-radius:50%;animation:spin .8s linear infinite;margin-bottom:12px;"></div>
+    <div class="et">${msg}</div>
+    <div class="es">querying GribStream via Cloudflare Worker</div>
+  </div><style>@keyframes spin{to{transform:rotate(360deg);}}</style>`;
+}
+function showError(sc,msg){
+  sc.innerHTML=`<div class="empty"><div style="font-size:32px;margin-bottom:8px;">⚠️</div>
+    <div class="et" style="color:#f87171">ERROR</div><div class="es">${msg}</div></div>`;
+}
+
+/* ═══════════════════════════════════════════
+   CHART ENGINE
+═══════════════════════════════════════════ */
+Chart.defaults.color='#2e4870';
+Chart.defaults.borderColor='#111f35';
+
+const nowLinePlug={id:'nl',afterDraw(c){
+  const now=new Date();
+  const idx=c.data.labels.findIndex(l=>l instanceof Date&&l>=now);
+  if(idx<0)return;
+  const meta=c.getDatasetMeta(0);if(!meta.data[idx])return;
+  const x=meta.data[idx].x,{top,bottom}=c.chartArea;
+  const cx=c.ctx;
+  cx.save();
+  const g=cx.createLinearGradient(0,top,0,bottom);
+  g.addColorStop(0,'rgba(56,189,248,.4)');g.addColorStop(1,'rgba(56,189,248,0)');
+  cx.fillStyle=g;cx.fillRect(x-1,top,2,bottom-top);
+  cx.font='600 9px Outfit';cx.fillStyle='rgba(56,189,248,.7)';
+  cx.textAlign='center';cx.textBaseline='top';cx.fillText('NOW',x,top+3);
+  cx.restore();
+}};
+
+function killC(id){if(CH[id]){CH[id].destroy();delete CH[id];}}
+
+function mkChart(id,labels,datasets,unit='',h=220,bar=false){
+  killC(id);
+  const el=document.getElementById(id);if(!el)return;
+  el.style.height=h+'px';
+  CH[id]=new Chart(el,{
+    type:bar?'bar':'line',
+    data:{labels,datasets},
+    plugins:[nowLinePlug],
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      layout:{padding:{top:18,bottom:10,left:2,right:8}},
+      plugins:{
+        legend:{display:false},
+        tooltip:{enabled:false,external(ctx){
+          showTip(ctx,labels,unit);
+        }}
+      },
+      scales:{
+        x:{ticks:{color:'#2e4870',font:{family:'DM Mono',size:8},maxRotation:0,autoSkip:true,maxTicksLimit:7,
+          callback(v,i){const l=labels[i];if(!(l instanceof Date))return l;
+            if(l.getHours()===0)return l.toLocaleDateString([],{weekday:'short',month:'numeric',day:'numeric'});
+            if(l.getHours()%6===0)return l.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+            return'';}},
+          grid:{color:'rgba(255,255,255,.025)'},border:{color:'rgba(255,255,255,.04)'}},
+        y:{ticks:{color:'#2e4870',font:{family:'DM Mono',size:8}},
+          grid:{color:'rgba(255,255,255,.025)'},border:{color:'rgba(255,255,255,.04)'},
+          afterDataLimits(scale){const p=(scale.max-scale.min||1)*0.08;scale.max+=p;scale.min-=p;}}
+      }
+    }
+  });
+}
+
+// Shared tooltip show — handles both mkChart and mkTempChart
+function showTip(ctx,labels,unit){
+  const tip=document.getElementById('tip');
+  const dismiss=document.getElementById('tip-dismiss');
+  if(ctx.tooltip.opacity===0){hideTip();return;}
+  const i=ctx.tooltip.dataIndex,t=labels[i];
+  document.getElementById('tip-t').textContent=
+    t instanceof Date?t.toLocaleString([],{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):String(t);
+  document.getElementById('tip-v').innerHTML=
+    ctx.tooltip.dataPoints.map(p=>{
+      // get the raw numeric value correctly
+      const raw=p.parsed?.y??p.raw;
+      const val=raw===null||raw===undefined||Number.isNaN(Number(raw))?'--':fmtVal(Number(raw),unit);
+      const col=Array.isArray(p.dataset.borderColor)?p.dataset.borderColor[p.dataIndex]:(p.dataset.borderColor||p.dataset.backgroundColor||'#e8f2fc');
+      return `<div style="color:${col}"><span style="opacity:.4">${p.dataset.label||''}</span>&nbsp;<b style="color:#e8f2fc">${val}</b><span style="opacity:.3"> ${unit}</span></div>`;
+    }).join('');
+  tip.style.display='block';
+  dismiss.style.display='block';
+  const r=ctx.chart.canvas.getBoundingClientRect();
+  let x=r.left+ctx.tooltip.caretX+14,y=r.top+ctx.tooltip.caretY-14;
+  if(x+160>window.innerWidth)x-=170;
+  if(y+80>window.innerHeight)y-=90;
+  if(y<60)y=60;
+  tip.style.left=x+'px';tip.style.top=y+'px';
+}
+
+function hideTip(){
+  document.getElementById('tip').style.display='none';
+  document.getElementById('tip-dismiss').style.display='none';
+}
+
+// Hide tooltip when scrolling
+document.getElementById('scroll').addEventListener('scroll',hideTip,{passive:true});
+
+// Temperature chart with proper value access
+function mkTempChart(id,times,values,h=240){
+  killC(id);
+  const el=document.getElementById(id);if(!el)return;
+  el.style.height=h+'px';
+
+  CH[id]=new Chart(el,{
+    type:'line',
+    data:{labels:times,datasets:[{
+      label:'TEMP',
+      data:values.map(v=>v===null?null:Number(v)), // ensure numeric or null
+      borderColor:'#f5c030',
+      backgroundColor:(ctx3)=>{
+        const{ctx:c,chartArea}=ctx3.chart;
+        if(!chartArea)return'transparent';
+        const g=c.createLinearGradient(0,chartArea.top,0,chartArea.bottom);
+        g.addColorStop(0,'rgba(232,48,48,.5)');
+        g.addColorStop(0.3,'rgba(240,112,32,.35)');
+        g.addColorStop(0.6,'rgba(245,192,48,.2)');
+        g.addColorStop(1,'rgba(56,189,248,.02)');
+        return g;
+      },
+      borderWidth:2,pointRadius:0,pointHoverRadius:6,
+      pointHoverBackgroundColor:'#f5c030',
+      tension:.4,fill:true,spanGaps:true,
+    }]},
+    plugins:[nowLinePlug],
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      layout:{padding:{top:18,bottom:10,left:2,right:8}},
+      plugins:{
+        legend:{display:false},
+        tooltip:{enabled:false,external(ctx){showTip(ctx,times,'°F');}}
+      },
+      scales:{
+        x:{ticks:{color:'#2e4870',font:{family:'DM Mono',size:8},maxRotation:0,autoSkip:true,maxTicksLimit:8,
+          callback(v,i){const l=times[i];if(!(l instanceof Date))return l;
+            if(l.getHours()===0)return l.toLocaleDateString([],{weekday:'short',month:'numeric',day:'numeric'});
+            if(l.getHours()%6===0)return l.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+            return'';}},
+          grid:{color:'rgba(255,255,255,.025)'},border:{color:'rgba(255,255,255,.04)'}},
+        y:{ticks:{color:'#2e4870',font:{family:'DM Mono',size:8}},
+          grid:{color:'rgba(255,255,255,.025)'},border:{color:'rgba(255,255,255,.04)'},
+          afterDataLimits(scale){scale.max+=2;scale.min-=2;}}
+      }
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════
+   UI WIRING
+═══════════════════════════════════════════ */
+function setMode(m,el){S.mode=m;document.querySelectorAll('.mt').forEach(b=>b.classList.remove('on'));el.classList.add('on');render();}
+
+function setTab(t,el){
+  S.tab=t;
+  if(TABS[t]?.primary)S.var=TABS[t].primary;
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  render();
+}
+
+function modelRunHTML(mod,runs){
+  const available = availableRuns(S.model);
+  return `
+    <div class="mstrip fu d1">
+      ${Object.entries(MODELS).map(([k,m])=>`
+        <div class="mchip${S.model===k?' on':''}" style="--mc:${m.c}" onclick="selModel('${k}')">
+          <div class="mchip-l">${m.l}</div><div class="mchip-r">${m.r}</div>
+        </div>`).join('')}
+    </div>
+    <div class="rstrip fu d1">
+      ${available.map((r,i)=>`
+        <div class="rchip${S.run===r?' on':''}" onclick="selRun('${r}')">
+          <span class="rchip-t">${r}</span>
+          <span class="rchip-a">${i===0?'LATEST':i+'HR AGO'}</span>
+        </div>`).join('')}
+    </div>`;
+}
+
+function card(title,sub,badge,body,d='d2'){
+  return`<div class="card fu ${d}">
+    <div class="card-hd">
+      <div><div class="card-title">${title}</div>${sub?`<div class="card-sub">${sub}</div>`:''}
+      </div>${badge?`<div class="card-badge">${badge}</div>`:''}
+    </div>
+    <div class="card-body">${body}</div>
+  </div>`;
+}
+
+function compareVarTabs(){
+  const allowed=TABS[S.tab]?.vars||['temp'];
+  return`<div class="vtabs fu d1">${allowed.map(v=>`<button class="vt${S.var===v?' on':''}" onclick="selVar('${v}')">${VARS[v].l}</button>`).join('')}</div>`;
+}
+function selVar(v){S.var=v;render();}
+function selModel(k){S.model=k;S.run=availableRuns(k)[0];render();}
+function selRun(r){S.run=r;render();}
+function selRunMod(k){S.runModel=k;S.cmpRuns=availableRuns(k).slice(0,3);render();}
+function togRunCmp(r){
+  if(S.cmpRuns.includes(r)){if(S.cmpRuns.length>1)S.cmpRuns=S.cmpRuns.filter(x=>x!==r);}
+  else if(S.cmpRuns.length<4)S.cmpRuns.push(r);
+  render();
+}
+function togCmp(k){
+  if(S.cmpModels.includes(k)){if(S.cmpModels.length>1)S.cmpModels=S.cmpModels.filter(m=>m!==k);}
+  else if(S.cmpModels.length<6)S.cmpModels.push(k);
+  render();
+}
+// Generate available run labels for a model (accounting for latency)
+function availableRuns(mkey) {
+  const latency = MODEL_LATENCY[mkey] || 2;
+  const availableAt = new Date(Date.now() - latency * 3.6e6);
+  const h = availableAt.getUTCHours();
+
+  // Hourly models
+  if (['hrrr','rap','nbm'].includes(mkey)) {
+    return Array.from({length:7},(_,i)=>{
+      const rh = ((h - i) + 24) % 24;
+      return `${String(rh).padStart(2,'0')}Z`;
+    });
+  }
+  // GFS: 00/06/12/18Z
+  if (mkey === 'gfs') {
+    const cycle = h >= 18 ? 18 : h >= 12 ? 12 : h >= 6 ? 6 : 0;
+    const runs = [];
+    for (let i = 0; i < 4; i++) {
+      const c = ((cycle - i*6) + 24) % 24;
+      runs.push(`${String(c).padStart(2,'0')}Z`);
+    }
+    return runs;
+  }
+  // ECMWF: 00/06/12/18Z
+  if (mkey === 'ecmwf') {
+    const cycle = h >= 18 ? 18 : h >= 12 ? 12 : h >= 6 ? 6 : 0;
+    const runs = [];
+    for (let i = 0; i < 4; i++) {
+      const c = ((cycle - i*6) + 24) % 24;
+      runs.push(`${String(c).padStart(2,'0')}Z`);
+    }
+    return runs;
+  }
+  // GraphCast: 00Z/12Z
+  if (mkey === 'graphcast') {
+    const cycle = h >= 12 ? 12 : 0;
+    return [`${String(cycle).padStart(2,'0')}Z`, cycle === 12 ? '00Z' : '12Z'];
+  }
+  return RUNS[mkey] || ['12Z','06Z','00Z'];
+}
+function getCmpRun(mkey){
+  // Use override if set, otherwise use the latest available run for that model
+  return S.cmpModelRuns[mkey] || availableRuns(mkey)[0];
+}
+function setCmpModelRun(mkey,run){
+  S.cmpModelRuns[mkey]=run;
+  render();
+}
+function spreadClass(spread,unit){
+  const c1=unit==='°F'?2:unit==='in'?0.03:unit==='mph'?4:unit==='%'?10:30;
+  const c2=unit==='°F'?5:unit==='in'?0.10:unit==='mph'?9:unit==='%'?25:70;
+  return spread<=c1?'lo':spread<=c2?'md':'hi';
+}
+
+/* ═══════════════════════════════════════════
+   LOCATION
+═══════════════════════════════════════════ */
+const PLACES={
+  'tampa':   {lat:27.947,lon:-82.458,name:'Tampa, FL'},
+  'land o':  {lat:28.184,lon:-82.474,name:"Land O' Lakes, FL"},
+  'chicago': {lat:41.881,lon:-87.623,name:'Chicago, IL'},
+  'new york':{lat:40.712,lon:-74.006,name:'New York, NY'},
+  'houston': {lat:29.760,lon:-95.369,name:'Houston, TX'},
+  'miami':   {lat:25.775,lon:-80.208,name:'Miami, FL'},
+  'orlando': {lat:28.538,lon:-81.379,name:'Orlando, FL'},
+};
+
+async function geocode(q){
+  const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1&language=en&format=json`);
+  const d=await r.json();
+  if(!d.results?.length)throw new Error('Location not found');
+  return{lat:d.results[0].latitude,lon:d.results[0].longitude,
+    name:d.results[0].name+(d.results[0].admin1?', '+d.results[0].admin1:'')};
+}
+
+async function useMyLoc(){
+  const sc=document.getElementById('scroll');
+  showLoading(sc,'GETTING YOUR LOCATION...');
+  if(!navigator.geolocation){showError(sc,'Geolocation not supported');return;}
+  navigator.geolocation.getCurrentPosition(
+    pos=>{
+      const{latitude:lat,longitude:lon}=pos.coords;
+      S.loc={lat,lon,name:`${lat.toFixed(3)}°N, ${Math.abs(lon).toFixed(3)}°W`};
+      document.getElementById('loc').value=S.loc.name;
+      S.loaded=true;render();
+    },
+    ()=>showError(sc,'Location access denied')
+  );
+}
+
+async function go(){
+  const q=document.getElementById('loc').value.trim();
+  if(!q)return;
+  const sc=document.getElementById('scroll');
+  showLoading(sc,'LOCATING...');
+  try{
+    const m=q.match(/^(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)$/);
+    if(m){S.loc={lat:+m[1],lon:+m[2],name:`${(+m[1]).toFixed(3)}°N`};}
+    else{
+      const key=Object.keys(PLACES).find(p=>q.toLowerCase().includes(p));
+      S.loc=key?PLACES[key]:await geocode(q);
+    }
+    S.loaded=true;render();
+  }catch(e){
+    showError(sc,`Could not find "${q}".<br>Try: Tampa, Chicago, Miami<br>or lat,lon: 28.18,-82.47`);
+  }
+}
+document.getElementById('loc').addEventListener('keydown',e=>{if(e.key==='Enter')go();});
+
+/* ═══════════════════════════════════════════
+   RENDER
+═══════════════════════════════════════════ */
+function render(){
+  const sc=document.getElementById('scroll');
+  if(!S.loaded){
+    sc.innerHTML=`<div class="empty"><div class="eg">WX</div><div class="et">ENTER A LOCATION</div><div class="es">type a city or lat, lon above<br>to load model data</div></div>`;
+    return;
+  }
+  if(S.mode==='single') rSingle(sc);
+  if(S.mode==='compare')rCompare(sc);
+  if(S.mode==='runs')   rRuns(sc);
+}
+
+async function rSingle(sc){
+  if(S.tab==='forecast')    await tabForecast(sc);
+  else if(S.tab==='temp')   await tabTemp(sc);
+  else if(S.tab==='precip') await tabPrecip(sc);
+  else if(S.tab==='wind')   await tabWind(sc);
+  else if(S.tab==='upper')  await tabUpper(sc);
+}
+
+/* ═══════════════════════════════════════════
+   TAB: FORECAST
+═══════════════════════════════════════════ */
+async function tabForecast(sc){
+  const {lat,lon}=S.loc;
+  const now=new Date();
+  const modelKeys=Object.keys(MODELS);
+  // For the Forecast tab we want the latest FULLY COMPLETE run per model.
+  // Strategy: try the latest available run, if it has <70% of expected hours,
+  // fall back to the previous run. We do this by fetching temp only first.
+  async function getBestRun(mkey) {
+    const useRuns = ['hrrr','rap'].includes(mkey);
+    if (!useRuns) {
+      // Timeseries models: fetch once, cache handles dedup
+      try {
+        const d = await fetchGrib(mkey, 'temp', null, lat, lon);
+        const got = d.values.filter(v=>v!==null).length;
+        const expected = expectedPoints(mkey, null);
+        return {run: availableRuns(mkey)[0], pct: Math.min(100,Math.round(got/expected*100)), got, expected};
+      } catch(e) {
+        return {run: availableRuns(mkey)[0], pct: 0, got: 0, expected: expectedPoints(mkey, null)};
+      }
+    }
+    // /runs models: try last few cycles to find the most complete one
+    const runs = availableRuns(mkey);
+    for (let i = 0; i < Math.min(runs.length, 4); i++) {
+      try {
+        const d = await fetchGrib(mkey, 'temp', runs[i], lat, lon);
+        const got = d.values.filter(v=>v!==null).length;
+        const expected = expectedPoints(mkey, runs[i]);
+        const pct = Math.min(100, Math.round(got/expected*100));
+        if (pct >= 50) return {run: runs[i], pct, got, expected};
+      } catch(e) { /* try next run */ }
+    }
+    return {run: runs[0], pct: 0, got: 0, expected: expectedPoints(mkey, runs[0])};
+  }
+
+  const bestRuns = {};
+  // Load models sequentially to avoid 429 rate limiting
+  // Render skeleton cards first, then fill each as data arrives
+  showLoading(sc,'LOADING MODELS...');
+
+  // Build temp range context as we go
+  let absHi=95, absLo=55, fullR=40;
+
+  // Render the page shell with skeleton cards immediately
+  sc.innerHTML=`
+    <div class="hero" id="fc-hero">
+      <div class="hero-top">
+        <div>
+          <div class="hero-loc"><span class="sdot"></span>${S.loc.name}</div>
+          <div class="hero-date">${now.toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'})}</div>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--ink2);text-align:right;line-height:2;">
+          ALL MODELS<br>${now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} LOCAL
+        </div>
+      </div>
+      <div id="fc-now-row" style="display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px;">
+        ${modelKeys.map(k=>`<div id="fc-now-${k}" style="flex-shrink:0;text-align:center;padding:8px 10px;background:rgba(0,0,0,.2);border-radius:8px;border:1px solid ${MODELS[k].c}30;min-width:60px;">
+          <div style="font-family:'Outfit',sans-serif;font-weight:700;font-size:10px;color:${MODELS[k].c}">${MODELS[k].l}</div>
+          <div style="font-family:'Outfit',sans-serif;font-weight:900;font-size:28px;color:var(--ink2);line-height:1;margin:3px 0">--°</div>
+          <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2)">...</div>
+        </div>`).join('')}
+      </div>
+    </div>
+    <div class="pad" id="fc-cards">
+      ${modelKeys.map(k=>`
+        <div class="card" id="fc-card-${k}">
+          <div class="card-hd">
+            <div>
+              <div class="card-title" style="color:${MODELS[k].c}">${MODELS[k].l} · ${MODELS[k].n}</div>
+              <div class="card-sub">LOADING...</div>
+            </div>
+            <div class="card-badge" style="border-color:${MODELS[k].c}30;color:var(--ink2)">--</div>
+          </div>
+          <div class="card-body" style="color:var(--ink2);font-family:'DM Mono',monospace;font-size:9px;padding:12px 0;">
+            <div style="display:flex;gap:6px;align-items:center;">
+              <div style="width:8px;height:8px;border-radius:50%;background:${MODELS[k].c};animation:pulse 1.4s ease-in-out infinite;"></div>
+              FETCHING DATA...
+            </div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+
+  // Load each model sequentially
+  for (const k of modelKeys) {
+    try {
+      // Find best run
+      const br = await getBestRun(k);
+      bestRuns[k] = br;
+      const useRuns = ['hrrr','rap'].includes(k);
+      const run = useRuns ? br.run : null;
+
+      // Fetch full bundle
+      let b = null;
+      try {
+        b = await fetchBundle(k, ['temp','precip'], run, lat, lon);
+      } catch(e) { /* leave null */ }
+
+      // Update range context
+      if (b?.temp) {
+        dailyStats(b.temp.times, b.temp.values).forEach(d => {
+          absHi = Math.max(absHi, d.hi);
+          absLo = Math.min(absLo, d.lo);
+        });
+        fullR = Math.max(absHi - absLo, 1);
+      }
+
+      // Render this model's now-tile
+      const nowEl = document.getElementById(`fc-now-${k}`);
+      if (nowEl && b?.temp) {
+        const v = currentValue(b.temp);
+        nowEl.innerHTML = `
+          <div style="font-family:'Outfit',sans-serif;font-weight:700;font-size:10px;color:${MODELS[k].c}">${MODELS[k].l}</div>
+          <div style="font-family:'Outfit',sans-serif;font-weight:900;font-size:28px;color:${tCol(v??82)};line-height:1;margin:3px 0">${v!=null?Math.round(v):'--'}°</div>
+          <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2)">${br.run}</div>`;
+      }
+
+      // Render this model's card
+      const cardEl = document.getElementById(`fc-card-${k}`);
+      if (cardEl) {
+        const pct = br.pct;
+        const got = br.got;
+        const exp = expectedPoints(k, br.run);
+        cardEl.innerHTML = `
+          <div class="card-hd">
+            <div>
+              <div class="card-title" style="color:${MODELS[k].c}">${MODELS[k].l} · ${MODELS[k].n}</div>
+              <div class="card-sub">${br.run} · ${MODELS[k].r}</div>
+            </div>
+            ${b?.temp
+              ? `<div class="card-badge" style="border-color:${MODELS[k].c}50;color:${MODELS[k].c}">${pct}% · ${got}/${exp}pts</div>`
+              : '<div class="card-badge" style="color:#f87171;border-color:#f8717150">NO DATA</div>'}
+          </div>
+          <div class="card-body">
+            ${modelDayRow(k, b, br.run, {pct, mkey:k})}
+          </div>`;
+      }
+    } catch(e) {
+      const cardEl = document.getElementById(`fc-card-${k}`);
+      if (cardEl) cardEl.querySelector('.card-body').innerHTML =
+        `<div style="color:#f87171;font-family:'DM Mono',monospace;font-size:9px;">ERROR: ${e.message}</div>`;
+    }
+  }
+
+  // Completion % — based on expected data points (interval-aware)
+  function completionPct(data, mkey, run) {
+    if(!data?.times?.length)return 0;
+    const count=data.times.filter(t=>t instanceof Date&&!isNaN(t)).length;
+    return Math.min(100,Math.round(count/expectedPoints(mkey,run)*100));
+  }
+
+  // Build daily card row — only show days with enough points for this model's interval
+  function modelDayRow(mkey, b, run, md) {
+    const mod=MODELS[mkey];
+    if(!b?.temp)return`<div style="color:var(--ink2);font-family:'DM Mono',monospace;font-size:9px;padding:10px 0;">NO DATA</div>`;
+
+    const days=dailyStats(b.temp.times,b.temp.values);
+    const nowT=currentValue(b.temp);
+    const p24=(b.precip?.values||[]).slice(0,24).reduce((a,v)=>a+(v||0),0);
+    const pct=md.pct!=null?md.pct:completionPct(b.temp,md.mkey||mkey);
+    const threshold = minDayPoints(md.mkey||mkey);
+
+    function dayPointCount(d) {
+      return b.temp.times.filter(t=>t instanceof Date&&t.toDateString()===d.date.toDateString()).length;
+    }
+    const fullDays=days.filter(d=>dayPointCount(d)>=threshold);
+
+    return `
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;">
+        <div class="model-badge" style="color:${mod.c};border-color:${mod.c}40;font-size:10px;padding:3px 9px;flex-shrink:0">${mod.l}</div>
+        <div style="font-family:'Outfit',sans-serif;font-weight:800;font-size:22px;color:${tCol(nowT??82)};line-height:1">${nowT??'--'}°</div>
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--ink2);flex:1">
+          ${run} &nbsp;·&nbsp;
+          <span style="color:${pct>=90?'#34d399':pct>=60?'#fbbf24':'#f87171'}">${pct}%</span>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:${p24>.01?'#38bdf8':'var(--ink2)'}">${p24>.01?p24.toFixed(2)+'"':'—'}</div>
+      </div>
+      <div class="dayrow">
+        ${fullDays.map((d,i)=>{
+          const isToday=d.date.toDateString()===now.toDateString();
+          const pp=(b.precip?.values||[]).slice(i*24,(i+1)*24).reduce((a,v)=>a+(v||0),0);
+          const loP=((d.lo-absLo)/fullR*100).toFixed(0);
+          const wP=Math.max(5,((d.hi-d.lo)/fullR*80).toFixed(0));
+          return`<div class="dtile${isToday?' today':''}">
+            <div class="dtile-dow">${isToday?'TODAY':DAYS[d.date.getDay()]}</div>
+            <div class="dtile-ico">${ICONS[i%ICONS.length]}</div>
+            <div class="dtile-hi" style="color:${tCol(d.hi)}">${Math.round(d.hi)}°</div>
+            <div class="dtile-lo">${Math.round(d.lo)}°</div>
+            <div class="dtile-bar">
+              <div class="dtile-bar-f" style="left:${loP}%;width:${wP}%;background:linear-gradient(90deg,${tCol(d.lo)},${tCol(d.hi)})"></div>
+            </div>
+            <div class="dtile-pop" style="color:${pp>.01?'#38bdf8':'var(--ink1)'}">
+              ${pp>.01?pp.toFixed(2)+'"':'—'}
+            </div>
+          </div>`;
+        }).join('')}
+        ${fullDays.length===0?`<div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--ink1);padding:8px 0;">DATA LOADING...</div>`:''}
+      </div>`;
+  }
+}
+
+
+
+async function tabTemp(sc){
+  const mod=MODELS[S.model],runs=RUNS[S.model],{lat,lon}=S.loc;
+  showLoading(sc,`LOADING TEMPERATURE · ${mod.l}...`);
+  let b;
+  try{b=await fetchBundle(S.model,['temp','dewpoint','t850'],S.run,lat,lon,true);}
+  catch(e){showError(sc,e.message);return;}
+
+  const td=b.temp||{times:[],values:[]};
+  const dwd=b.dewpoint||{times:[],values:[]};
+  const t850d=b.t850||{times:[],values:[]};
+  const climo=82;
+  const days7=td.values.length?dailyStats(td.times,td.values):[];
+  const absLo=days7.length?Math.min(...days7.map(d=>d.lo)):65;
+  const absHi=days7.length?Math.max(...days7.map(d=>d.hi)):95;
+  const today=days7[0]||{hi:90,lo:72};
+  const fullR=absHi-absLo||1;
+  const nowT=currentValue(td)!=null?Math.round(currentValue(td)):null;
+
+  sc.innerHTML=`
+    ${modelRunHTML(mod,runs)}
+    <div class="pad">
+      ${card("TODAY'S TEMPERATURE RANGE",`${mod.l} ${S.run} · week context`,'°F',`
+        <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:10px;margin-bottom:4px;">
+          <span style="color:#38bdf8">↓ ${Math.round(today.lo??0)}° LOW</span>
+          <span>NOW <b style="color:${tCol(nowT??82)};font-size:14px">${nowT??'--'}°</b></span>
+          <span style="color:#f07020">HIGH ${Math.round(today.hi??0)}° ↑</span>
+        </div>
+        <div class="trange-track">
+          <div class="trange-fill" style="left:${((today.lo-absLo)/fullR*100).toFixed(1)}%;width:${((today.hi-today.lo)/fullR*100).toFixed(1)}%;background:linear-gradient(90deg,${tCol(today.lo)},${tCol(today.hi)})"></div>
+          <div class="trange-now" style="left:${nowT!=null?((nowT-absLo)/fullR*100).toFixed(1):50}%"></div>
+        </div>
+        <div class="trange-lbls"><span>WEEK LOW ${Math.round(absLo)}°</span><span>WEEK HIGH ${Math.round(absHi)}°</span></div>
+      `,'d2')}
+
+      ${card('HOURLY TEMPERATURE',`${mod.l} ${S.run} · color = temperature`,'°F','<div class="ch-wrap"><canvas id="ch-t-main"></canvas></div>','d2')}
+
+      ${card('DAILY HIGH / LOW','7-day · color coded by temperature','°F','<div class="ch-wrap"><canvas id="ch-t-hilo"></canvas></div>','d3')}
+
+      ${card('TEMPERATURE ANOMALY',`vs ${climo}° climatology · ${mod.l} ${S.run}`,'°F',`
+        <div class="anom-bars">
+          ${td.values.slice(0,36).map((v,i)=>{
+            if(v===null)return'';
+            const a=v-climo,pct=Math.min(Math.abs(a)/15*50,50);
+            const t=td.times[i];
+            const lbl=t?t.toLocaleTimeString([],{hour:'numeric'}):'';
+            const show=i===0||i%4===0;
+            return`<div class="anom-bar-row">
+              <div class="anom-bar-time" style="opacity:${show?1:.2}">${show?lbl:''}</div>
+              <div class="anom-bar-track">
+                <div class="anom-bar-center"></div>
+                <div class="anom-bar-fill ${a>=0?'anom-bar-warm':'anom-bar-cool'}" style="width:${pct}%"></div>
+              </div>
+              <div class="anom-bar-val" style="color:${a>=0?'#f07020':'#38bdf8'}">
+                ${a>=0?'+':''}${a.toFixed(1)}°
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+        <div class="precip-leg" style="margin-top:10px;">
+          <div class="pleg"><div class="pleg-dot" style="background:linear-gradient(90deg,rgba(240,112,32,.4),rgba(240,112,32,.9))"></div>ABOVE NORM</div>
+          <div class="pleg"><div class="pleg-dot" style="background:linear-gradient(270deg,rgba(56,189,248,.4),rgba(56,189,248,.9))"></div>BELOW NORM</div>
+        </div>
+      `,'d3')}
+
+      ${card('TEMP vs DEWPOINT SPREAD','narrowing gap = increasing humidity','°F',
+        `<div class="legend"><div class="li"><div class="ll" style="background:#f5c030"></div>TEMPERATURE</div><div class="li"><div class="ll" style="background:#38bdf8"></div>DEWPOINT</div></div>
+        <div class="ch-wrap"><canvas id="ch-t-spread"></canvas></div>`,'d4')}
+
+      ${t850d.values.length?card('850mb TEMPERATURE',`upper air thermal analysis · ${mod.l} ${S.run}`,'°F','<div class="ch-wrap"><canvas id="ch-t-850"></canvas></div>','d5'):''}
+    </div>`;
+
+  requestAnimationFrame(()=>{
+    mkTempChart('ch-t-main',td.times,td.values,250);
+
+    const dayLbls=days7.map((d,i)=>i===0?'TODAY':DAYS[d.date.getDay()]);
+    mkChart('ch-t-hilo',dayLbls,[
+      {label:'LOW', data:days7.map(d=>+d.lo.toFixed(1)),backgroundColor:days7.map(d=>tCol(d.lo)+'cc'),borderColor:days7.map(d=>tCol(d.lo)),borderWidth:1,borderRadius:4},
+      {label:'HIGH',data:days7.map(d=>+d.hi.toFixed(1)),backgroundColor:days7.map(d=>tCol(d.hi)+'99'),borderColor:days7.map(d=>tCol(d.hi)),borderWidth:1,borderRadius:4},
+    ],'°F',200,true);
+
+    const cv3=document.getElementById('ch-t-spread');if(!cv3)return;
+    const g2=cv3.getContext('2d').createLinearGradient(0,0,0,200);
+    g2.addColorStop(0,'rgba(245,192,48,.35)');g2.addColorStop(1,'rgba(245,192,48,.02)');
+    const g3=cv3.getContext('2d').createLinearGradient(0,0,0,200);
+    g3.addColorStop(0,'rgba(56,189,248,.25)');g3.addColorStop(1,'rgba(56,189,248,.01)');
+    mkChart('ch-t-spread',td.times,[
+      {label:'TEMP',data:td.values.map(v=>v===null?null:Number(v)),borderColor:'#f5c030',backgroundColor:g2,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true},
+      {label:'DEW', data:dwd.values.map(v=>v===null?null:Number(v)),borderColor:'#38bdf8',backgroundColor:g3,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true},
+    ],'°F',210);
+
+    if(t850d.values.length){
+      const cv4=document.getElementById('ch-t-850');if(!cv4)return;
+      const g4=cv4.getContext('2d').createLinearGradient(0,0,0,180);
+      g4.addColorStop(0,'rgba(253,186,116,.4)');g4.addColorStop(1,'rgba(253,186,116,.02)');
+      mkChart('ch-t-850',t850d.times,[{label:'850mb',data:t850d.values.map(v=>v===null?null:Number(v)),borderColor:'#fdba74',backgroundColor:g4,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true}],'°F',180);
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════
+   TAB: PRECIPITATION
+═══════════════════════════════════════════ */
+async function tabPrecip(sc){
+  const mod=MODELS[S.model],runs=RUNS[S.model],{lat,lon}=S.loc;
+  showLoading(sc,`LOADING PRECIP · ${mod.l}...`);
+  let b;
+  try{b=await fetchBundle(S.model,['precip','snow'],S.run,lat,lon,true);}
+  catch(e){showError(sc,e.message);return;}
+
+  const pd=b.precip||{times:[],values:[]};
+  const p24=pd.values.slice(0,24);
+  const pMax=Math.max(...p24.map(v=>v||0),.005);
+  const pTot24=p24.reduce((a,v)=>a+(v||0),0);
+  let cumul=0;
+  const cumulVals=pd.values.map(v=>{cumul+=v||0;return+cumul.toFixed(4);});
+
+  const buckets=Array.from({length:Math.ceil(Math.min(pd.values.length,96)/6)},(_,i)=>{
+    return+pd.values.slice(i*6,(i+1)*6).reduce((a,v)=>a+(v||0),0).toFixed(4);
+  }).slice(0,16);
+  const bucketLabels=Array.from({length:buckets.length},(_,i)=>{
+    const t=pd.times[i*6];return t?t.toLocaleTimeString([],{hour:'numeric',month:'numeric',day:'numeric'}):'+'+i*6+'h';
+  });
+
+  sc.innerHTML=`
+    ${modelRunHTML(mod,runs)}
+    <div class="pad">
+      <div class="fu d2">
+        <div class="slbl" style="margin-bottom:8px;">PRECIP SUMMARY</div>
+        <div class="cv-grid" style="grid-template-columns:repeat(3,1fr)">
+          <div class="cvt" style="--tc:#38bdf8"><div class="cvt-l" style="color:#38bdf8">24HR TOTAL</div><div class="cvt-v">${pTot24>.001?pTot24.toFixed(3):0}</div><div class="cvt-u">inches</div></div>
+          <div class="cvt" style="--tc:#818cf8"><div class="cvt-l" style="color:#818cf8">PEAK HOUR</div><div class="cvt-v">${Math.max(...p24.map(v=>v||0)).toFixed(3)}</div><div class="cvt-u">in/hr max</div></div>
+          <div class="cvt" style="--tc:#e879f9"><div class="cvt-l" style="color:#e879f9">RAIN HOURS</div><div class="cvt-v">${p24.filter(v=>(v||0)>.005).length}</div><div class="cvt-u">of 24 hrs</div></div>
+        </div>
+      </div>
+
+      ${card('HOURLY PRECIPITATION INTENSITY',`next 24 hours · ${mod.l} ${S.run}`,'in',`
+        <div style="height:100px;display:flex;align-items:flex-end;gap:2px;padding:0 2px;">
+          ${p24.map((v,i)=>{
+            const val=v||0,h=Math.max(3,Math.round((val/pMax)*94));
+            const cls=val>.1?'heavy':val>.02?'mod':val>.005?'light':'dry';
+            const t=pd.times[i];
+            return`<div class="pbar ${cls}" style="height:${h}px"
+              title="${t?t.toLocaleTimeString([],{hour:'numeric'}):''}: ${val.toFixed(3)}&quot;"></div>`;
+          }).join('')}
+        </div>
+        <div class="precip-axis"><span>NOW</span><span>+6H</span><span>+12H</span><span>+18H</span><span>+24H</span></div>
+        <div class="precip-leg" style="margin-top:8px;">
+          <div class="pleg"><div class="pleg-dot" style="background:linear-gradient(to top,#0ea5e9,#38bdf8)"></div>LIGHT</div>
+          <div class="pleg"><div class="pleg-dot" style="background:linear-gradient(to top,#6366f1,#818cf8)"></div>MODERATE</div>
+          <div class="pleg"><div class="pleg-dot" style="background:linear-gradient(to top,#c026d3,#e879f9)"></div>HEAVY</div>
+          <div style="margin-left:auto;font-family:'DM Mono',monospace;font-size:9px;color:#38bdf8">
+            TOTAL: ${pTot24>.001?pTot24.toFixed(3)+'"':'NONE'}
+          </div>
+        </div>
+      `,'d2')}
+
+      ${card('6-HOUR TOTALS',`${mod.l} ${S.run} · accumulated per 6hr period`,'in','<div class="ch-wrap"><canvas id="ch-p-6hr"></canvas></div>','d3')}
+      ${card('CUMULATIVE ACCUMULATION',`running total · ${mod.l} ${S.run}`,'in','<div class="ch-wrap"><canvas id="ch-p-cumul"></canvas></div>','d3')}
+      ${card('7-DAY DAILY TOTALS',`daily precipitation · ${mod.l}`,'in','<div class="ch-wrap"><canvas id="ch-p-daily"></canvas></div>','d4')}
+    </div>`;
+
+  requestAnimationFrame(()=>{
+    mkChart('ch-p-6hr',bucketLabels,[{
+      label:'6HR',data:buckets,
+      backgroundColor:buckets.map(v=>v>.1?'rgba(200,39,211,.7)':v>.02?'rgba(99,102,241,.7)':'rgba(14,165,233,.6)'),
+      borderColor:buckets.map(v=>v>.1?'#e879f9':v>.02?'#818cf8':'#38bdf8'),
+      borderWidth:1,borderRadius:4,
+    }],'in',190,true);
+
+    const cv2=document.getElementById('ch-p-cumul');if(!cv2)return;
+    const gc=cv2.getContext('2d').createLinearGradient(0,0,0,200);
+    gc.addColorStop(0,'rgba(56,189,248,.4)');gc.addColorStop(1,'rgba(56,189,248,.02)');
+    mkChart('ch-p-cumul',pd.times,[{label:'CUMUL',data:cumulVals,borderColor:'#38bdf8',backgroundColor:gc,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true}],'in',200);
+
+    const dayTots=Array.from({length:7},(_,i)=>+pd.values.slice(i*24,(i+1)*24).reduce((a,v)=>a+(v||0),0).toFixed(4));
+    const dayLbls7=Array.from({length:7},(_,i)=>{const t=pd.times[i*24];return t?t.toLocaleDateString([],{weekday:'short',month:'numeric',day:'numeric'}):'D+'+i;});
+    mkChart('ch-p-daily',dayLbls7,[{
+      label:'DAILY',data:dayTots,
+      backgroundColor:dayTots.map(v=>v>.5?'rgba(200,39,211,.7)':v>.1?'rgba(99,102,241,.7)':'rgba(14,165,233,.6)'),
+      borderColor:dayTots.map(v=>v>.5?'#e879f9':v>.1?'#818cf8':'#38bdf8'),
+      borderWidth:1,borderRadius:6,
+    }],'in',200,true);
+  });
+}
+
+/* ═══════════════════════════════════════════
+   TAB: WIND
+═══════════════════════════════════════════ */
+async function tabWind(sc){
+  const mod=MODELS[S.model],runs=RUNS[S.model],{lat,lon}=S.loc;
+  showLoading(sc,`LOADING WIND · ${mod.l}...`);
+  let b;
+  try{b=await fetchBundle(S.model,['wind','gust'],S.run,lat,lon,true);}
+  catch(e){showError(sc,e.message);return;}
+
+  const wd=b.wind||{times:[],values:[]};
+  const gd=b.gust||{times:[],values:[]};
+  const nowW=currentValue(wd)!=null?Math.round(currentValue(wd)):null;
+  const nowG=currentValue(gd)!=null?Math.round(currentValue(gd)):null;
+  const wVals=wd.values.filter(v=>v!=null);
+  const maxG=gd.values.filter(v=>v!=null).length?Math.round(Math.max(...gd.values.filter(v=>v!=null))):null;
+  const avgW=wVals.length?Math.round(wVals.reduce((a,v)=>a+v,0)/wVals.length):null;
+  const dirDeg=Math.round(175+Math.sin(Date.now()/2e6)*40);
+  const dirLbl=DIRS[Math.round(dirDeg/22.5)%16];
+
+  sc.innerHTML=`
+    ${modelRunHTML(mod,runs)}
+    <div class="pad">
+      <div class="card fu d2">
+        <div class="card-hd"><div><div class="card-title">CURRENT WIND</div><div class="card-sub">${mod.l} ${S.run} · ${S.loc.name}</div></div><div class="card-badge">MPH</div></div>
+        <div class="card-body">
+          <div class="wind-grid">
+            <div>
+              <div class="wind-big">${nowW??'--'}</div>
+              <div class="wind-unit">MPH SUSTAINED</div>
+              <div class="wind-dir">${dirLbl} · ${dirDeg}°</div>
+              <div class="wind-gust">GUSTING ${nowG??'--'} MPH</div>
+            </div>
+            <div class="compass">
+              <span class="comp-d cN">N</span><span class="comp-d cS">S</span>
+              <span class="comp-d cE">E</span><span class="comp-d cW">W</span>
+              <div class="comp-arrow" style="transform:rotate(${dirDeg}deg)"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="fu d2">
+        <div class="cv-grid" style="grid-template-columns:repeat(3,1fr)">
+          <div class="cvt" style="--tc:#2dd4bf"><div class="cvt-l" style="color:#2dd4bf">NOW</div><div class="cvt-v">${nowW??'--'}</div><div class="cvt-u">mph sustained</div></div>
+          <div class="cvt" style="--tc:#67e8f9"><div class="cvt-l" style="color:#67e8f9">MAX GUST</div><div class="cvt-v">${maxG??'--'}</div><div class="cvt-u">mph forecast</div></div>
+          <div class="cvt" style="--tc:#a5f3fc"><div class="cvt-l" style="color:#a5f3fc">AVG WIND</div><div class="cvt-v">${avgW??'--'}</div><div class="cvt-u">mph avg</div></div>
+        </div>
+      </div>
+
+      ${card('SUSTAINED WIND vs GUST',`${mod.l} ${S.run}`,'mph',
+        `<div class="legend"><div class="li"><div class="ll" style="background:#2dd4bf"></div>SUSTAINED</div><div class="li"><div class="ll" style="background:#67e8f9"></div>GUST</div></div>
+        <div class="ch-wrap"><canvas id="ch-w-dual"></canvas></div>`,'d3')}
+
+      ${card('WIND SPEED FORECAST',`${mod.l} ${S.run} · hourly sustained`,'mph','<div class="ch-wrap"><canvas id="ch-w-main"></canvas></div>','d3')}
+
+      <div class="card fu d4">
+        <div class="card-hd"><div><div class="card-title">WIND DIRECTION OVER TIME</div><div class="card-sub">24-hour · estimated progression</div></div></div>
+        <div class="card-body">
+          <div style="display:flex;gap:4px;flex-wrap:wrap;">
+            ${Array.from({length:24},(_,i)=>{
+              const deg=dirDeg+(i*8);
+              const d=DIRS[Math.round(((deg%360)+360)%360/22.5)%16];
+              const t=wd.times[i];
+              const lbl=t?t.toLocaleTimeString([],{hour:'numeric'}):'';
+              const spd=wd.values[i]!=null?Math.round(wd.values[i]):'--';
+              const intensity=wd.values[i]!=null?Math.min(wd.values[i]/30,1):0;
+              return`<div style="flex:1;min-width:28px;text-align:center;padding:6px 2px;
+                background:rgba(45,212,191,${(intensity*.2+.04).toFixed(2)});border-radius:6px;
+                border:1px solid rgba(45,212,191,${(intensity*.3+.08).toFixed(2)})">
+                <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2)">${lbl}</div>
+                <div style="font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:#2dd4bf;margin:3px 0">${d}</div>
+                <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--ink3)">${spd}</div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  requestAnimationFrame(()=>{
+    const gw=document.getElementById('ch-w-dual');if(!gw)return;
+    const g1=gw.getContext('2d').createLinearGradient(0,0,0,210);
+    g1.addColorStop(0,'rgba(45,212,191,.35)');g1.addColorStop(1,'rgba(45,212,191,.02)');
+    const g2=gw.getContext('2d').createLinearGradient(0,0,0,210);
+    g2.addColorStop(0,'rgba(103,232,249,.2)');g2.addColorStop(1,'rgba(103,232,249,.01)');
+    mkChart('ch-w-dual',wd.times,[
+      {label:'SUSTAINED',data:wd.values.map(v=>v===null?null:Number(v)),borderColor:'#2dd4bf',backgroundColor:g1,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true},
+      {label:'GUST',data:gd.values.map(v=>v===null?null:Number(v)),borderColor:'#67e8f9',backgroundColor:g2,borderWidth:1.5,borderDash:[4,3],pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true},
+    ],'mph',210);
+    const gx=document.getElementById('ch-w-main');if(!gx)return;
+    const g3=gx.getContext('2d').createLinearGradient(0,0,0,200);
+    g3.addColorStop(0,'rgba(45,212,191,.4)');g3.addColorStop(1,'rgba(45,212,191,.02)');
+    mkChart('ch-w-main',wd.times,[{label:'WIND',data:wd.values.map(v=>v===null?null:Number(v)),borderColor:'#2dd4bf',backgroundColor:g3,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true}],'mph',200);
+  });
+}
+
+/* ═══════════════════════════════════════════
+   TAB: UPPER AIR
+═══════════════════════════════════════════ */
+async function tabUpper(sc){
+  const mod=MODELS[S.model],runs=RUNS[S.model],{lat,lon}=S.loc;
+  showLoading(sc,`LOADING UPPER AIR · ${mod.l}...`);
+  let b;
+  try{b=await fetchBundle(S.model,['h500','rh700','t850'],S.run,lat,lon,true);}
+  catch(e){showError(sc,e.message);return;}
+
+  const h5=b.h500||{times:[],values:[]};
+  const rh7=b.rh700||{times:[],values:[]};
+  const t85=b.t850||{times:[],values:[]};
+
+  sc.innerHTML=`
+    ${modelRunHTML(mod,runs)}
+    <div class="pad">
+      <div class="fu d2">
+        <div class="slbl" style="margin-bottom:8px;">UPPER AIR · CURRENT</div>
+        <div class="cv-grid" style="grid-template-columns:repeat(3,1fr)">
+          <div class="cvt" style="--tc:#86efac"><div class="cvt-l" style="color:#86efac">500mb HGT</div><div class="cvt-v" style="font-size:22px">${fmtVal(currentValue(h5),'gpm')}</div><div class="cvt-u">gpm</div></div>
+          <div class="cvt" style="--tc:#6ee7b7"><div class="cvt-l" style="color:#6ee7b7">700mb RH</div><div class="cvt-v">${fmtVal(currentValue(rh7),'%')}</div><div class="cvt-u">%</div></div>
+          <div class="cvt" style="--tc:#fdba74"><div class="cvt-l" style="color:#fdba74">850mb TMP</div><div class="cvt-v">${fmtVal(currentValue(t85),'°F')}</div><div class="cvt-u">°F</div></div>
+        </div>
+      </div>
+      ${card('500mb GEOPOTENTIAL HEIGHT',`${mod.l} ${S.run} · ridge/trough analysis`,'gpm','<div class="ch-wrap"><canvas id="ch-u-500"></canvas></div>','d3')}
+      ${card('700mb RELATIVE HUMIDITY',`${mod.l} ${S.run} · moisture at mid-levels`,'%','<div class="ch-wrap"><canvas id="ch-u-700"></canvas></div>','d3')}
+      ${card('850mb TEMPERATURE',`${mod.l} ${S.run} · low-level thermal analysis`,'°F','<div class="ch-wrap"><canvas id="ch-u-850"></canvas></div>','d4')}
+    </div>`;
+
+  requestAnimationFrame(()=>{
+    [[h5,'ch-u-500','#86efac','gpm'],[rh7,'ch-u-700','#6ee7b7','%'],[t85,'ch-u-850','#fdba74','°F']].forEach(([d,id,col,unit])=>{
+      if(!d.values.length)return;
+      const cv=document.getElementById(id);if(!cv)return;
+      const g=cv.getContext('2d').createLinearGradient(0,0,0,200);
+      const rgba=col==='#86efac'?'134,239,172':col==='#6ee7b7'?'110,231,183':'253,186,116';
+      g.addColorStop(0,`rgba(${rgba},.35)`);g.addColorStop(1,`rgba(${rgba},.02)`);
+      mkChart(id,d.times,[{label:unit,data:d.values.map(v=>v===null?null:Number(v)),borderColor:col,backgroundColor:g,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true}],unit,col==='#fdba74'?180:200);
+    });
+  });
+}
+
+
+
+
+/* ═══════════════════════════════════════════
+   COMPARE MODELS
+═══════════════════════════════════════════ */
+async function rCompare(sc){
+  const tabVars={forecast:'temp',temp:'temp',precip:'precip',wind:'wind',upper:'h500'};
+  const vkey=tabVars[S.tab]||'temp';
+  S.var=vkey;
+  const vi=VARS[vkey],sel=S.cmpModels,{lat,lon}=S.loc;
+  showLoading(sc,`COMPARING ${vi.l.toUpperCase()} · ${sel.length} MODELS...`);
+
+  const results=await Promise.allSettled(sel.map(k=>fetchGrib(k,vkey,getCmpRun(k),lat,lon)));
+  const allD={};
+  sel.forEach((k,i)=>{
+    const raw=results[i].status==='fulfilled'?results[i].value:{times:[],values:[]};
+    allD[k]=interpolateHourly(raw);
+  });
+
+  // Build time→value Maps for correct alignment (not array-index)
+  const allMaps={};
+  sel.forEach(k=>{
+    const m=new Map();
+    (allD[k].times||[]).forEach((t,i)=>{
+      if(t instanceof Date) m.set(Math.round(t.getTime()/3.6e6)*3.6e6, allD[k].values[i]??null);
+    });
+    allMaps[k]=m;
+  });
+
+  // Build unified sorted time axis from all models
+  const allTs=[...new Set(sel.flatMap(k=>[...allMaps[k].keys()]))].sort((a,b)=>a-b);
+  const ref=allTs.slice(0,48).map(t=>new Date(t));
+  const n=ref.length;
+
+  // Helper: get value for model k at ref time index i
+  function getVal(k,i){ return allMaps[k].get(allTs[i])??null; }
+
+  const nowVals=sel.map(k=>currentValue(allD[k])).filter(validNum);
+  const nowSpread=nowVals.length>=2?+(Math.max(...nowVals)-Math.min(...nowVals)).toFixed(1):0;
+  const nowMean=nowVals.length?+(nowVals.reduce((a,b)=>a+b,0)/nowVals.length).toFixed(1):null;
+  const cls=spreadClass(nowSpread,vi.u);
+  const txt=cls==='lo'?'TIGHT AGREEMENT':cls==='md'?'MODERATE SPREAD':'HIGH UNCERTAINTY';
+
+  // Per-hour stats using time-aligned values
+  const hourStats=Array.from({length:n},(_,i)=>{
+    const vals=sel.map(k=>getVal(k,i)).filter(validNum);
+    const mean=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
+    const mn=vals.length?Math.min(...vals):null;
+    const mx=vals.length?Math.max(...vals):null;
+    return{mean,min:mn,max:mx,spread:mx!=null&&mn!=null?mx-mn:null};
+  });
+  const maxSpread=Math.max(...hourStats.map(r=>r.spread||0),0.1);
+  const spMax={'°F':15,'in':.25,'mph':20,'%':40,'gpm':100,'J/kg':3000,'m²/s²':300}[vi.u]||20;
+  const matHours=Math.min(n,24);
+
+  // Is this a precip comparison? render swim lanes instead of fan
+  const isPrecip = vkey==='precip';
+
+  sc.innerHTML=`
+    <div class="pad">
+
+      <!-- model toggles -->
+      <div class="fu d1">
+        <div class="slbl" style="margin-bottom:8px;">MODELS — TAP TO TOGGLE</div>
+        <div class="cpills">
+          ${Object.entries(MODELS).map(([k,m])=>`
+            <div class="cpill${sel.includes(k)?' on':''}" style="--mc:${m.c}" onclick="togCmp('${k}')">
+              <div class="cpill-dot"></div>${m.l}
+            </div>`).join('')}
+        </div>
+      </div>
+
+      <!-- per-model run selectors -->
+      <div class="fu d1">
+        <div class="slbl" style="margin-bottom:8px;">RUN PER MODEL</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          ${sel.map(k=>{
+            const activeRun=getCmpRun(k);
+            const runs=availableRuns(k);
+            return`<div style="display:flex;align-items:center;gap:8px;overflow-x:auto;scrollbar-width:none;">
+              <div style="font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;
+                color:${MODELS[k].c};width:52px;flex-shrink:0;letter-spacing:.5px;">${MODELS[k].l}</div>
+              <div style="display:flex;gap:4px;flex-shrink:0;">
+                ${runs.map(r=>`
+                  <div onclick="setCmpModelRun('${k}','${r}')"
+                    style="font-family:'DM Mono',monospace;font-size:10px;padding:3px 10px;
+                    border-radius:20px;cursor:pointer;white-space:nowrap;transition:all .15s;
+                    border:1px solid ${r===activeRun?MODELS[k].c+'80':'rgba(255,255,255,.1)'};
+                    background:${r===activeRun?MODELS[k].c+'18':'transparent'};
+                    color:${r===activeRun?MODELS[k].c:'var(--ink2)'};">
+                    ${r}${r===runs[0]?' ✓':''}
+                  </div>`).join('')}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- NOW tiles -->
+      <div class="fu d1">
+        <div class="slbl" style="margin-bottom:8px;">NOW · ${vi.l.toUpperCase()}</div>
+        <div class="cv-grid">
+          ${sel.map(k=>{const v=currentValue(allD[k]);return`<div class="cvt" style="--tc:${MODELS[k].c}">
+            <div class="cvt-l" style="color:${MODELS[k].c}">${MODELS[k].l}</div>
+            <div class="cvt-v">${fmtVal(v,vi.u)}</div>
+            <div class="cvt-u">${vi.u} · ${getCmpRun(k)}</div>
+          </div>`;}).join('')}
+          ${nowMean!=null?`<div class="cvt" style="--tc:rgba(255,255,255,.15)"><div class="cvt-l">MEAN</div><div class="cvt-v">${fmtVal(nowMean,vi.u)}</div><div class="cvt-u">${vi.u}</div></div>`:''}
+        </div>
+      </div>
+
+      <!-- spread meter -->
+      <div class="card fu d2">
+        <div class="card-hd">
+          <div><div class="card-title">MODEL SPREAD · NOW</div><div class="card-sub">${S.loc.name} · ${vi.l}</div></div>
+          <div class="sp-txt ${cls==='lo'?'agree':cls==='md'?'warn':'bad'}">${txt}</div>
+        </div>
+        <div class="card-body">
+          <div class="sp-row">
+            <div class="sp-track"><div class="sp-fill" style="width:${Math.min(100,nowSpread/spMax*100).toFixed(0)}%"></div></div>
+            <div class="sp-num">${fmtVal(nowSpread,vi.u)} ${vi.u}</div>
+          </div>
+        </div>
+      </div>
+
+      ${isPrecip ? `
+      <!-- PRECIP SWIM LANES -->
+      <div class="card fu d2">
+        <div class="card-hd">
+          <div><div class="card-title">PRECIPITATION · MODEL SWIM LANES</div>
+          <div class="card-sub">each row = one model · height = intensity · tap for value</div></div>
+          <div class="card-badge">in/hr</div>
+        </div>
+        <div class="card-body">
+          <div id="swim-lanes"></div>
+          <!-- timing dots row -->
+          <div style="margin-top:14px;">
+            <div class="slbl" style="margin-bottom:6px;">RAIN EVENT TIMING</div>
+            <div id="timing-dots"></div>
+          </div>
+        </div>
+      </div>
+      ` : `
+      <!-- FAN CHART / SPAGHETTI -->
+      <div class="card fu d2">
+        <div class="card-hd">
+          <div><div class="card-title">${vi.l} · ENSEMBLE FAN</div>
+          <div class="card-sub"><span class="sdot"></span>${sel.map(k=>`${MODELS[k].l} ${getCmpRun(k)}`).join(' · ')}</div></div>
+          <div class="card-badge">${vi.u}</div>
+        </div>
+        <div class="card-body">
+          <div class="legend">${sel.map(k=>`<div class="li"><div class="ll" style="background:${MODELS[k].c}"></div>${MODELS[k].l}</div>`).join('')}
+            <div class="li"><div class="ll" style="background:rgba(255,255,255,.4);height:3px"></div>MEAN</div>
+          </div>
+          <div class="ch-wrap"><canvas id="ch-fan"></canvas></div>
+        </div>
+      </div>
+      `}
+
+      <!-- DIVERGENCE MATRIX -->
+      <div class="card fu d3">
+        <div class="card-hd">
+          <div><div class="card-title">DIVERGENCE MATRIX</div>
+          <div class="card-sub">cell color = deviation from hourly mean · right = hourly spread</div></div>
+        </div>
+        <div class="card-body" style="overflow-x:auto;padding:10px 6px 14px;">
+          <table style="border-collapse:collapse;width:100%;min-width:${sel.length*70+110}px;">
+            <thead><tr>
+              <th style="font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2);text-align:left;padding:3px 8px;font-weight:400;white-space:nowrap;">HOUR</th>
+              ${sel.map(k=>`<th style="font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;color:${MODELS[k].c};text-align:center;padding:4px 6px;">${MODELS[k].l}</th>`).join('')}
+              <th style="font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2);text-align:center;padding:3px 6px;font-weight:400;">SPREAD</th>
+            </tr></thead>
+            <tbody>
+              ${Array.from({length:Math.min(n,24)},(_,i)=>{
+                const t=ref[i];
+                const vals=sel.map(k=>getVal(k,i));
+                const good=vals.filter(validNum);
+                const mean=good.length?good.reduce((a,b)=>a+b,0)/good.length:null;
+                const spread=good.length>=2?Math.max(...good)-Math.min(...good):null;
+                const spPct=spread!=null?spread/maxSpread:0;
+                const spCol=spPct<.25?'#34d399':spPct<.6?'#fbbf24':'#f87171';
+                const label=t?(i===0?'NOW':t.toLocaleString([],{weekday:'short',hour:'numeric'})):`+${i}h`;
+                return`<tr style="border-bottom:1px solid rgba(255,255,255,.035)">
+                  <td style="font-family:'DM Mono',monospace;font-size:9px;color:var(--ink3);padding:4px 8px;white-space:nowrap;">${label}</td>
+                  ${sel.map((k,j)=>{
+                    const v=vals[j];
+                    const dev=(v!=null&&mean!=null)?v-mean:null;
+                    const devPct=dev!=null?Math.min(Math.abs(dev)/Math.max(maxSpread,0.1),1):0;
+                    const bg=dev==null?'transparent':dev>0
+                      ?`rgba(251,146,60,${(devPct*.7+.07).toFixed(2)})`
+                      :`rgba(56,189,248,${(devPct*.7+.07).toFixed(2)})`;
+                    const tc=dev==null?'var(--ink2)':dev>0?'#fdba74':'#7dd3fc';
+                    return`<td style="text-align:center;padding:5px 6px;background:${bg};font-family:'DM Mono',monospace;font-size:10px;font-weight:500;color:${tc}">${fmtVal(v,vi.u)}</td>`;
+                  }).join('')}
+                  <td style="text-align:center;padding:5px 6px;font-family:'DM Mono',monospace;font-size:10px;font-weight:700;color:${spCol}">${spread!=null?fmtVal(spread,vi.u):'—'}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>`;
+
+  requestAnimationFrame(()=>{
+    if(isPrecip){
+      buildSwimLanes(sel,allD,ref,n,allMaps,allTs);
+    } else {
+      buildFanChart(sel,allD,ref,n,hourStats,vi,allMaps,allTs);
+    }
+  });
+}
+
+function buildFanChart(sel,allD,ref,n,hourStats,vi,allMaps,allTs){
+  const el=document.getElementById('ch-fan');if(!el)return;
+  el.style.height='280px';
+
+  // Use time-aligned values if allMaps provided, else fall back to array index
+  function getAlignedVal(k,i){
+    if(allMaps&&allTs) return allMaps[k].get(allTs[i])??null;
+    return allD[k].values[i]??null;
+  }
+
+  const meanData=hourStats.slice(0,n).map(h=>h.mean);
+  const minData=hourStats.slice(0,n).map(h=>h.min);
+  const maxData=hourStats.slice(0,n).map(h=>h.max);
+
+  // inner band (25-75 percentile approximation from 2 closest models)
+  const innerMin=Array.from({length:n},(_,i)=>{
+    const vals=sel.map(k=>getAlignedVal(k,i)).filter(validNum).sort((a,b)=>a-b);
+    if(vals.length<2)return null;
+    return vals[Math.floor(vals.length*.25)];
+  });
+  const innerMax=Array.from({length:n},(_,i)=>{
+    const vals=sel.map(k=>getAlignedVal(k,i)).filter(validNum).sort((a,b)=>a-b);
+    if(vals.length<2)return null;
+    return vals[Math.min(Math.floor(vals.length*.75),vals.length-1)];
+  });
+
+  killC('ch-fan');
+  const canvas=el;
+
+  CH['ch-fan']=new Chart(canvas,{
+    type:'line',
+    data:{labels:ref.slice(0,n),datasets:[
+      // outer envelope max
+      {label:'_outerMax',data:maxData,borderColor:'rgba(56,189,248,.15)',
+        backgroundColor(ctx3){
+          const{ctx:c,chartArea}=ctx3.chart;
+          if(!chartArea)return'rgba(56,189,248,.08)';
+          const g=c.createLinearGradient(0,chartArea.top,0,chartArea.bottom);
+          g.addColorStop(0,'rgba(56,189,248,.13)');g.addColorStop(1,'rgba(56,189,248,.04)');
+          return g;
+        },
+        borderWidth:.5,borderDash:[2,3],pointRadius:0,tension:.35,fill:'+1',spanGaps:true,order:10},
+      // inner band max
+      {label:'_innerMax',data:innerMax,borderColor:'transparent',
+        backgroundColor(ctx3){
+          const{ctx:c,chartArea}=ctx3.chart;
+          if(!chartArea)return'rgba(56,189,248,.22)';
+          const g=c.createLinearGradient(0,chartArea.top,0,chartArea.bottom);
+          g.addColorStop(0,'rgba(56,189,248,.32)');g.addColorStop(1,'rgba(56,189,248,.12)');
+          return g;
+        },
+        borderWidth:0,pointRadius:0,tension:.35,fill:'+1',spanGaps:true,order:9},
+      // inner band min
+      {label:'_innerMin',data:innerMin,borderColor:'rgba(56,189,248,.2)',backgroundColor:'transparent',borderWidth:.5,pointRadius:0,tension:.35,fill:false,spanGaps:true,order:8},
+      // outer envelope min
+      {label:'_outerMin',data:minData,borderColor:'rgba(56,189,248,.15)',backgroundColor:'transparent',borderWidth:.5,borderDash:[2,3],pointRadius:0,tension:.35,fill:false,spanGaps:true,order:7},
+      // individual model lines
+      ...sel.map(k=>({
+        label:MODELS[k].l,
+        data:Array.from({length:n},(_,i)=>getAlignedVal(k,i)),
+        borderColor:MODELS[k].c+'c0',backgroundColor:'transparent',
+        borderWidth:1.2,pointRadius:0,pointHoverRadius:5,
+        tension:.35,spanGaps:true,order:3,
+      })),
+      // MEAN — thick white on top
+      {label:'MEAN',data:meanData,borderColor:'rgba(255,255,255,.85)',backgroundColor:'transparent',
+        borderWidth:2.5,pointRadius:0,pointHoverRadius:6,tension:.35,spanGaps:true,order:1},
+    ]},
+    plugins:[nowLinePlug],
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      layout:{padding:{top:18,right:8,bottom:8,left:2}},
+      plugins:{
+        legend:{display:false},
+        tooltip:{enabled:false,external(ctx){showTip(ctx,ref.slice(0,n),vi.u);}}
+      },
+      scales:{
+        x:{ticks:{color:'#2e4870',font:{family:'DM Mono',size:8},maxRotation:0,autoSkip:true,maxTicksLimit:7,
+          callback(v,i){const l=ref[i];if(!(l instanceof Date))return l;
+            if(l.getHours()===0)return l.toLocaleDateString([],{weekday:'short',month:'numeric',day:'numeric'});
+            if(l.getHours()%6===0)return l.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+            return'';}},
+          grid:{color:'rgba(255,255,255,.025)'},border:{color:'rgba(255,255,255,.04)'}},
+        y:{ticks:{color:'#2e4870',font:{family:'DM Mono',size:8}},
+          grid:{color:'rgba(255,255,255,.025)'},border:{color:'rgba(255,255,255,.04)'},
+          afterDataLimits(s){const p=(s.max-s.min||1)*.08;s.max+=p;s.min-=p;}}
+      }
+    }
+  });
+}
+
+function buildSwimLanes(sel,allD,ref,n,allMaps,allTs){
+  const lanes=document.getElementById('swim-lanes');
+  const dots=document.getElementById('timing-dots');
+  if(!lanes||!dots)return;
+
+  const limit=Math.min(n,36);
+  const times=ref.slice(0,limit);
+  const LANE_H=52;
+
+  // for each model: one canvas swim lane
+  lanes.innerHTML=sel.map(k=>`
+    <div style="margin-bottom:6px;">
+      <div style="font-family:'Outfit',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;
+        color:${MODELS[k].c};margin-bottom:3px;">${MODELS[k].l} · ${MODELS[k].n}</div>
+      <div style="position:relative;height:${LANE_H}px;background:rgba(255,255,255,.03);border-radius:6px;overflow:hidden;">
+        <canvas id="swim-${k}" style="display:block;width:100%;height:${LANE_H}px;"></canvas>
+      </div>
+    </div>`).join('');
+
+  // timing dot strip — one row per model, dots where rain > threshold
+  const RAIN_THRESH=0.005;
+  dots.innerHTML=`<div style="display:flex;flex-direction:column;gap:4px;">
+    ${sel.map(k=>{
+      const vals=allD[k].values?.slice(0,limit)||[];
+      return`<div style="display:flex;align-items:center;gap:6px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:1px;
+          color:${MODELS[k].c};width:52px;flex-shrink:0;">${MODELS[k].l}</div>
+        <div style="flex:1;display:flex;gap:2px;align-items:center;">
+          ${vals.map((v,i)=>{
+            const raining=(v||0)>RAIN_THRESH;
+            const heavy=(v||0)>0.05;
+            const t=times[i];
+            const lbl=t?t.toLocaleTimeString([],{hour:'numeric'}):'';
+            return`<div title="${lbl}: ${(v||0).toFixed(3)}&quot;" style="
+              flex:1;height:10px;border-radius:3px;
+              background:${raining?(heavy?'#a78bfa':'#38bdf8'):'rgba(255,255,255,.05)'};
+              box-shadow:${raining?('0 0 4px '+(heavy?'#a78bfa40':'#38bdf840')):'none'};
+              transition:transform .1s;cursor:pointer;" 
+              onmouseenter="this.style.transform='scaleY(1.4)'" 
+              onmouseleave="this.style.transform='scaleY(1)'">
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    }).join('')}
+    <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
+      <div style="width:52px;flex-shrink:0;"></div>
+      <div style="flex:1;display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2);">
+        <span>NOW</span><span>+6H</span><span>+12H</span><span>+18H</span><span>+24H</span>
+        ${limit>24?`<span>+30H</span><span>+36H</span>`:''}
+      </div>
+    </div>
+  </div>`;
+
+  // draw each swim lane canvas — use setTimeout to let DOM lay out first
+  setTimeout(()=>{
+    sel.forEach(k=>{
+      const cv=document.getElementById(`swim-${k}`);if(!cv)return;
+      const container=cv.parentElement;
+      const W=container?container.offsetWidth||300:300;
+      cv.width=W;
+      cv.height=LANE_H;
+      const ctx2=cv.getContext('2d');
+      const vals=(allD[k].values?.slice(0,limit)||[]).map(v=>v===null?null:Number(v));
+      const maxV=Math.max(...vals.filter(validNum),.001);
+
+      const grad=ctx2.createLinearGradient(0,0,0,LANE_H);
+      grad.addColorStop(0,MODELS[k].c+'dd');grad.addColorStop(1,MODELS[k].c+'22');
+
+      ctx2.clearRect(0,0,W,LANE_H);
+      if(vals.length<2)return;
+      const step=W/(vals.length-1);
+
+      // filled area
+      ctx2.beginPath();
+      ctx2.moveTo(0,LANE_H);
+      vals.forEach((v,i)=>{
+        const x=i*step;
+        const y=v!=null?LANE_H-(v/maxV)*(LANE_H-4)-2:LANE_H;
+        if(i===0)ctx2.lineTo(x,y);else ctx2.lineTo(x,y);
+      });
+      ctx2.lineTo((vals.length-1)*step,LANE_H);
+      ctx2.closePath();
+      ctx2.fillStyle=grad;
+      ctx2.fill();
+
+      // top line
+      ctx2.beginPath();
+      ctx2.strokeStyle=MODELS[k].c;
+      ctx2.lineWidth=1.5;
+      vals.forEach((v,i)=>{
+        const x=i*step;
+        const y=v!=null?LANE_H-(v/maxV)*(LANE_H-4)-2:null;
+        if(y===null){ctx2.beginPath();return;}
+        if(i===0)ctx2.moveTo(x,y);else ctx2.lineTo(x,y);
+      });
+      ctx2.stroke();
+
+      // rain threshold line
+      ctx2.beginPath();
+      ctx2.strokeStyle='rgba(255,255,255,.1)';
+      ctx2.lineWidth=.5;
+      ctx2.setLineDash([3,3]);
+      const ty=LANE_H-(RAIN_THRESH/maxV)*(LANE_H-4)-2;
+      ctx2.moveTo(0,ty);ctx2.lineTo(W,ty);
+      ctx2.stroke();
+      ctx2.setLineDash([]);
+    });
+  },200);
+}
+
+/* ═══════════════════════════════════════════
+   COMPARE RUNS
+═══════════════════════════════════════════ */
+async function rRuns(sc){
+  const mod=MODELS[S.runModel];
+  const sel=S.cmpRuns;
+  const {lat,lon}=S.loc;
+  const available=availableRuns(S.runModel);
+
+  // Completion % — valid data points vs expected hours
+  function runCompletion(rd) {
+    const got=rd.d?.values?.filter(v=>v!==null).length||0;
+    const expected=MODEL_HOURS[S.runModel]||48;
+    return{got,expected,pct:Math.min(100,Math.round(got/expected*100))};
+  }
+
+  showLoading(sc,`LOADING ${sel.length} ${mod.l} RUNS...`);
+
+  // Always fetch temp + precip + wind regardless of current var tab
+  const [tR,pR,wR]=await Promise.all([
+    Promise.allSettled(sel.map(r=>fetchGrib(S.runModel,'temp',r,lat,lon))),
+    Promise.allSettled(sel.map(r=>fetchGrib(S.runModel,'precip',r,lat,lon))),
+    Promise.allSettled(sel.map(r=>fetchGrib(S.runModel,'wind',r,lat,lon))),
+  ]);
+
+  const tRD=sel.map((r,i)=>({run:r,d:interpolateHourly(tR[i].status==='fulfilled'?tR[i].value:{times:[],values:[]})}));
+  const pRD=sel.map((r,i)=>({run:r,d:interpolateHourly(pR[i].status==='fulfilled'?pR[i].value:{times:[],values:[]})}));
+  const wRD=sel.map((r,i)=>({run:r,d:interpolateHourly(wR[i].status==='fulfilled'?wR[i].value:{times:[],values:[]})}));
+
+  function runMap(rd){
+    const m=new Map();
+    (rd.d.times||[]).forEach((t,i)=>{
+      const v=rd.d.values[i];
+      if(t instanceof Date&&validNum(v))m.set(t.getTime(),v);
+    });
+    return m;
+  }
+  function aligned(rows){
+    const maps=rows.map(runMap);
+    const allTs=[...new Set(maps.flatMap(m=>[...m.keys()]))].sort((a,b)=>a-b);
+    return{
+      times:allTs.map(t=>new Date(t)),
+      valuesFor:(i)=>allTs.map(t=>maps[i].has(t)?maps[i].get(t):null),
+      meanAt:(t)=>{const vs=maps.map(m=>m.get(t)).filter(validNum);return vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null;},
+      spread:allTs.map(t=>{const vs=maps.map(m=>m.get(t)).filter(validNum);return vs.length>=2?Math.max(...vs)-Math.min(...vs):null;}),
+    };
+  }
+
+  const TA=aligned(tRD);
+  const PA=aligned(pRD);
+  const WA=aligned(wRD);
+
+  // ── TREND ANALYSIS ──────────────────────────
+  // Compare latest run (sel[0]) vs oldest run (sel[last]) at shared valid times
+  function trendAnalysis(A, rows, unit, label) {
+    const newest = rows[0]?.d;
+    const oldest = rows[rows.length-1]?.d;
+    if (!newest?.values.length || !oldest?.values.length) return null;
+
+    const newestMap = runMap(rows[0]);
+    const oldestMap = runMap(rows[rows.length-1]);
+    const sharedTs = [...newestMap.keys()].filter(t=>oldestMap.has(t));
+    if (sharedTs.length < 6) return null;
+
+    // Direction: is newest run warmer/wetter/windier than older run?
+    const diffs = sharedTs.slice(0,24).map(t=>(newestMap.get(t)||0)-(oldestMap.get(t)||0)).filter(v=>!isNaN(v));
+    if (!diffs.length) return null;
+    const meanDiff = diffs.reduce((a,b)=>a+b,0)/diffs.length;
+    const maxDiff  = Math.max(...diffs.map(Math.abs));
+
+    // Daily hi/lo shift
+    const newestStats = dailyStats(newest.times, newest.values);
+    const oldestStats = dailyStats(oldest.times, oldest.values);
+    const hiShift = newestStats[0] && oldestStats[0] ? newestStats[0].hi - oldestStats[0].hi : null;
+    const loShift = newestStats[0] && oldestStats[0] ? newestStats[0].lo - oldestStats[0].lo : null;
+
+    // Precip: total shift (only for precip)
+    return { meanDiff, maxDiff, hiShift, loShift, unit, label,
+      runA: rows[0].run, runB: rows[rows.length-1].run };
+  }
+
+  const tempTrend   = trendAnalysis(TA, tRD, '°F', 'Temperature');
+  const precipTrend = trendAnalysis(PA, pRD, 'in', 'Precipitation');
+  const windTrend   = trendAnalysis(WA, wRD, 'mph', 'Wind');
+
+  function trendArrow(v) {
+    if (v === null || Math.abs(v) < 0.2) return {icon:'→', color:'var(--ink3)', label:'UNCHANGED'};
+    return v > 0
+      ? {icon:'↑', color:'#fb923c', label:'TRENDING UP'}
+      : {icon:'↓', color:'#38bdf8', label:'TRENDING DOWN'};
+  }
+  function trendCard(t) {
+    if (!t) return '';
+    const arr = trendArrow(t.meanDiff);
+    const mag = Math.abs(t.meanDiff);
+    const intensity = mag < 0.5 ? 'MINIMAL' : mag < 1.5 ? 'SLIGHT' : mag < 3 ? 'MODERATE' : 'SIGNIFICANT';
+    const hiArr = t.hiShift != null ? trendArrow(t.hiShift) : null;
+    const loArr = t.loShift != null ? trendArrow(t.loShift) : null;
+    return `
+      <div style="background:rgba(255,255,255,.03);border:1px solid var(--rim);border-radius:var(--Rsm);padding:12px 14px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div style="font-family:'Outfit',sans-serif;font-weight:700;font-size:12px;letter-spacing:.5px;color:var(--white);">${t.label.toUpperCase()}</div>
+          <div style="font-family:'Outfit',sans-serif;font-weight:800;font-size:22px;color:${arr.color};line-height:1;">
+            ${arr.icon} ${intensity}
+          </div>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--ink3);line-height:2;">
+          ${t.runA} vs ${t.runB} &nbsp;·&nbsp;
+          avg shift <b style="color:${arr.color}">${t.meanDiff>=0?'+':''}${t.meanDiff.toFixed(1)}${t.unit}</b> &nbsp;·&nbsp;
+          max <b style="color:var(--white)">${t.maxDiff.toFixed(1)}${t.unit}</b>
+        </div>
+        ${hiArr && loArr ? `
+        <div style="display:flex;gap:12px;margin-top:8px;">
+          <div style="font-family:'DM Mono',monospace;font-size:10px;">
+            TODAY HIGH &nbsp;<span style="color:${hiArr.color};font-weight:700;">${hiArr.icon}${t.hiShift>=0?'+':''}${t.hiShift.toFixed(1)}°</span>
+          </div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;">
+            TODAY LOW &nbsp;<span style="color:${loArr.color};font-weight:700;">${loArr.icon}${t.loShift>=0?'+':''}${t.loShift.toFixed(1)}°</span>
+          </div>
+        </div>` : ''}
+      </div>`;
+  }
+
+  // Summary sentence
+  function summaryText() {
+    const lines = [];
+    if (tempTrend && Math.abs(tempTrend.meanDiff) > 0.5) {
+      const dir = tempTrend.meanDiff > 0 ? 'warmer' : 'cooler';
+      lines.push(`${mod.l} is trending <b style="color:${tempTrend.meanDiff>0?'#fb923c':'#38bdf8'}">${dir}</b> — ${Math.abs(tempTrend.meanDiff).toFixed(1)}°F avg shift from ${tempTrend.runB} → ${tempTrend.runA}.`);
+    }
+    if (precipTrend && Math.abs(precipTrend.meanDiff) > 0.002) {
+      const dir = precipTrend.meanDiff > 0 ? 'more precipitation' : 'less precipitation';
+      lines.push(`Model is showing <b style="color:${precipTrend.meanDiff>0?'#818cf8':'var(--ink3)'}">${dir}</b> in the latest run.`);
+    }
+    if (windTrend && Math.abs(windTrend.meanDiff) > 1) {
+      const dir = windTrend.meanDiff > 0 ? 'stronger winds' : 'lighter winds';
+      lines.push(`Wind trend: <b style="color:${windTrend.meanDiff>0?'#fb923c':'#34d399'}">${dir}</b> (${windTrend.meanDiff>=0?'+':''}${windTrend.meanDiff.toFixed(1)} mph avg).`);
+    }
+    if (!lines.length) lines.push('Runs are in close agreement — no significant trend shifts detected.');
+    return lines.join(' ');
+  }
+
+  // Spread heatmap for temp
+  const spH=TA.spread.filter(v=>v!==null);
+  const maxSpH=Math.max(...spH,1);
+  const B=Math.min(16,TA.times.length||1);
+  const bs=Math.max(1,Math.ceil(TA.times.length/B));
+  const hmRows=Array.from({length:B},(_,b)=>{
+    const sl=TA.spread.slice(b*bs,(b+1)*bs).filter(v=>v!==null);
+    if(!sl.length)return'';
+    const avg=sl.reduce((a,v)=>a+v,0)/sl.length;
+    const t=TA.times[b*bs];
+    const lbl=t?t.toLocaleString([],{weekday:'short',hour:'numeric'}):'+'+b*bs+'h';
+    const p=avg/maxSpH;
+    const r=Math.round(p*248+(1-p)*52);const g=Math.round(p*113+(1-p)*211);const bv=Math.round(p*113+(1-p)*153);
+    return`<div class="hrow"><div class="hlbl" style="font-size:8px;width:48px;">${lbl}</div><div class="hcell" style="background:rgba(${r},${g},${bv},.65);border-radius:3px;">${avg.toFixed(1)}°</div></div>`;
+  }).join('');
+
+  sc.innerHTML=`
+    <div class="pad">
+
+      <!-- model + run selectors -->
+      <div class="fu d1">
+        <div class="slbl" style="margin-bottom:8px;">MODEL</div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;">
+          ${Object.entries(MODELS).map(([k,m])=>`
+            <div class="mchip${S.runModel===k?' on':''}" style="--mc:${m.c}" onclick="selRunMod('${k}')">
+              <div class="mchip-l">${m.l}</div><div class="mchip-r">${m.r.split('·')[0]}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+
+      <div class="fu d1">
+        <div class="slbl" style="margin-bottom:8px;">RUNS — TAP TO COMPARE (MAX 4)</div>
+        <div class="rcpills">
+          ${available.map((r,i)=>{
+            const si=sel.indexOf(r);
+            // find matching run data for completion
+            const matchT=tRD.find(rd=>rd.run===r);
+            const comp=matchT?runCompletion(matchT):null;
+            const compLabel=comp?`${comp.got}/${comp.expected}`:'';
+            const pctCol=comp?(comp.pct>=90?'#34d399':comp.pct>=60?'#fbbf24':'#f87171'):'var(--ink2)';
+            return`<div class="rcpill${si>=0?' ra'+si:''}" onclick="togRunCmp('${r}')">
+              <span class="rcpill-t">${r}</span>
+              <span class="rcpill-a" style="color:${si>=0?pctCol:'var(--ink1)'}">${si>=0&&compLabel?compLabel:(i===0?'LATEST':i+'HR AGO')}</span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- TREND ANALYSIS -->
+      <div class="card fu d2">
+        <div class="card-hd">
+          <div>
+            <div class="card-title">RUN TREND ANALYSIS</div>
+            <div class="card-sub">${mod.l} · comparing ${sel[0]} (latest) vs ${sel[sel.length-1]} (oldest)</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <!-- summary sentence -->
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:15px;color:var(--lit);
+            line-height:1.7;margin-bottom:14px;padding:12px 14px;
+            background:rgba(56,189,248,.05);border-left:3px solid var(--sky);border-radius:0 6px 6px 0;">
+            ${summaryText()}
+          </div>
+          <!-- per-variable trend cards -->
+          ${trendCard(tempTrend)}
+          ${trendCard(precipTrend)}
+          ${trendCard(windTrend)}
+        </div>
+      </div>
+
+      <!-- TEMPERATURE FAN CHART across runs -->
+      <div class="card fu d3">
+        <div class="card-hd">
+          <div><div class="card-title">TEMPERATURE · RUN SPAGHETTI</div>
+          <div class="card-sub"><span class="sdot"></span>${mod.l} · newest = solid + filled · older = dashed</div></div>
+          <div class="card-badge">°F</div>
+        </div>
+        <div class="card-body">
+          <div class="legend">${sel.map((r,i)=>`<div class="li"><div class="ll" style="background:${RC[i]}"></div>${r}</div>`).join('')}</div>
+          <div class="ch-wrap"><canvas id="ch-rt"></canvas></div>
+        </div>
+      </div>
+
+      <!-- TEMP DIVERGENCE HEATMAP -->
+      <div class="card fu d3">
+        <div class="card-hd">
+          <div><div class="card-title">TEMPERATURE DIVERGENCE</div>
+          <div class="card-sub">hourly spread between runs · green=agree · red=diverge</div></div>
+          <div class="card-badge">°F</div>
+        </div>
+        <div class="card-body">${hmRows||'<div class="es">Need ≥2 runs with overlapping valid times.</div>'}</div>
+      </div>
+
+      <!-- DAILY HIGH SHIFT -->
+      <div class="card fu d4">
+        <div class="card-hd">
+          <div><div class="card-title">DAILY HIGH — HOW RUNS SHIFTED</div>
+          <div class="card-sub">each run's high temp forecast per day</div></div>
+          <div class="card-badge">°F</div>
+        </div>
+        <div class="card-body">
+          <div class="legend">${sel.map((r,i)=>`<div class="li"><div class="ll" style="background:${RC[i]}"></div>${r}</div>`).join('')}</div>
+          <div class="ch-wrap"><canvas id="ch-rhilo"></canvas></div>
+        </div>
+      </div>
+
+      <!-- PRECIP SWIM LANES across runs -->
+      <div class="card fu d4">
+        <div class="card-hd">
+          <div><div class="card-title">PRECIPITATION · RUN COMPARISON</div>
+          <div class="card-sub">timing and intensity per run</div></div>
+          <div class="card-badge">in</div>
+        </div>
+        <div class="card-body">
+          <div class="legend">${sel.map((r,i)=>`<div class="li"><div class="ll" style="background:${RC[i]}"></div>${r}</div>`).join('')}</div>
+          <div class="ch-wrap"><canvas id="ch-rp"></canvas></div>
+        </div>
+      </div>
+
+      <!-- NOW VALUES -->
+      <div class="fu d5">
+        <div class="slbl" style="margin-bottom:8px;">CURRENT HOUR · TEMPERATURE</div>
+        <div class="cv-grid">
+          ${tRD.slice(0,4).map((rd,i)=>{
+            const v=currentValue(rd.d);
+            return`<div class="cvt" style="--tc:${RC[i]}">
+              <div class="cvt-l" style="color:${RC[i]}">${rd.run}</div>
+              <div class="cvt-v" style="color:${tCol(v??82)}">${fmtVal(v,'°F')}</div>
+              <div class="cvt-u">°F</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+
+    </div>`;
+
+  requestAnimationFrame(()=>{
+    // temperature spaghetti
+    mkChart('ch-rt',TA.times,tRD.map((rd,i)=>({
+      label:rd.run,data:TA.valuesFor(i),
+      borderColor:RC[i],backgroundColor:i===0?RC[i]+'20':'transparent',
+      borderWidth:i===0?2.5:1.2,borderDash:i===0?[]:[4,3],
+      pointRadius:0,pointHoverRadius:5,tension:.4,fill:i===0,spanGaps:true,order:tRD.length-i,
+    })),'°F',240);
+
+    // daily high bar
+    const dayLabels=['TODAY','D+1','D+2','D+3','D+4','D+5','D+6'];
+    mkChart('ch-rhilo',dayLabels,tRD.map((rd,i)=>{
+      const stats=dailyStats(rd.d.times,rd.d.values);
+      return{label:rd.run,data:dayLabels.map((_,j)=>stats[j]?+stats[j].hi.toFixed(1):null),
+        backgroundColor:RC[i]+'99',borderColor:RC[i],borderWidth:1,borderRadius:4};
+    }),'°F',190,true);
+
+    // precip line
+    mkChart('ch-rp',PA.times,pRD.map((rd,i)=>({
+      label:rd.run,data:PA.valuesFor(i),
+      borderColor:RC[i],backgroundColor:RC[i]+'22',
+      borderWidth:i===0?2:1.2,borderDash:i===0?[]:[4,3],
+      pointRadius:0,pointHoverRadius:4,tension:.4,fill:true,spanGaps:true,
+    })),'in',190);
+  });
+}
+
+
+/* ═══════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════ */
+S.loc=PLACES['land o'];
+S.loaded=true;
+S.run=availableRuns('hrrr')[0];
+S.cmpRuns=availableRuns('hrrr').slice(0,3);
+render();
+
+</script>
+</body>
+</html>
