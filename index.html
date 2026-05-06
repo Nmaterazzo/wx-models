@@ -516,8 +516,8 @@ const MODEL_LATENCY = {
 };
 
 function latestModelCycle(mkey, run) {
-  // If an explicit run was requested (e.g. "06Z"), honour it
-  if (run) return latestCycleTime(run);
+  // If an explicit run string was requested (e.g. "06Z"), honour it
+  if (run && typeof run === 'string' && /^\d{2}Z$/.test(run)) return latestCycleTime(run);
 
   const latency = MODEL_LATENCY[mkey] || 2;
   // "Available now" = current UTC minus latency
@@ -573,7 +573,7 @@ function _pump() {
     .then(r => {
       if (r.status === 429 && item.retries < 3) {
         item.retries++;
-        const delay = item.retries * 2000; // 2s, 4s, 6s backoff
+        const delay = item.retries * 5000; // 5s, 10s, 15s backoff
         setTimeout(() => { _queue.unshift(item); _inflight--; _pump(); }, delay);
       } else {
         _inflight--;
@@ -599,9 +599,13 @@ async function fetchGrib(mkey, vkey, run, lat, lon) {
   // ECMWF precip (tp) is accumulated in metres, needs conversion and diffing
   const isAccum = gv.name === 'APCP' || gv.name === 'ASNOW' || gv.name === 'tp' || gv.name === 'sf';
   const useRuns = RUNS_MODELS.has(mkey);
-  const cycle    = useRuns ? latestModelCycle(mkey, run) : latestModelCycle(mkey, null);
+  const cycle    = latestModelCycle(mkey, useRuns ? run : null);
+  // Guard against NaN cycle (shouldn't happen after fix but just in case)
+  if (isNaN(cycle.getTime())) throw new Error(`${mkey}: invalid cycle time`);
   const cycleISO = isoNoMs(cycle);
-  const cacheKey = `${mkey}|${vkey}|${cycleISO}|${lat.toFixed(4)}|${lon.toFixed(4)}`;
+  // For timeseries models, round cache key to nearest hour so same-hour fetches hit cache
+  const cacheHour = useRuns ? cycleISO : new Date(Math.floor(Date.now()/3.6e6)*3.6e6).toISOString().slice(0,13)+'Z';
+  const cacheKey = `${mkey}|${vkey}|${cacheHour}|${lat.toFixed(4)}|${lon.toFixed(4)}`;
 
   if (CACHE[cacheKey]) return CACHE[cacheKey];
   if (IN_FLIGHT[cacheKey]) return IN_FLIGHT[cacheKey];
@@ -1112,26 +1116,29 @@ async function tabForecast(sc){
   // fall back to the previous run. We do this by fetching temp only first.
   async function getBestRun(mkey) {
     const useRuns = ['hrrr','rap'].includes(mkey);
-    const runs = useRuns ? availableRuns(mkey) : [null];
+    if (!useRuns) {
+      // Timeseries models: fetch once, cache handles dedup
+      try {
+        const d = await fetchGrib(mkey, 'temp', null, lat, lon);
+        const got = d.values.filter(v=>v!==null).length;
+        const expected = expectedPoints(mkey, null);
+        return {run: availableRuns(mkey)[0], pct: Math.min(100,Math.round(got/expected*100)), got, expected};
+      } catch(e) {
+        return {run: availableRuns(mkey)[0], pct: 0, got: 0, expected: expectedPoints(mkey, null)};
+      }
+    }
+    // /runs models: try last few cycles to find the most complete one
+    const runs = availableRuns(mkey);
     for (let i = 0; i < Math.min(runs.length, 4); i++) {
       try {
-        const run = runs[i];
-        const d = await fetchGrib(mkey, 'temp', run, lat, lon);
+        const d = await fetchGrib(mkey, 'temp', runs[i], lat, lon);
         const got = d.values.filter(v=>v!==null).length;
-        const expected = expectedPoints(mkey, run);
+        const expected = expectedPoints(mkey, runs[i]);
         const pct = Math.min(100, Math.round(got/expected*100));
-        if (pct >= 50) return {run: run||availableRuns(mkey)[0], pct, got, expected};
-      } catch(e) { if(!useRuns) break; }
+        if (pct >= 50) return {run: runs[i], pct, got, expected};
+      } catch(e) { /* try next run */ }
     }
-    // fallback
-    try {
-      const run = runs[0];
-      const d = await fetchGrib(mkey, 'temp', run, lat, lon);
-      const got = d.values.filter(v=>v!==null).length;
-      const expected = expectedPoints(mkey, run);
-      return {run: availableRuns(mkey)[0], pct: Math.min(100,Math.round(got/expected*100)), got, expected};
-    } catch(e) {}
-    return {run: availableRuns(mkey)[0], pct: 0, got: 0, expected: expectedPoints(mkey, null)};
+    return {run: runs[0], pct: 0, got: 0, expected: expectedPoints(mkey, runs[0])};
   }
 
   const bestRuns = {};
