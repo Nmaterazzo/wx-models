@@ -22,7 +22,7 @@
 }
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html{height:100%;}
-body{min-height:100%;height:100%;background:var(--navy0);color:var(--ink4);font-family:'Outfit',sans-serif;font-size:14px;overflow:hidden;}
+body{min-height:100%;height:100%;background:var(--navy0);color:var(--ink4);font-family:'Outfit',sans-serif;font-size:14px;}
 body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   background:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(56,189,248,.08) 0%,transparent 60%),
     radial-gradient(ellipse 60% 40% at 80% 100%,rgba(167,139,250,.05) 0%,transparent 50%),
@@ -30,7 +30,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.25;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='.03'/%3E%3C/svg%3E");}
 
-#shell{display:flex;flex-direction:column;height:100dvh;height:100vh;position:relative;z-index:1;}
+#shell{display:flex;flex-direction:column;height:100dvh;position:relative;z-index:1;overflow:hidden;}
 
 /* ── HEADER ── */
 .hdr{height:var(--HDR);flex-shrink:0;background:rgba(13,24,41,.92);backdrop-filter:blur(20px);
@@ -71,12 +71,18 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
 .scroll::-webkit-scrollbar-thumb{background:var(--navy5);border-radius:2px;}
 
 /* ── BOTTOM NAV ── */
-.bot{height:var(--BOT);flex-shrink:0;background:rgba(11,20,34,.95);backdrop-filter:blur(20px);border-top:1px solid var(--rim);display:flex;}
-.nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--ink2);transition:color .15s;background:none;border:none;position:relative;}
+.bot{
+  height:calc(var(--BOT) + env(safe-area-inset-bottom,0px));
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  flex-shrink:0;background:rgba(11,20,34,.98);
+  backdrop-filter:blur(20px);border-top:1px solid var(--rim);
+  display:flex;z-index:10;position:relative;
+}
+.nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:var(--ink2);transition:color .15s;background:none;border:none;position:relative;min-height:var(--BOT);padding:0;}
 .nb.on{color:var(--sky);}
 .nb.on::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:24px;height:2px;border-radius:0 0 3px 3px;background:var(--sky);box-shadow:0 0 10px var(--sky);}
-.ni{font-size:16px;line-height:1;}
-.nl{font-family:'Outfit',sans-serif;font-size:9px;font-weight:600;letter-spacing:1px;}
+.ni{font-size:18px;line-height:1;}
+.nl{font-family:'Outfit',sans-serif;font-size:10px;font-weight:600;letter-spacing:.5px;}
 
 /* ── CARDS ── */
 .pad{padding:12px;display:flex;flex-direction:column;gap:12px;}
@@ -391,6 +397,7 @@ const S={
   model:'hrrr',run:'12Z',
   loc:null,loaded:false,
   cmpModels:['hrrr','gfs','nbm'],
+  cmpModelRuns:{},  // per-model run override for compare mode, key=modelKey
   runModel:'hrrr',cmpRuns:['12Z','06Z','00Z'],
 };
 let CH={};
@@ -863,6 +870,14 @@ function availableRuns(mkey) {
   // For 6-hourly models just return the base list
   return base;
 }
+function getCmpRun(mkey){
+  // Use override if set, otherwise use the latest available run for that model
+  return S.cmpModelRuns[mkey] || availableRuns(mkey)[0];
+}
+function setCmpModelRun(mkey,run){
+  S.cmpModelRuns[mkey]=run;
+  render();
+}
 function spreadClass(spread,unit){
   const c1=unit==='°F'?2:unit==='in'?0.03:unit==='mph'?4:unit==='%'?10:30;
   const c2=unit==='°F'?5:unit==='in'?0.10:unit==='mph'?9:unit==='%'?25:70;
@@ -950,29 +965,92 @@ async function rSingle(sc){
    TAB: FORECAST
 ═══════════════════════════════════════════ */
 async function tabForecast(sc){
-  const mod=MODELS[S.model],runs=RUNS[S.model],{lat,lon}=S.loc;
-  showLoading(sc,`LOADING FORECAST · ${mod.l}...`);
-  let b;
-  try{b=await fetchBundle(S.model,['temp','dewpoint','wind','gust','precip'],S.run,lat,lon);}
-  catch(e){showError(sc,e.message);return;}
-
-  const td=b.temp||{times:[],values:[]};
-  const dwd=b.dewpoint||{times:[],values:[]};
-  const wd=b.wind||{times:[],values:[]};
-  const gd=b.gust||{times:[],values:[]};
-  const pd=b.precip||{times:[],values:[]};
+  const {lat,lon}=S.loc;
   const now=new Date();
-  const nowT=currentValue(td)!=null?Math.round(currentValue(td)):null;
-  const nowD=currentValue(dwd)!=null?Math.round(currentValue(dwd)):null;
-  const nowF=nowT!=null&&nowD!=null?Math.round(nowT+(nowD-65)*.18):null;
-  const nowW=currentValue(wd)!=null?Math.round(currentValue(wd)):null;
-  const nowG=currentValue(gd)!=null?Math.round(currentValue(gd)):nowW!=null?Math.round(nowW*1.45):null;
-  const days7=td.values.length?dailyStats(td.times,td.values):[];
-  const absLo=days7.length?Math.min(...days7.map(d=>d.lo)):70;
-  const absHi=days7.length?Math.max(...days7.map(d=>d.hi)):95;
-  const today=days7[0]||{hi:absHi,lo:absLo};
+  // Fetch temp + precip for every model in parallel
+  showLoading(sc,'LOADING ALL MODELS...');
+
+  const modelKeys=Object.keys(MODELS);
+  const bundles=await Promise.allSettled(
+    modelKeys.map(k=>fetchBundle(k,['temp','precip'],availableRuns(k)[0],lat,lon))
+  );
+
+  // Build per-model data
+  const modelData=modelKeys.map((k,i)=>({
+    key:k,
+    mod:MODELS[k],
+    run:availableRuns(k)[0],
+    b:bundles[i].status==='fulfilled'?bundles[i].value:null,
+  }));
+
+  // Compute cross-model daily stats for range context
+  const allHis=[], allLos=[];
+  modelData.forEach(({b})=>{
+    if(!b?.temp)return;
+    dailyStats(b.temp.times,b.temp.values).forEach(d=>{allHis.push(d.hi);allLos.push(d.lo);});
+  });
+  const absHi=allHis.length?Math.max(...allHis):95;
+  const absLo=allLos.length?Math.min(...allLos):65;
   const fullR=absHi-absLo||1;
-  const p24=pd.values.slice(0,24),pTot=p24.reduce((a,v)=>a+(v||0),0);
+
+  // Completion % helper
+  function completionPct(data, expectedHours) {
+    if(!data?.times?.length)return 0;
+    const count=data.times.filter(t=>t instanceof Date&&!isNaN(t)).length;
+    return Math.min(100,Math.round(count/expectedHours*100));
+  }
+
+  // Build daily card row for one model — only show full days
+  function modelDayRow(mkey, b, run) {
+    const mod=MODELS[mkey];
+    if(!b?.temp)return`<div style="color:var(--ink2);font-family:'DM Mono',monospace;font-size:9px;padding:10px 0;">NO DATA</div>`;
+
+    const days=dailyStats(b.temp.times,b.temp.values);
+    const nowT=currentValue(b.temp);
+    const p24=(b.precip?.values||[]).slice(0,24).reduce((a,v)=>a+(v||0),0);
+    const expHours=MODEL_HOURS[mkey]||48;
+    const pct=completionPct(b.temp,expHours);
+
+    // Only show a day if we have data for >75% of its hours (18 of 24)
+    function dayHourCount(d) {
+      return b.temp.times.filter(t=>{
+        return t instanceof Date && t.toDateString()===d.date.toDateString();
+      }).length;
+    }
+    const fullDays=days.filter(d=>dayHourCount(d)>=18);
+
+    return `
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;">
+        <div class="model-badge" style="color:${mod.c};border-color:${mod.c}40;font-size:10px;padding:3px 9px;flex-shrink:0">${mod.l}</div>
+        <div style="font-family:'Outfit',sans-serif;font-weight:800;font-size:22px;color:${tCol(nowT??82)};line-height:1">${nowT??'--'}°</div>
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--ink2);flex:1">
+          ${run} &nbsp;·&nbsp;
+          <span style="color:${pct>=90?'#34d399':pct>=60?'#fbbf24':'#f87171'}">${pct}%</span>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:${p24>.01?'#38bdf8':'var(--ink2)'}">${p24>.01?p24.toFixed(2)+'"':'—'}</div>
+      </div>
+      <div class="dayrow">
+        ${fullDays.map((d,i)=>{
+          const isToday=d.date.toDateString()===now.toDateString();
+          const pp=(b.precip?.values||[]).slice(i*24,(i+1)*24).reduce((a,v)=>a+(v||0),0);
+          const loP=((d.lo-absLo)/fullR*100).toFixed(0);
+          const wP=Math.max(5,((d.hi-d.lo)/fullR*80).toFixed(0));
+          return`<div class="dtile${isToday?' today':''}">
+            <div class="dtile-dow">${isToday?'TODAY':DAYS[d.date.getDay()]}</div>
+            <div class="dtile-ico">${ICONS[i%ICONS.length]}</div>
+            <div class="dtile-hi" style="color:${tCol(d.hi)}">${Math.round(d.hi)}°</div>
+            <div class="dtile-lo">${Math.round(d.lo)}°</div>
+            <div class="dtile-bar">
+              <div class="dtile-bar-f" style="left:${loP}%;width:${wP}%;background:linear-gradient(90deg,${tCol(d.lo)},${tCol(d.hi)})"></div>
+            </div>
+            <div class="dtile-pop" style="color:${pp>.01?'#38bdf8':'var(--ink1)'}">
+              ${pp>.01?pp.toFixed(2)+'"':'—'}
+            </div>
+          </div>`;
+        }).join('')}
+        ${fullDays.length===0?`<div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--ink1);padding:8px 0;">DATA LOADING...</div>`:''}
+      </div>`;
+  }
 
   sc.innerHTML=`
     <div class="hero fu d1">
@@ -981,78 +1059,56 @@ async function tabForecast(sc){
           <div class="hero-loc"><span class="sdot"></span>${S.loc.name}</div>
           <div class="hero-date">${now.toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'})}</div>
         </div>
-        <div>
-          <div class="model-badge" style="color:${mod.c};border-color:${mod.c}50">${mod.l}</div>
-          <div class="run-badge">${S.run} · ${mod.r}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--ink2);text-align:right;line-height:2;">
+          ALL MODELS<br>${now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} LOCAL
         </div>
       </div>
-      <div class="hero-temp-row">
-        <div class="hero-temp" style="color:${tCol(nowT??82)}">${nowT??'--'}</div>
-        <div class="hero-deg">°F</div>
-        <div class="hero-aside">
-          <div class="hero-lohi">
-            <span class="hero-lo">↓${Math.round(today.lo??0)}°</span>
-            <span class="hero-sep">/</span>
-            <span class="hero-hi">${Math.round(today.hi??0)}°↑</span>
-          </div>
-          <div class="hero-feels">FEELS ${nowF??'--'}° · DEW ${nowD??'--'}°</div>
-          <div class="hero-feels">WIND ${nowW??'--'} · GUST ${nowG??'--'} MPH</div>
-        </div>
+      <!-- Cross-model NOW summary -->
+      <div style="display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin-bottom:0;padding-bottom:0;">
+        ${modelData.filter(({b})=>b?.temp).map(({key,mod,b,run})=>{
+          const v=currentValue(b.temp);
+          return`<div style="flex-shrink:0;text-align:center;padding:8px 10px;background:rgba(0,0,0,.2);border-radius:8px;border:1px solid ${mod.c}30">
+            <div style="font-family:'Outfit',sans-serif;font-weight:700;font-size:10px;color:${mod.c};letter-spacing:.5px">${mod.l}</div>
+            <div style="font-family:'Outfit',sans-serif;font-weight:900;font-size:28px;color:${tCol(v??82)};line-height:1;margin:3px 0">${v!=null?Math.round(v):'--'}°</div>
+            <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2)">${run}</div>
+          </div>`;
+        }).join('')}
       </div>
-      <div class="hero-stats">
-        <div class="hstat"><div class="hstat-v" style="color:${tCol(today.hi??82)}">${Math.round(today.hi??0)}°</div><div class="hstat-l">HIGH</div></div>
-        <div class="hstat"><div class="hstat-v" style="color:${tCol(today.lo??70)}">${Math.round(today.lo??0)}°</div><div class="hstat-l">LOW</div></div>
-        <div class="hstat"><div class="hstat-v">${nowW??'--'}</div><div class="hstat-l">WIND</div></div>
-        <div class="hstat"><div class="hstat-v" style="color:#38bdf8">${pTot>.005?pTot.toFixed(2)+'"':'—'}</div><div class="hstat-l">PRECIP</div></div>
-        <div class="hstat"><div class="hstat-v">${nowD??'--'}°</div><div class="hstat-l">DEWPT</div></div>
+      <div class="hero-stats" style="margin-top:0;">
+        ${modelData.filter(({b})=>b?.temp).slice(0,5).map(({key,mod,b,run})=>{
+          const days=dailyStats(b.temp.times,b.temp.values);
+          const hi=days[0]?.hi;const lo=days[0]?.lo;
+          const pct=completionPct(b.temp,MODEL_HOURS[key]||48);
+          return`<div class="hstat">
+            <div class="hstat-v" style="font-size:14px;color:${mod.c}">${mod.l}</div>
+            <div style="font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:${tCol(hi??82)}">${hi?Math.round(hi)+'°':'--'}</div>
+            <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--sky)">${lo?Math.round(lo)+'°':'--'}</div>
+            <div class="hstat-l" style="color:${pct>=90?'#34d399':pct>=60?'#fbbf24':'#f87171'}">${pct}%</div>
+          </div>`;
+        }).join('')}
       </div>
     </div>
-    ${modelRunHTML(mod,runs)}
-    <div class="pad">
-      <div class="fu d2">
-        <div class="slbl" style="margin-bottom:8px;">7-DAY OVERVIEW</div>
-        <div class="dayrow">
-          ${days7.map((d,i)=>{
-            const isToday=d.date.toDateString()===now.toDateString();
-            const pp=pd.values.slice(i*24,(i+1)*24).reduce((a,v)=>a+(v||0),0);
-            const loP=((d.lo-absLo)/fullR*100).toFixed(0);
-            const wP=((d.hi-d.lo)/fullR*80+10).toFixed(0);
-            return`<div class="dtile${isToday?' today':''}">
-              <div class="dtile-dow">${isToday?'TODAY':DAYS[d.date.getDay()]}</div>
-              <div class="dtile-ico">${ICONS[i%ICONS.length]}</div>
-              <div class="dtile-hi" style="color:${tCol(d.hi)}">${Math.round(d.hi)}°</div>
-              <div class="dtile-lo">${Math.round(d.lo)}°</div>
-              <div class="dtile-bar"><div class="dtile-bar-f" style="left:${loP}%;width:${wP}%;background:linear-gradient(90deg,${tCol(d.lo)},${tCol(d.hi)})"></div></div>
-              <div class="dtile-pop" style="color:${pp>.01?'#38bdf8':'var(--ink1)'}">
-                ${pp>.01?pp.toFixed(2)+'"':'—'}
-              </div>
-            </div>`;
-          }).join('')}
-        </div>
-      </div>
-      ${card('TEMPERATURE FORECAST',`${mod.l} ${S.run} · ${S.loc.name}`,'°F','<div class="ch-wrap"><canvas id="ch-f-temp"></canvas></div>','d3')}
-      ${card('TEMP + DEWPOINT','spread = humidity · narrowing = muggy','°F',
-        `<div class="legend"><div class="li"><div class="ll" style="background:#f5c030"></div>TEMP</div><div class="li"><div class="ll" style="background:#38bdf8"></div>DEW</div></div>
-        <div class="ch-wrap"><canvas id="ch-f-td"></canvas></div>`,'d4')}
-    </div>`;
 
-  requestAnimationFrame(()=>{
-    mkTempChart('ch-f-temp',td.times,td.values,240);
-    const cv2=document.getElementById('ch-f-td');if(!cv2)return;
-    const g2=cv2.getContext('2d').createLinearGradient(0,0,0,200);
-    g2.addColorStop(0,'rgba(245,192,48,.4)');g2.addColorStop(1,'rgba(245,192,48,.02)');
-    const g3=cv2.getContext('2d').createLinearGradient(0,0,0,200);
-    g3.addColorStop(0,'rgba(56,189,248,.25)');g3.addColorStop(1,'rgba(56,189,248,.01)');
-    mkChart('ch-f-td',td.times,[
-      {label:'TEMP',data:td.values.map(v=>v===null?null:Number(v)),borderColor:'#f5c030',backgroundColor:g2,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true},
-      {label:'DEW', data:dwd.values.map(v=>v===null?null:Number(v)),borderColor:'#38bdf8',backgroundColor:g3,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,spanGaps:true},
-    ],'°F',200);
-  });
+    <div class="pad">
+      ${modelData.map(({key,mod,b,run})=>`
+        <div class="card fu d2">
+          <div class="card-hd">
+            <div>
+              <div class="card-title" style="color:${mod.c}">${mod.l} · ${mod.n}</div>
+              <div class="card-sub">${run} · ${mod.r}</div>
+            </div>
+            ${b?.temp?`<div class="card-badge" style="border-color:${mod.c}50;color:${mod.c}">
+              ${completionPct(b.temp,MODEL_HOURS[key]||48)}% · ${b.temp.values.filter(v=>v!==null).length}hrs
+            </div>`:'<div class="card-badge" style="color:#f87171;border-color:#f8717150">NO DATA</div>'}
+          </div>
+          <div class="card-body">
+            ${modelDayRow(key,b,run)}
+          </div>
+        </div>`).join('')}
+    </div>`;
 }
 
-/* ═══════════════════════════════════════════
-   TAB: TEMPERATURE
-═══════════════════════════════════════════ */
+
 async function tabTemp(sc){
   const mod=MODELS[S.model],runs=RUNS[S.model],{lat,lon}=S.loc;
   showLoading(sc,`LOADING TEMPERATURE · ${mod.l}...`);
@@ -1390,7 +1446,7 @@ async function rCompare(sc){
   const vi=VARS[vkey],sel=S.cmpModels,{lat,lon}=S.loc;
   showLoading(sc,`COMPARING ${vi.l.toUpperCase()} · ${sel.length} MODELS...`);
 
-  const results=await Promise.allSettled(sel.map(k=>fetchGrib(k,vkey,'12Z',lat,lon)));
+  const results=await Promise.allSettled(sel.map(k=>fetchGrib(k,vkey,getCmpRun(k),lat,lon)));
   const allD={};
   sel.forEach((k,i)=>{allD[k]=results[i].status==='fulfilled'?results[i].value:{times:[],values:[]};});
 
@@ -1433,11 +1489,41 @@ async function rCompare(sc){
         </div>
       </div>
 
+      <!-- per-model run selectors -->
+      <div class="fu d1">
+        <div class="slbl" style="margin-bottom:8px;">RUN PER MODEL</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          ${sel.map(k=>{
+            const activeRun=getCmpRun(k);
+            const runs=availableRuns(k);
+            return`<div style="display:flex;align-items:center;gap:8px;overflow-x:auto;scrollbar-width:none;">
+              <div style="font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;
+                color:${MODELS[k].c};width:52px;flex-shrink:0;letter-spacing:.5px;">${MODELS[k].l}</div>
+              <div style="display:flex;gap:4px;flex-shrink:0;">
+                ${runs.map(r=>`
+                  <div onclick="setCmpModelRun('${k}','${r}')"
+                    style="font-family:'DM Mono',monospace;font-size:10px;padding:3px 10px;
+                    border-radius:20px;cursor:pointer;white-space:nowrap;transition:all .15s;
+                    border:1px solid ${r===activeRun?MODELS[k].c+'80':'rgba(255,255,255,.1)'};
+                    background:${r===activeRun?MODELS[k].c+'18':'transparent'};
+                    color:${r===activeRun?MODELS[k].c:'var(--ink2)'};">
+                    ${r}${r===runs[0]?' ✓':''}
+                  </div>`).join('')}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+
       <!-- NOW tiles -->
       <div class="fu d1">
         <div class="slbl" style="margin-bottom:8px;">NOW · ${vi.l.toUpperCase()}</div>
         <div class="cv-grid">
-          ${sel.map(k=>{const v=currentValue(allD[k]);return`<div class="cvt" style="--tc:${MODELS[k].c}"><div class="cvt-l" style="color:${MODELS[k].c}">${MODELS[k].l}</div><div class="cvt-v">${fmtVal(v,vi.u)}</div><div class="cvt-u">${vi.u}</div></div>`;}).join('')}
+          ${sel.map(k=>{const v=currentValue(allD[k]);return`<div class="cvt" style="--tc:${MODELS[k].c}">
+            <div class="cvt-l" style="color:${MODELS[k].c}">${MODELS[k].l}</div>
+            <div class="cvt-v">${fmtVal(v,vi.u)}</div>
+            <div class="cvt-u">${vi.u} · ${getCmpRun(k)}</div>
+          </div>`;}).join('')}
           ${nowMean!=null?`<div class="cvt" style="--tc:rgba(255,255,255,.15)"><div class="cvt-l">MEAN</div><div class="cvt-v">${fmtVal(nowMean,vi.u)}</div><div class="cvt-u">${vi.u}</div></div>`:''}
         </div>
       </div>
@@ -1478,7 +1564,7 @@ async function rCompare(sc){
       <div class="card fu d2">
         <div class="card-hd">
           <div><div class="card-title">${vi.l} · ENSEMBLE FAN</div>
-          <div class="card-sub"><span class="sdot"></span>bands = model spread · thick line = mean · thin = each model</div></div>
+          <div class="card-sub"><span class="sdot"></span>${sel.map(k=>`${MODELS[k].l} ${getCmpRun(k)}`).join(' · ')}</div></div>
           <div class="card-badge">${vi.u}</div>
         </div>
         <div class="card-body">
@@ -1745,7 +1831,17 @@ function buildSwimLanes(sel,allD,ref,n){
 ═══════════════════════════════════════════ */
 async function rRuns(sc){
   const mod=MODELS[S.runModel];
-  const runs=RUNS[S.runModel],sel=S.cmpRuns,{lat,lon}=S.loc;
+  const sel=S.cmpRuns;
+  const {lat,lon}=S.loc;
+  const available=availableRuns(S.runModel);
+
+  // Completion % — valid data points vs expected hours
+  function runCompletion(rd) {
+    const got=rd.d?.values?.filter(v=>v!==null).length||0;
+    const expected=MODEL_HOURS[S.runModel]||48;
+    return{got,expected,pct:Math.min(100,Math.round(got/expected*100))};
+  }
+
   showLoading(sc,`LOADING ${sel.length} ${mod.l} RUNS...`);
 
   // Always fetch temp + precip + wind regardless of current var tab
@@ -1905,11 +2001,16 @@ async function rRuns(sc){
       <div class="fu d1">
         <div class="slbl" style="margin-bottom:8px;">RUNS — TAP TO COMPARE (MAX 4)</div>
         <div class="rcpills">
-          ${runs.map((r,i)=>{
+          ${available.map((r,i)=>{
             const si=sel.indexOf(r);
+            // find matching run data for completion
+            const matchT=tRD.find(rd=>rd.run===r);
+            const comp=matchT?runCompletion(matchT):null;
+            const compLabel=comp?`${comp.got}/${comp.expected}`:'';
+            const pctCol=comp?(comp.pct>=90?'#34d399':comp.pct>=60?'#fbbf24':'#f87171'):'var(--ink2)';
             return`<div class="rcpill${si>=0?' ra'+si:''}" onclick="togRunCmp('${r}')">
               <span class="rcpill-t">${r}</span>
-              <span class="rcpill-a">${i===0?'LATEST':i+'HR AGO'}</span>
+              <span class="rcpill-a" style="color:${si>=0?pctCol:'var(--ink1)'}">${si>=0&&compLabel?compLabel:(i===0?'LATEST':i+'HR AGO')}</span>
             </div>`;
           }).join('')}
         </div>
