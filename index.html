@@ -953,20 +953,50 @@ function togCmp(k){
 }
 // Generate available run labels for a model (accounting for latency)
 function availableRuns(mkey) {
-  const base = RUNS[mkey] || ['12Z','06Z','00Z'];
   const latency = MODEL_LATENCY[mkey] || 2;
-  const cutoff = new Date(Date.now() - latency * 3.6e6);
-  const cutoffH = cutoff.getUTCHours();
+  const availableAt = new Date(Date.now() - latency * 3.6e6);
+  const h = availableAt.getUTCHours();
 
-  // For hourly models (HRRR etc), show last 7 available hours
+  // Hourly models
   if (['hrrr','rap','nbm'].includes(mkey)) {
     return Array.from({length:7},(_,i)=>{
-      const h = ((cutoffH - i) + 24) % 24;
-      return `${String(h).padStart(2,'0')}Z`;
+      const rh = ((h - i) + 24) % 24;
+      return `${String(rh).padStart(2,'0')}Z`;
     });
   }
-  // For 6-hourly models just return the base list
-  return base;
+  // GFS: 00/06/12/18Z
+  if (mkey === 'gfs') {
+    const cycle = h >= 18 ? 18 : h >= 12 ? 12 : h >= 6 ? 6 : 0;
+    const runs = [];
+    for (let i = 0; i < 4; i++) {
+      const c = ((cycle - i*6) + 24) % 24;
+      runs.push(`${String(c).padStart(2,'0')}Z`);
+    }
+    return runs;
+  }
+  // ECMWF: 00/06/12/18Z
+  if (mkey === 'ecmwf') {
+    const cycle = h >= 18 ? 18 : h >= 12 ? 12 : h >= 6 ? 6 : 0;
+    const runs = [];
+    for (let i = 0; i < 4; i++) {
+      const c = ((cycle - i*6) + 24) % 24;
+      runs.push(`${String(c).padStart(2,'0')}Z`);
+    }
+    return runs;
+  }
+  // GraphCast: 00Z/12Z
+  if (mkey === 'graphcast') {
+    const cycle = h >= 12 ? 12 : 0;
+    return [`${String(cycle).padStart(2,'0')}Z`, cycle === 12 ? '00Z' : '12Z'];
+  }
+  // RRFS: hourly like HRRR
+  if (mkey === 'rrfs') {
+    return Array.from({length:7},(_,i)=>{
+      const rh = ((h - i) + 24) % 24;
+      return `${String(rh).padStart(2,'0')}Z`;
+    });
+  }
+  return RUNS[mkey] || ['12Z','06Z','00Z'];
 }
 function getCmpRun(mkey){
   // Use override if set, otherwise use the latest available run for that model
@@ -1070,22 +1100,23 @@ async function tabForecast(sc){
   // Strategy: try the latest available run, if it has <70% of expected hours,
   // fall back to the previous run. We do this by fetching temp only first.
   async function getBestRun(mkey) {
-    const runs = availableRuns(mkey);
+    const useRuns = ['hrrr','rap'].includes(mkey); // only these use /runs with cycle pinning
+    const runs = useRuns ? availableRuns(mkey) : [null]; // timeseries models: try once with null
     const expected = expectedPoints(mkey);
     for (let i = 0; i < Math.min(runs.length, 4); i++) {
       try {
         const d = await fetchGrib(mkey, 'temp', runs[i], lat, lon);
         const got = d.values.filter(v=>v!==null).length;
-        if (got / expected >= 0.65) return {run: runs[i], pct: Math.round(got/expected*100), got, expected};
-      } catch(e) { /* try next */ }
+        if (got / expected >= 0.5) return {run: runs[i]||availableRuns(mkey)[0], pct: Math.round(got/expected*100), got, expected};
+      } catch(e) { if(!useRuns) break; }
     }
-    // If nothing passes threshold, just use the latest and report what we got
+    // fallback — use whatever we got
     try {
       const d = await fetchGrib(mkey, 'temp', runs[0], lat, lon);
       const got = d.values.filter(v=>v!==null).length;
-      return {run: runs[0], pct: Math.round(got/expected*100), got, expected};
+      return {run: availableRuns(mkey)[0], pct: Math.round(got/expected*100), got, expected};
     } catch(e) {}
-    return {run: runs[0], pct: 0, got: 0, expected};
+    return {run: availableRuns(mkey)[0], pct: 0, got: 0, expected};
   }
 
   showLoading(sc,'FINDING BEST RUN PER MODEL...');
@@ -1098,7 +1129,11 @@ async function tabForecast(sc){
   showLoading(sc,'LOADING ALL MODELS...');
   // Second pass: fetch full bundle with best run
   const bundles = await Promise.allSettled(
-    modelKeys.map(k => fetchBundle(k, ['temp','precip'], bestRuns[k].run, lat, lon))
+    modelKeys.map(k => {
+      const useRuns = ['hrrr','rap'].includes(k);
+      const run = useRuns ? (bestRuns[k]?.run || availableRuns(k)[0]) : null;
+      return fetchBundle(k, ['temp','precip'], run, lat, lon);
+    })
   );
 
   // Build per-model data
@@ -1576,12 +1611,26 @@ async function rCompare(sc){
   const allD={};
   sel.forEach((k,i)=>{
     const raw=results[i].status==='fulfilled'?results[i].value:{times:[],values:[]};
-    allD[k]=interpolateHourly(raw); // normalize all to hourly
+    allD[k]=interpolateHourly(raw);
   });
 
-  const refKey=sel.find(k=>allD[k].times.length)||sel[0];
-  const ref=allD[refKey].times||[];
-  const n=Math.min(ref.length,48);
+  // Build time→value Maps for correct alignment (not array-index)
+  const allMaps={};
+  sel.forEach(k=>{
+    const m=new Map();
+    (allD[k].times||[]).forEach((t,i)=>{
+      if(t instanceof Date) m.set(Math.round(t.getTime()/3.6e6)*3.6e6, allD[k].values[i]??null);
+    });
+    allMaps[k]=m;
+  });
+
+  // Build unified sorted time axis from all models
+  const allTs=[...new Set(sel.flatMap(k=>[...allMaps[k].keys()]))].sort((a,b)=>a-b);
+  const ref=allTs.slice(0,48).map(t=>new Date(t));
+  const n=ref.length;
+
+  // Helper: get value for model k at ref time index i
+  function getVal(k,i){ return allMaps[k].get(allTs[i])??null; }
 
   const nowVals=sel.map(k=>currentValue(allD[k])).filter(validNum);
   const nowSpread=nowVals.length>=2?+(Math.max(...nowVals)-Math.min(...nowVals)).toFixed(1):0;
@@ -1589,9 +1638,9 @@ async function rCompare(sc){
   const cls=spreadClass(nowSpread,vi.u);
   const txt=cls==='lo'?'TIGHT AGREEMENT':cls==='md'?'MODERATE SPREAD':'HIGH UNCERTAINTY';
 
-  // Per-hour stats for envelope + divergence matrix
+  // Per-hour stats using time-aligned values
   const hourStats=Array.from({length:n},(_,i)=>{
-    const vals=sel.map(k=>allD[k].values?.[i]??null).filter(validNum);
+    const vals=sel.map(k=>getVal(k,i)).filter(validNum);
     const mean=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
     const mn=vals.length?Math.min(...vals):null;
     const mx=vals.length?Math.max(...vals):null;
@@ -1719,9 +1768,9 @@ async function rCompare(sc){
               <th style="font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2);text-align:center;padding:3px 6px;font-weight:400;">SPREAD</th>
             </tr></thead>
             <tbody>
-              ${Array.from({length:matHours},(_,i)=>{
+              ${Array.from({length:Math.min(n,24)},(_,i)=>{
                 const t=ref[i];
-                const vals=sel.map(k=>allD[k].values?.[i]??null);
+                const vals=sel.map(k=>getVal(k,i));
                 const good=vals.filter(validNum);
                 const mean=good.length?good.reduce((a,b)=>a+b,0)/good.length:null;
                 const spread=good.length>=2?Math.max(...good)-Math.min(...good):null;
@@ -1733,9 +1782,12 @@ async function rCompare(sc){
                   ${sel.map((k,j)=>{
                     const v=vals[j];
                     const dev=(v!=null&&mean!=null)?v-mean:null;
-                    const devPct=dev!=null?Math.min(Math.abs(dev)/maxSpread,1):0;
-                    const bg=dev==null?'transparent':dev>0?`rgba(251,146,60,${(devPct*.7+.07).toFixed(2)})`:`rgba(56,189,248,${(devPct*.7+.07).toFixed(2)})`;
-                    return`<td style="text-align:center;padding:5px 6px;background:${bg};font-family:'DM Mono',monospace;font-size:10px;font-weight:500;color:${dev==null?'var(--ink2)':dev>0?'#fdba74':'#7dd3fc'}">${fmtVal(v,vi.u)}</td>`;
+                    const devPct=dev!=null?Math.min(Math.abs(dev)/Math.max(maxSpread,0.1),1):0;
+                    const bg=dev==null?'transparent':dev>0
+                      ?`rgba(251,146,60,${(devPct*.7+.07).toFixed(2)})`
+                      :`rgba(56,189,248,${(devPct*.7+.07).toFixed(2)})`;
+                    const tc=dev==null?'var(--ink2)':dev>0?'#fdba74':'#7dd3fc';
+                    return`<td style="text-align:center;padding:5px 6px;background:${bg};font-family:'DM Mono',monospace;font-size:10px;font-weight:500;color:${tc}">${fmtVal(v,vi.u)}</td>`;
                   }).join('')}
                   <td style="text-align:center;padding:5px 6px;font-family:'DM Mono',monospace;font-size:10px;font-weight:700;color:${spCol}">${spread!=null?fmtVal(spread,vi.u):'—'}</td>
                 </tr>`;
@@ -1749,33 +1801,37 @@ async function rCompare(sc){
 
   requestAnimationFrame(()=>{
     if(isPrecip){
-      buildSwimLanes(sel,allD,ref,n);
+      buildSwimLanes(sel,allD,ref,n,allMaps,allTs);
     } else {
-      buildFanChart(sel,allD,ref,n,hourStats,vi);
+      buildFanChart(sel,allD,ref,n,hourStats,vi,allMaps,allTs);
     }
   });
 }
 
-function buildFanChart(sel,allD,ref,n,hourStats,vi){
+function buildFanChart(sel,allD,ref,n,hourStats,vi,allMaps,allTs){
   const el=document.getElementById('ch-fan');if(!el)return;
   el.style.height='280px';
+
+  // Use time-aligned values if allMaps provided, else fall back to array index
+  function getAlignedVal(k,i){
+    if(allMaps&&allTs) return allMaps[k].get(allTs[i])??null;
+    return allD[k].values[i]??null;
+  }
 
   const meanData=hourStats.slice(0,n).map(h=>h.mean);
   const minData=hourStats.slice(0,n).map(h=>h.min);
   const maxData=hourStats.slice(0,n).map(h=>h.max);
 
   // inner band (25-75 percentile approximation from 2 closest models)
-  const innerMin=ref.slice(0,n).map((_,i)=>{
-    const vals=sel.map(k=>allD[k].values?.[i]??null).filter(validNum).sort((a,b)=>a-b);
+  const innerMin=Array.from({length:n},(_,i)=>{
+    const vals=sel.map(k=>getAlignedVal(k,i)).filter(validNum).sort((a,b)=>a-b);
     if(vals.length<2)return null;
-    const q=Math.floor(vals.length*.25);
-    return vals[q];
+    return vals[Math.floor(vals.length*.25)];
   });
-  const innerMax=ref.slice(0,n).map((_,i)=>{
-    const vals=sel.map(k=>allD[k].values?.[i]??null).filter(validNum).sort((a,b)=>a-b);
+  const innerMax=Array.from({length:n},(_,i)=>{
+    const vals=sel.map(k=>getAlignedVal(k,i)).filter(validNum).sort((a,b)=>a-b);
     if(vals.length<2)return null;
-    const q=Math.floor(vals.length*.75);
-    return vals[Math.min(q,vals.length-1)];
+    return vals[Math.min(Math.floor(vals.length*.75),vals.length-1)];
   });
 
   killC('ch-fan');
@@ -1811,7 +1867,7 @@ function buildFanChart(sel,allD,ref,n,hourStats,vi){
       // individual model lines
       ...sel.map(k=>({
         label:MODELS[k].l,
-        data:ref.slice(0,n).map((_,i)=>allD[k].values[i]??null),
+        data:Array.from({length:n},(_,i)=>getAlignedVal(k,i)),
         borderColor:MODELS[k].c+'c0',backgroundColor:'transparent',
         borderWidth:1.2,pointRadius:0,pointHoverRadius:5,
         tension:.35,spanGaps:true,order:3,
@@ -1844,7 +1900,7 @@ function buildFanChart(sel,allD,ref,n,hourStats,vi){
   });
 }
 
-function buildSwimLanes(sel,allD,ref,n){
+function buildSwimLanes(sel,allD,ref,n,allMaps,allTs){
   const lanes=document.getElementById('swim-lanes');
   const dots=document.getElementById('timing-dots');
   if(!lanes||!dots)return;
