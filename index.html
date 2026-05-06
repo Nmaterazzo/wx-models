@@ -406,6 +406,9 @@ let CH={};
    API
 ═══════════════════════════════════════════ */
 const WORKER='https://gribstream-proxy.nmaterazzo2435.workers.dev';
+// Variable definitions per model family
+// NOAA models (HRRR, GFS, NBM, RAP, RRFS) use standard GRIB2 names
+// ECMWF uses ECMWF-specific names and 'sfc' level
 const GRIB_VARS={
   temp:      {name:'TMP',  level:'2 m above ground'},
   dewpoint:  {name:'DPT',  level:'2 m above ground'},
@@ -420,7 +423,24 @@ const GRIB_VARS={
   rh700:     {name:'RH',   level:'700 mb'},
   t850:      {name:'TMP',  level:'850 mb'},
 };
-const MODEL_IDS={hrrr:'hrrr',gfs:'gfs',nbm:'nbm',rap:'rap',ecmwf:'ifsoper',graphcast:'graphcast',rrfs:'rrfsprslev'};
+// ECMWF-specific variable overrides
+const ECMWF_VARS={
+  temp:      {name:'2t',   level:'sfc'},
+  dewpoint:  {name:'2d',   level:'sfc'},
+  feels:     {name:'2t',   level:'sfc'}, // no feels-like, use temp
+  precip:    {name:'tp',   level:'sfc'},
+  snow:      {name:'sf',   level:'sfc'},
+  preciprate:{name:'tp',   level:'sfc'},
+  wind:      {name:'10u',  level:'sfc'}, // u-component, we'll magnitude it
+  gust:      {name:'10fg', level:'sfc'},
+  winddir:   {name:'10v',  level:'sfc'},
+  h500:      {name:'z',    level:'500 hPa'},
+  rh700:     {name:'r',    level:'700 hPa'},
+  t850:      {name:'t',    level:'850 hPa'},
+};
+// RRFS uses surface dataset (rrfs), not pressure level (rrfsprslev)
+
+const MODEL_IDS={hrrr:'hrrr',gfs:'gfs',nbm:'nbm',rap:'rap',ecmwf:'ifsoper',graphcast:'graphcast',rrfs:'rrfs'};
 const MODEL_HOURS={hrrr:48,gfs:168,nbm:168,rap:51,ecmwf:168,graphcast:168,rrfs:84};
 const CACHE={};
 
@@ -438,14 +458,25 @@ function latestCycleTime(run){
 
 function normalizeValue(gv, v, prevV){
   if(!validNum(v))return null;
-  // APCP is cumulative for GFS/ECMWF — diff to get hourly rate
-  if(gv.name==='APCP' && prevV !== undefined && validNum(prevV)){
+  // Accumulated precip — diff consecutive values
+  const isAccumField = gv.name==='APCP'||gv.name==='ASNOW'||gv.name==='tp'||gv.name==='sf';
+  if(isAccumField && prevV !== undefined && validNum(prevV)){
     v = Math.max(0, v - prevV);
   }
-  if((gv.name==='TMP'||gv.name==='DPT'||gv.name==='APTMP')&&v>200)v=(v-273.15)*9/5+32;
-  if(gv.name==='WIND'||gv.name==='GUST')v=v*2.23694;
+  // Kelvin → °F
+  if((gv.name==='TMP'||gv.name==='DPT'||gv.name==='APTMP'||gv.name==='2t'||gv.name==='2d'||gv.name==='t')&&v>200)
+    v=(v-273.15)*9/5+32;
+  // Wind m/s → mph
+  if(gv.name==='WIND'||gv.name==='GUST'||gv.name==='10u'||gv.name==='10v'||gv.name==='10fg'||gv.name==='u'||gv.name==='v')
+    v=v*2.23694;
+  // NOAA precip kg/m² → inches
   if(gv.name==='APCP'||gv.name==='ASNOW')v=v*0.0393701;
+  // ECMWF precip metres → inches
+  if(gv.name==='tp'||gv.name==='sf')v=v*39.3701;
+  // Precip rate kg/m²/s → in/hr
   if(gv.name==='PRATE')v=v*141.732;
+  // ECMWF geopotential (m²/s²) → gpm
+  if(gv.name==='z')v=v/9.80665;
   return +v.toFixed(3);
 }
 
@@ -473,8 +504,16 @@ function latestModelCycle(mkey, run) {
   // "Available now" = current UTC minus latency
   const availableAt = new Date(Date.now() - latency * 3.6e6);
 
-  if (mkey === 'ecmwf' || mkey === 'graphcast') {
-    // 00Z and 12Z only
+  if (mkey === 'ecmwf') {
+    // ECMWF open data: 00Z/06Z/12Z/18Z (6hr latency each)
+    const h = availableAt.getUTCHours();
+    const cycle = h >= 18 ? 18 : h >= 12 ? 12 : h >= 6 ? 6 : 0;
+    const d = new Date(availableAt);
+    d.setUTCHours(cycle, 0, 0, 0);
+    return d;
+  }
+  if (mkey === 'graphcast') {
+    // GraphCast: 00Z and 12Z only
     const h = availableAt.getUTCHours();
     const d = new Date(availableAt);
     d.setUTCMinutes(0,0,0);
@@ -521,15 +560,16 @@ function _pump() {
 const IN_FLIGHT = {};
 
 async function fetchGrib(mkey, vkey, run, lat, lon) {
-  const gv = GRIB_VARS[vkey];
+  // Use ECMWF-specific variable names if applicable
+  const gv = (mkey === 'ecmwf' && ECMWF_VARS[vkey]) ? ECMWF_VARS[vkey] : GRIB_VARS[vkey];
   if (!gv) throw new Error(`No GRIB mapping for ${vkey}`);
 
   const modelId = MODEL_IDS[mkey];
   const hours   = MODEL_HOURS[mkey] || 48;
 
-  const isAccum = gv.name === 'APCP' || gv.name === 'ASNOW';
+  // ECMWF precip (tp) is accumulated in metres, needs conversion and diffing
+  const isAccum = gv.name === 'APCP' || gv.name === 'ASNOW' || gv.name === 'tp' || gv.name === 'sf';
   const useRuns = RUNS_MODELS.has(mkey);
-  // For /runs models, honour the requested run. For /timeseries, always use auto-detected cycle.
   const cycle    = useRuns ? latestModelCycle(mkey, run) : latestModelCycle(mkey, null);
   const cycleISO = isoNoMs(cycle);
   const cacheKey = `${mkey}|${vkey}|${cycleISO}|${lat.toFixed(4)}|${lon.toFixed(4)}`;
@@ -540,7 +580,7 @@ async function fetchGrib(mkey, vkey, run, lat, lon) {
   const promise = (async () => {
     let body, endpoint;
 
-    if (RUNS_MODELS.has(mkey)) {
+    if (useRuns) {
       // /runs — pin to exact model cycle (HRRR, RAP, RRFS)
       endpoint = `${modelId}/runs`;
       body = {
@@ -552,14 +592,15 @@ async function fetchGrib(mkey, vkey, run, lat, lon) {
         variables: [{name: gv.name, level: gv.level, info:''}],
       };
     } else {
-      // /timeseries — best value per valid time (GFS, NBM, ECMWF, GraphCast)
-      // Start from the latest model cycle so times align with run start, not current hour
+      // /timeseries — pin to latest cycle window, short lead time for consistency
       const cycleStart = latestModelCycle(mkey, null);
       const until = new Date(cycleStart.getTime() + hours * 3.6e6);
       endpoint = `${modelId}/timeseries`;
       body = {
-        fromTime:  isoNoMs(cycleStart),
-        untilTime: isoNoMs(until),
+        fromTime:    isoNoMs(cycleStart),
+        untilTime:   isoNoMs(until),
+        minLeadTime: '0h',   // only use data from latest cycle, no stale runs
+        maxLeadTime: `${hours}h`,
         coordinates: [{lat, lon, name:'loc'}],
         variables: [{name: gv.name, level: gv.level, info:''}],
       };
@@ -983,19 +1024,44 @@ async function rSingle(sc){
 async function tabForecast(sc){
   const {lat,lon}=S.loc;
   const now=new Date();
-  // Fetch temp + precip for every model in parallel
-  showLoading(sc,'LOADING ALL MODELS...');
-
   const modelKeys=Object.keys(MODELS);
-  const bundles=await Promise.allSettled(
-    modelKeys.map(k=>fetchBundle(k,['temp','precip'],availableRuns(k)[0],lat,lon))
+  // For the Forecast tab we want the latest FULLY COMPLETE run per model.
+  // Strategy: try the latest available run, if it has <70% of expected hours,
+  // fall back to the previous run. We do this by fetching temp only first.
+  async function getBestRun(mkey) {
+    const runs = availableRuns(mkey);
+    const expected = MODEL_HOURS[mkey] || 48;
+    for (let i = 0; i < Math.min(runs.length, 4); i++) {
+      try {
+        const d = await fetchGrib(mkey, 'temp', runs[i], lat, lon);
+        const got = d.values.filter(v=>v!==null).length;
+        if (got / expected >= 0.7) return {run: runs[i], pct: Math.round(got/expected*100), got, expected};
+      } catch(e) { /* try next */ }
+    }
+    return {run: availableRuns(mkey)[0], pct: 0, got: 0, expected};
+  }
+
+  showLoading(sc,'FINDING BEST RUN PER MODEL...');
+  // First pass: find best run for each model
+  const bestRuns = {};
+  await Promise.allSettled(modelKeys.map(async k => {
+    bestRuns[k] = await getBestRun(k);
+  }));
+
+  showLoading(sc,'LOADING ALL MODELS...');
+  // Second pass: fetch full bundle with best run
+  const bundles = await Promise.allSettled(
+    modelKeys.map(k => fetchBundle(k, ['temp','precip'], bestRuns[k].run, lat, lon))
   );
 
   // Build per-model data
   const modelData=modelKeys.map((k,i)=>({
     key:k,
     mod:MODELS[k],
-    run:availableRuns(k)[0],
+    run:bestRuns[k]?.run || availableRuns(k)[0],
+    pct:bestRuns[k]?.pct || 0,
+    got:bestRuns[k]?.got || 0,
+    expected:bestRuns[k]?.expected || MODEL_HOURS[k]||48,
     b:bundles[i].status==='fulfilled'?bundles[i].value:null,
   }));
 
@@ -1017,15 +1083,15 @@ async function tabForecast(sc){
   }
 
   // Build daily card row for one model — only show full days
-  function modelDayRow(mkey, b, run) {
+  function modelDayRow(mkey, b, run, md) {
     const mod=MODELS[mkey];
     if(!b?.temp)return`<div style="color:var(--ink2);font-family:'DM Mono',monospace;font-size:9px;padding:10px 0;">NO DATA</div>`;
 
     const days=dailyStats(b.temp.times,b.temp.values);
     const nowT=currentValue(b.temp);
     const p24=(b.precip?.values||[]).slice(0,24).reduce((a,v)=>a+(v||0),0);
-    const expHours=MODEL_HOURS[mkey]||48;
-    const pct=completionPct(b.temp,expHours);
+    const expHours=md.expected||MODEL_HOURS[mkey]||48;
+    const pct=md.pct||completionPct(b.temp,expHours);
 
     // Only show a day if we have data for >75% of its hours (18 of 24)
     function dayHourCount(d) {
@@ -1106,7 +1172,7 @@ async function tabForecast(sc){
     </div>
 
     <div class="pad">
-      ${modelData.map(({key,mod,b,run})=>`
+      ${modelData.map(({key,mod,b,run,pct,got,expected})=>`
         <div class="card fu d2">
           <div class="card-hd">
             <div>
@@ -1114,11 +1180,11 @@ async function tabForecast(sc){
               <div class="card-sub">${run} · ${mod.r}</div>
             </div>
             ${b?.temp?`<div class="card-badge" style="border-color:${mod.c}50;color:${mod.c}">
-              ${completionPct(b.temp,MODEL_HOURS[key]||48)}% · ${b.temp.values.filter(v=>v!==null).length}hrs
+              ${pct}% · ${got}/${expected}hrs
             </div>`:'<div class="card-badge" style="color:#f87171;border-color:#f8717150">NO DATA</div>'}
           </div>
           <div class="card-body">
-            ${modelDayRow(key,b,run)}
+            ${modelDayRow(key,b,run,{pct,expected:MODEL_HOURS[key]||48})}
           </div>
         </div>`).join('')}
     </div>`;
