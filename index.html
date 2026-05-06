@@ -1216,15 +1216,7 @@ async function tabForecast(sc){
   }
 
   const bestRuns = {};
-  // Load models sequentially to avoid 429 rate limiting
-  // Render skeleton cards first, then fill each as data arrives
-  showLoading(sc,'LOADING MODELS...');
-
-  // Build temp range context as we go
-  let absHi=95, absLo=55, fullR=40;
-
-  // Render the page shell with skeleton cards immediately
-  // Credit estimate: 48hrs avg × models selected
+  // Render skeleton UI immediately
   const credEst = modelKeys.length * 48;
   sc.innerHTML=`
     <div style="padding:10px 16px 4px;">
@@ -1272,37 +1264,23 @@ async function tabForecast(sc){
           <div class="card-body" style="color:var(--ink2);font-family:'DM Mono',monospace;font-size:9px;padding:12px 0;">
             <div style="display:flex;gap:6px;align-items:center;">
               <div style="width:8px;height:8px;border-radius:50%;background:${MODELS[k].c};animation:pulse 1.4s ease-in-out infinite;"></div>
-              FETCHING DATA...
+              FETCHING...
             </div>
           </div>
         </div>`).join('')}
     </div>`;
 
-  // Load each model sequentially
-  for (const k of modelKeys) {
+  // Load all models in parallel — each renders its own card as it resolves
+  await Promise.allSettled(modelKeys.map(async k => {
     try {
-      // Find best run
       const br = await getBestRun(k);
       bestRuns[k] = br;
       const useRuns = ['hrrr','rap'].includes(k);
       const run = useRuns ? br.run : null;
-
-      // Fetch full bundle
       let b = null;
-      try {
-        b = await fetchBundle(k, ['temp','precip'], run, lat, lon);
-      } catch(e) { /* leave null */ }
+      try { b = await fetchBundle(k, ['temp','precip'], run, lat, lon); } catch(e) {}
 
-      // Update range context
-      if (b?.temp) {
-        dailyStats(b.temp.times, b.temp.values).forEach(d => {
-          absHi = Math.max(absHi, d.hi);
-          absLo = Math.min(absLo, d.lo);
-        });
-        fullR = Math.max(absHi - absLo, 1);
-      }
-
-      // Render this model's now-tile
+      // Now-tile
       const nowEl = document.getElementById(`fc-now-${k}`);
       if (nowEl && b?.temp) {
         const v = currentValue(b.temp);
@@ -1312,12 +1290,10 @@ async function tabForecast(sc){
           <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2)">${br.run}</div>`;
       }
 
-      // Render this model's card
+      // Card
       const cardEl = document.getElementById(`fc-card-${k}`);
       if (cardEl) {
-        const pct = br.pct;
-        const got = br.got;
-        const exp = expectedPoints(k, br.run);
+        const pct = br.pct, got = br.got, exp = expectedPoints(k, br.run);
         cardEl.innerHTML = `
           <div class="card-hd">
             <div>
@@ -1337,7 +1313,7 @@ async function tabForecast(sc){
       if (cardEl) cardEl.querySelector('.card-body').innerHTML =
         `<div style="color:#f87171;font-family:'DM Mono',monospace;font-size:9px;">ERROR: ${e.message}</div>`;
     }
-  }
+  }));
 
   // Completion % — based on expected data points (interval-aware)
   function completionPct(data, mkey, run) {
@@ -1361,6 +1337,9 @@ async function tabForecast(sc){
       return b.temp.times.filter(t=>t instanceof Date&&t.toDateString()===d.date.toDateString()).length;
     }
     const fullDays=days.filter(d=>dayPointCount(d)>=threshold);
+    const absLo = fullDays.length ? Math.min(...fullDays.map(d=>d.lo)) : 60;
+    const absHi = fullDays.length ? Math.max(...fullDays.map(d=>d.hi)) : 95;
+    const fullR = Math.max(absHi - absLo, 1);
 
     return `
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;">
