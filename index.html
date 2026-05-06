@@ -557,32 +557,40 @@ function latestModelCycle(mkey, run) {
 }
 
 // Simple concurrency limiter — max 2 at once to avoid 429
-let _inflight = 0;
+// Simple sequential request queue — one at a time, 300ms between requests
+// This is the only reliable way to avoid 429s from GribStream
 const _queue = [];
+let _running = false;
+
 function _limitedFetch(url, opts) {
-  return new Promise((res, rej) => {
-    _queue.push({url, opts, res, rej, retries: 0});
-    _pump();
+  return new Promise((resolve, reject) => {
+    _queue.push({ url, opts, resolve, reject, attempts: 0 });
+    _runQueue();
   });
 }
-function _pump() {
-  if (_inflight >= 1 || !_queue.length) return; // max 1 concurrent
-  const item = _queue.shift();
-  _inflight++;
-  const doFetch = () => fetch(item.url, item.opts)
-    .then(r => {
-      if (r.status === 429 && item.retries < 3) {
-        item.retries++;
-        const delay = item.retries * 5000; // 5s, 10s, 15s backoff
-        setTimeout(() => { _queue.unshift(item); _inflight--; _pump(); }, delay);
-      } else {
-        _inflight--;
-        _pump();
-        item.res(r);
+
+async function _runQueue() {
+  if (_running || !_queue.length) return;
+  _running = true;
+  while (_queue.length) {
+    const item = _queue.shift();
+    try {
+      const r = await fetch(item.url, item.opts);
+      if (r.status === 429 && item.attempts < 3) {
+        item.attempts++;
+        const wait = item.attempts * 8000; // 8s, 16s, 24s
+        await new Promise(res => setTimeout(res, wait));
+        _queue.unshift(item); // retry at front
+        continue;
       }
-    })
-    .catch(e => { _inflight--; _pump(); item.rej(e); });
-  doFetch();
+      item.resolve(r);
+    } catch(e) {
+      item.reject(e);
+    }
+    // Mandatory gap between requests
+    if (_queue.length) await new Promise(res => setTimeout(res, 300));
+  }
+  _running = false;
 }
 
 // In-flight dedup — same cache key → same promise
@@ -611,71 +619,59 @@ async function fetchGrib(mkey, vkey, run, lat, lon) {
   if (IN_FLIGHT[cacheKey]) return IN_FLIGHT[cacheKey];
 
   const promise = (async () => {
-    let body, endpoint;
-
-    if (useRuns) {
-      // /runs — pin to exact model cycle (HRRR, RAP, RRFS)
-      endpoint = `${modelId}/runs`;
-      body = {
-        forecastedFrom:  cycleISO,
-        forecastedUntil: cycleISO,
-        minLeadTime: '0h',
-        maxLeadTime: `${hours}h`,
-        coordinates: [{lat, lon, name:'loc'}],
-        variables: [{name: gv.name, level: gv.level, info:''}],
-      };
-    } else {
-      // /timeseries — start from NOW so all models align at the current hour
-      const now = new Date();
-      now.setUTCMinutes(0,0,0);
-      const until = new Date(now.getTime() + hours * 3.6e6);
-      endpoint = `${modelId}/timeseries`;
-      body = {
-        fromTime:    isoNoMs(now),
-        untilTime:   isoNoMs(until),
-        minLeadTime: '0h',
-        maxLeadTime: `${hours}h`,
-        coordinates: [{lat, lon, name:'loc'}],
-        variables: [{name: gv.name, level: gv.level, info:''}],
-      };
-    }
-
-    const res = await _limitedFetch(`${WORKER}/${endpoint}`, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json','Accept':'application/json'},
-      body: JSON.stringify(body),
-    });
-    const rawText = await res.text();
-    if (!res.ok) throw new Error(`${mkey}/${vkey} HTTP ${res.status}`);
-
-    let rows;
     try {
-      const j = JSON.parse(rawText);
-      rows = Array.isArray(j) ? j : (j.data || j.results || []);
-    } catch(e) { throw new Error(`${mkey}/${vkey} bad JSON`); }
-    if (!rows.length) throw new Error(`${mkey}/${vkey} empty`);
-
-    const gribKey = valueKey(gv);
-    rows.sort((a,b) => new Date(a.forecasted_time||a.time) - new Date(b.forecasted_time||b.time));
-
-    const seen = new Set();
-    const times = [], values = [];
-    rows.forEach((r, i) => {
-      const t = new Date(r.forecasted_time || r.time);
-      const tk = t.getTime();
-      if (seen.has(tk)) return;
-      seen.add(tk);
-      const rawV    = r[gribKey];
-      const rawPrev = i > 0 ? rows[i-1][gribKey] : undefined;
-      const v = normalizeValue(gv, rawV, isAccum ? rawPrev : undefined);
-      times.push(t);
-      values.push(v);
-    });
-
-    const result = {times, values};
-    CACHE[cacheKey] = result;
-    delete IN_FLIGHT[cacheKey];
-    return result;
+      let body, endpoint;
+      if (useRuns) {
+        endpoint = `${modelId}/runs`;
+        body = {
+          forecastedFrom:  cycleISO, forecastedUntil: cycleISO,
+          minLeadTime: '0h', maxLeadTime: `${hours}h`,
+          coordinates: [{lat, lon, name:'loc'}],
+          variables: [{name: gv.name, level: gv.level, info:''}],
+        };
+      } else {
+        const now = new Date(); now.setUTCMinutes(0,0,0);
+        const until = new Date(now.getTime() + hours * 3.6e6);
+        endpoint = `${modelId}/timeseries`;
+        body = {
+          fromTime: isoNoMs(now), untilTime: isoNoMs(until),
+          minLeadTime: '0h', maxLeadTime: `${hours}h`,
+          coordinates: [{lat, lon, name:'loc'}],
+          variables: [{name: gv.name, level: gv.level, info:''}],
+        };
+      }
+      const res = await _limitedFetch(`${WORKER}/${endpoint}`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','Accept':'application/json'},
+        body: JSON.stringify(body),
+      });
+      const rawText = await res.text();
+      if (!res.ok) throw new Error(`${mkey}/${vkey} HTTP ${res.status}`);
+      let rows;
+      try {
+        const j = JSON.parse(rawText);
+        rows = Array.isArray(j) ? j : (j.data || j.results || []);
+      } catch(e) { throw new Error(`${mkey}/${vkey} bad JSON`); }
+      if (!rows.length) throw new Error(`${mkey}/${vkey} empty`);
+      const gribKey = valueKey(gv);
+      rows.sort((a,b) => new Date(a.forecasted_time||a.time) - new Date(b.forecasted_time||b.time));
+      const seen = new Set(), times = [], values = [];
+      rows.forEach((r, i) => {
+        const t = new Date(r.forecasted_time || r.time);
+        const tk = t.getTime();
+        if (seen.has(tk)) return;
+        seen.add(tk);
+        const rawV = r[gribKey];
+        const rawPrev = i > 0 ? rows[i-1][gribKey] : undefined;
+        times.push(t);
+        values.push(normalizeValue(gv, rawV, isAccum ? rawPrev : undefined));
+      });
+      const result = {times, values};
+      CACHE[cacheKey] = result;
+      return result;
+    } finally {
+      delete IN_FLIGHT[cacheKey];
+    }
   })();
 
   IN_FLIGHT[cacheKey] = promise;
