@@ -561,18 +561,28 @@ let _inflight = 0;
 const _queue = [];
 function _limitedFetch(url, opts) {
   return new Promise((res, rej) => {
-    _queue.push({url, opts, res, rej});
+    _queue.push({url, opts, res, rej, retries: 0});
     _pump();
   });
 }
 function _pump() {
-  while (_inflight < 2 && _queue.length) {
-    const {url, opts, res, rej} = _queue.shift();
-    _inflight++;
-    fetch(url, opts)
-      .then(r  => { _inflight--; _pump(); res(r); })
-      .catch(e => { _inflight--; _pump(); rej(e); });
-  }
+  if (_inflight >= 1 || !_queue.length) return; // max 1 concurrent
+  const item = _queue.shift();
+  _inflight++;
+  const doFetch = () => fetch(item.url, item.opts)
+    .then(r => {
+      if (r.status === 429 && item.retries < 3) {
+        item.retries++;
+        const delay = item.retries * 2000; // 2s, 4s, 6s backoff
+        setTimeout(() => { _queue.unshift(item); _inflight--; _pump(); }, delay);
+      } else {
+        _inflight--;
+        _pump();
+        item.res(r);
+      }
+    })
+    .catch(e => { _inflight--; _pump(); item.rej(e); });
+  doFetch();
 }
 
 // In-flight dedup — same cache key → same promise
@@ -1124,43 +1134,113 @@ async function tabForecast(sc){
     return {run: availableRuns(mkey)[0], pct: 0, got: 0, expected: expectedPoints(mkey, null)};
   }
 
-  showLoading(sc,'FINDING BEST RUN PER MODEL...');
-  // First pass: find best run for each model
   const bestRuns = {};
-  await Promise.allSettled(modelKeys.map(async k => {
-    bestRuns[k] = await getBestRun(k);
-  }));
+  // Load models sequentially to avoid 429 rate limiting
+  // Render skeleton cards first, then fill each as data arrives
+  showLoading(sc,'LOADING MODELS...');
 
-  showLoading(sc,'LOADING ALL MODELS...');
-  // Second pass: fetch full bundle with best run
-  const bundles = await Promise.allSettled(
-    modelKeys.map(k => {
+  // Build temp range context as we go
+  let absHi=95, absLo=55, fullR=40;
+
+  // Render the page shell with skeleton cards immediately
+  sc.innerHTML=`
+    <div class="hero" id="fc-hero">
+      <div class="hero-top">
+        <div>
+          <div class="hero-loc"><span class="sdot"></span>${S.loc.name}</div>
+          <div class="hero-date">${now.toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'})}</div>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--ink2);text-align:right;line-height:2;">
+          ALL MODELS<br>${now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} LOCAL
+        </div>
+      </div>
+      <div id="fc-now-row" style="display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px;">
+        ${modelKeys.map(k=>`<div id="fc-now-${k}" style="flex-shrink:0;text-align:center;padding:8px 10px;background:rgba(0,0,0,.2);border-radius:8px;border:1px solid ${MODELS[k].c}30;min-width:60px;">
+          <div style="font-family:'Outfit',sans-serif;font-weight:700;font-size:10px;color:${MODELS[k].c}">${MODELS[k].l}</div>
+          <div style="font-family:'Outfit',sans-serif;font-weight:900;font-size:28px;color:var(--ink2);line-height:1;margin:3px 0">--°</div>
+          <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2)">...</div>
+        </div>`).join('')}
+      </div>
+    </div>
+    <div class="pad" id="fc-cards">
+      ${modelKeys.map(k=>`
+        <div class="card" id="fc-card-${k}">
+          <div class="card-hd">
+            <div>
+              <div class="card-title" style="color:${MODELS[k].c}">${MODELS[k].l} · ${MODELS[k].n}</div>
+              <div class="card-sub">LOADING...</div>
+            </div>
+            <div class="card-badge" style="border-color:${MODELS[k].c}30;color:var(--ink2)">--</div>
+          </div>
+          <div class="card-body" style="color:var(--ink2);font-family:'DM Mono',monospace;font-size:9px;padding:12px 0;">
+            <div style="display:flex;gap:6px;align-items:center;">
+              <div style="width:8px;height:8px;border-radius:50%;background:${MODELS[k].c};animation:pulse 1.4s ease-in-out infinite;"></div>
+              FETCHING DATA...
+            </div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+
+  // Load each model sequentially
+  for (const k of modelKeys) {
+    try {
+      // Find best run
+      const br = await getBestRun(k);
+      bestRuns[k] = br;
       const useRuns = ['hrrr','rap'].includes(k);
-      const run = useRuns ? (bestRuns[k]?.run || availableRuns(k)[0]) : null;
-      return fetchBundle(k, ['temp','precip'], run, lat, lon);
-    })
-  );
+      const run = useRuns ? br.run : null;
 
-  // Build per-model data
-  const modelData=modelKeys.map((k,i)=>({
-    key:k,
-    mod:MODELS[k],
-    run:bestRuns[k]?.run || availableRuns(k)[0],
-    pct:bestRuns[k]?.pct || 0,
-    got:bestRuns[k]?.got || 0,
-    expected:bestRuns[k]?.expected || MODEL_HOURS[k]||48,
-    b:bundles[i].status==='fulfilled'?bundles[i].value:null,
-  }));
+      // Fetch full bundle
+      let b = null;
+      try {
+        b = await fetchBundle(k, ['temp','precip'], run, lat, lon);
+      } catch(e) { /* leave null */ }
 
-  // Compute cross-model daily stats for range context
-  const allHis=[], allLos=[];
-  modelData.forEach(({b})=>{
-    if(!b?.temp)return;
-    dailyStats(b.temp.times,b.temp.values).forEach(d=>{allHis.push(d.hi);allLos.push(d.lo);});
-  });
-  const absHi=allHis.length?Math.max(...allHis):95;
-  const absLo=allLos.length?Math.min(...allLos):65;
-  const fullR=absHi-absLo||1;
+      // Update range context
+      if (b?.temp) {
+        dailyStats(b.temp.times, b.temp.values).forEach(d => {
+          absHi = Math.max(absHi, d.hi);
+          absLo = Math.min(absLo, d.lo);
+        });
+        fullR = Math.max(absHi - absLo, 1);
+      }
+
+      // Render this model's now-tile
+      const nowEl = document.getElementById(`fc-now-${k}`);
+      if (nowEl && b?.temp) {
+        const v = currentValue(b.temp);
+        nowEl.innerHTML = `
+          <div style="font-family:'Outfit',sans-serif;font-weight:700;font-size:10px;color:${MODELS[k].c}">${MODELS[k].l}</div>
+          <div style="font-family:'Outfit',sans-serif;font-weight:900;font-size:28px;color:${tCol(v??82)};line-height:1;margin:3px 0">${v!=null?Math.round(v):'--'}°</div>
+          <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2)">${br.run}</div>`;
+      }
+
+      // Render this model's card
+      const cardEl = document.getElementById(`fc-card-${k}`);
+      if (cardEl) {
+        const pct = br.pct;
+        const got = br.got;
+        const exp = expectedPoints(k, br.run);
+        cardEl.innerHTML = `
+          <div class="card-hd">
+            <div>
+              <div class="card-title" style="color:${MODELS[k].c}">${MODELS[k].l} · ${MODELS[k].n}</div>
+              <div class="card-sub">${br.run} · ${MODELS[k].r}</div>
+            </div>
+            ${b?.temp
+              ? `<div class="card-badge" style="border-color:${MODELS[k].c}50;color:${MODELS[k].c}">${pct}% · ${got}/${exp}pts</div>`
+              : '<div class="card-badge" style="color:#f87171;border-color:#f8717150">NO DATA</div>'}
+          </div>
+          <div class="card-body">
+            ${modelDayRow(k, b, br.run, {pct, mkey:k})}
+          </div>`;
+      }
+    } catch(e) {
+      const cardEl = document.getElementById(`fc-card-${k}`);
+      if (cardEl) cardEl.querySelector('.card-body').innerHTML =
+        `<div style="color:#f87171;font-family:'DM Mono',monospace;font-size:9px;">ERROR: ${e.message}</div>`;
+    }
+  }
 
   // Completion % — based on expected data points (interval-aware)
   function completionPct(data, mkey, run) {
@@ -1217,62 +1297,8 @@ async function tabForecast(sc){
         ${fullDays.length===0?`<div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--ink1);padding:8px 0;">DATA LOADING...</div>`:''}
       </div>`;
   }
-
-  sc.innerHTML=`
-    <div class="hero fu d1">
-      <div class="hero-top">
-        <div>
-          <div class="hero-loc"><span class="sdot"></span>${S.loc.name}</div>
-          <div class="hero-date">${now.toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'})}</div>
-        </div>
-        <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--ink2);text-align:right;line-height:2;">
-          ALL MODELS<br>${now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} LOCAL
-        </div>
-      </div>
-      <!-- Cross-model NOW summary -->
-      <div style="display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin-bottom:0;padding-bottom:0;">
-        ${modelData.filter(({b})=>b?.temp).map(({key,mod,b,run})=>{
-          const v=currentValue(b.temp);
-          return`<div style="flex-shrink:0;text-align:center;padding:8px 10px;background:rgba(0,0,0,.2);border-radius:8px;border:1px solid ${mod.c}30">
-            <div style="font-family:'Outfit',sans-serif;font-weight:700;font-size:10px;color:${mod.c};letter-spacing:.5px">${mod.l}</div>
-            <div style="font-family:'Outfit',sans-serif;font-weight:900;font-size:28px;color:${tCol(v??82)};line-height:1;margin:3px 0">${v!=null?Math.round(v):'--'}°</div>
-            <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--ink2)">${run}</div>
-          </div>`;
-        }).join('')}
-      </div>
-      <div class="hero-stats" style="margin-top:0;">
-        ${modelData.filter(({b})=>b?.temp).slice(0,5).map(({key,mod,b,run})=>{
-          const days=dailyStats(b.temp.times,b.temp.values);
-          const hi=days[0]?.hi;const lo=days[0]?.lo;
-          const pct=completionPct(b.temp,key,run);
-          return`<div class="hstat">
-            <div class="hstat-v" style="font-size:14px;color:${mod.c}">${mod.l}</div>
-            <div style="font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:${tCol(hi??82)}">${hi?Math.round(hi)+'°':'--'}</div>
-            <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--sky)">${lo?Math.round(lo)+'°':'--'}</div>
-            <div class="hstat-l" style="color:${pct>=90?'#34d399':pct>=60?'#fbbf24':'#f87171'}">${pct}%</div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>
-
-    <div class="pad">
-      ${modelData.map(({key,mod,b,run,pct,got,expected})=>`
-        <div class="card fu d2">
-          <div class="card-hd">
-            <div>
-              <div class="card-title" style="color:${mod.c}">${mod.l} · ${mod.n}</div>
-              <div class="card-sub">${run} · ${mod.r}</div>
-            </div>
-            ${b?.temp?`<div class="card-badge" style="border-color:${mod.c}50;color:${mod.c}">
-              ${pct}% · ${got}/${expectedPoints(key,run)}pts
-            </div>`:'<div class="card-badge" style="color:#f87171;border-color:#f8717150">NO DATA</div>'}
-          </div>
-          <div class="card-body">
-            ${modelDayRow(key,b,run,{pct,mkey:key})}
-          </div>
-        </div>`).join('')}
-    </div>`;
 }
+
 
 
 async function tabTemp(sc){
