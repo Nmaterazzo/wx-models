@@ -443,9 +443,33 @@ function normalizeValue(gv, v, prevV){
 }
 
 // Models that support the /runs endpoint (cycle-specific)
-const RUNS_ENDPOINT = new Set(['hrrr','rap','rrfs','nbm']);
-// Models that use /timeseries (no cycle pinning)
-const TIMESERIES_ENDPOINT = new Set(['gfs','ecmwf','graphcast']);
+const RUNS_ENDPOINT = new Set(['hrrr','rap','rrfs','nbm','ecmwf','graphcast','gfs']);
+// All models use /runs — but with different cycle logic
+
+// Latest cycle time for models that run less frequently
+function latestModelCycle(mkey, run) {
+  // For explicit run selection, honour it
+  if (run) return latestCycleTime(run);
+  // ECMWF: 00Z and 12Z only
+  if (mkey === 'ecmwf' || mkey === 'ifsoper') {
+    const d = new Date();
+    const h = d.getUTCHours();
+    d.setUTCMinutes(0,0,0);
+    d.setUTCHours(h >= 12 ? 12 : 0, 0, 0, 0);
+    if (d > new Date()) d.setUTCDate(d.getUTCDate() - 1);
+    return d;
+  }
+  // GFS: 00Z/06Z/12Z/18Z — pick most recent
+  if (mkey === 'gfs') {
+    const d = new Date();
+    const h = d.getUTCHours();
+    const cycle = h >= 18 ? 18 : h >= 12 ? 12 : h >= 6 ? 6 : 0;
+    d.setUTCHours(cycle, 0, 0, 0);
+    if (d > new Date()) d.setUTCDate(d.getUTCDate() - 1);
+    return d;
+  }
+  return latestCycleTime('12Z');
+}
 
 // Simple concurrency limiter — max 2 at once to avoid 429
 let _inflight = 0;
@@ -475,44 +499,29 @@ async function fetchGrib(mkey, vkey, run, lat, lon) {
 
   const modelId = MODEL_IDS[mkey];
   const hours   = MODEL_HOURS[mkey] || 48;
-  const isAccum = gv.name === 'APCP' || gv.name === 'ASNOW';
 
-  // Build cache key — timeseries models don't need cycle
-  const useRuns = RUNS_ENDPOINT.has(mkey);
-  const cycle   = latestCycleTime(run);
+  const isAccum = gv.name === 'APCP' || gv.name === 'ASNOW';
+  const cycle   = latestModelCycle(mkey, run);
   const cycleISO = isoNoMs(cycle);
-  const cacheKey = `${mkey}|${vkey}|${useRuns ? cycleISO : run}|${lat.toFixed(4)}|${lon.toFixed(4)}`;
+  const cacheKey = `${mkey}|${vkey}|${cycleISO}|${lat.toFixed(4)}|${lon.toFixed(4)}`;
 
   if (CACHE[cacheKey]) return CACHE[cacheKey];
   if (IN_FLIGHT[cacheKey]) return IN_FLIGHT[cacheKey];
 
   const promise = (async () => {
     let body, endpoint;
+    const cycle = latestModelCycle(mkey, run);
+    const cycleISO = isoNoMs(cycle);
 
-    if (useRuns) {
-      // /runs — pin to exact model cycle
-      endpoint = `${modelId}/runs`;
-      body = {
-        forecastedFrom:  cycleISO,
-        forecastedUntil: cycleISO,
-        minLeadTime: '0h',
-        maxLeadTime: `${hours}h`,
-        coordinates: [{lat, lon, name:'loc'}],
-        variables: [{name: gv.name, level: gv.level, info:''}],
-      };
-    } else {
-      // /timeseries — latest available data
-      const now = new Date();
-      now.setUTCMinutes(0,0,0);
-      const until = new Date(now.getTime() + hours * 3.6e6);
-      endpoint = `${modelId}/timeseries`;
-      body = {
-        fromTime:  isoNoMs(now),
-        untilTime: isoNoMs(until),
-        coordinates: [{lat, lon, name:'loc'}],
-        variables: [{name: gv.name, level: gv.level, info:''}],
-      };
-    }
+    endpoint = `${modelId}/runs`;
+    body = {
+      forecastedFrom:  cycleISO,
+      forecastedUntil: cycleISO,
+      minLeadTime: '0h',
+      maxLeadTime: `${hours}h`,
+      coordinates: [{lat, lon, name:'loc'}],
+      variables: [{name: gv.name, level: gv.level, info:''}],
+    };
 
     const res = await _limitedFetch(`${WORKER}/${endpoint}`, {
       method: 'POST',
@@ -1698,21 +1707,21 @@ function buildSwimLanes(sel,allD,ref,n){
    COMPARE RUNS
 ═══════════════════════════════════════════ */
 async function rRuns(sc){
-  const vi=VARS[S.var],mod=MODELS[S.runModel];
+  const mod=MODELS[S.runModel];
   const runs=RUNS[S.runModel],sel=S.cmpRuns,{lat,lon}=S.loc;
-  showLoading(sc,`LOADING ${sel.length} RUNS...`);
+  showLoading(sc,`LOADING ${sel.length} ${mod.l} RUNS...`);
 
-  const[varR,tR,pR]=await Promise.all([
-    Promise.allSettled(sel.map(r=>fetchGrib(S.runModel,S.var,r,lat,lon))),
+  // Always fetch temp + precip + wind regardless of current var tab
+  const [tR,pR,wR]=await Promise.all([
     Promise.allSettled(sel.map(r=>fetchGrib(S.runModel,'temp',r,lat,lon))),
     Promise.allSettled(sel.map(r=>fetchGrib(S.runModel,'precip',r,lat,lon))),
+    Promise.allSettled(sel.map(r=>fetchGrib(S.runModel,'wind',r,lat,lon))),
   ]);
 
-  const RD=sel.map((r,i)=>({run:r,d:varR[i].status==='fulfilled'?varR[i].value:{times:[],values:[]}}));
   const tRD=sel.map((r,i)=>({run:r,d:tR[i].status==='fulfilled'?tR[i].value:{times:[],values:[]}}));
   const pRD=sel.map((r,i)=>({run:r,d:pR[i].status==='fulfilled'?pR[i].value:{times:[],values:[]}}));
+  const wRD=sel.map((r,i)=>({run:r,d:wR[i].status==='fulfilled'?wR[i].value:{times:[],values:[]}}));
 
-  // align by valid time
   function runMap(rd){
     const m=new Map();
     (rd.d.times||[]).forEach((t,i)=>{
@@ -1721,39 +1730,131 @@ async function rRuns(sc){
     });
     return m;
   }
-  function aligned(rows,limit=null){
+  function aligned(rows){
     const maps=rows.map(runMap);
     const allTs=[...new Set(maps.flatMap(m=>[...m.keys()]))].sort((a,b)=>a-b);
-    const ts=limit?allTs.slice(0,limit):allTs;
     return{
-      times:ts.map(t=>new Date(t)),
-      valuesFor:(i)=>ts.map(t=>maps[i].has(t)?maps[i].get(t):null),
-      spread:ts.map(t=>{
-        const vs=maps.map(m=>m.get(t)).filter(validNum);
-        return vs.length>=2?Math.max(...vs)-Math.min(...vs):null;
-      }),
+      times:allTs.map(t=>new Date(t)),
+      valuesFor:(i)=>allTs.map(t=>maps[i].has(t)?maps[i].get(t):null),
+      meanAt:(t)=>{const vs=maps.map(m=>m.get(t)).filter(validNum);return vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null;},
+      spread:allTs.map(t=>{const vs=maps.map(m=>m.get(t)).filter(validNum);return vs.length>=2?Math.max(...vs)-Math.min(...vs):null;}),
     };
   }
-  const A=aligned(RD);
-  const PA=aligned(pRD,24);
 
-  const spH=A.spread.filter(v=>v!==null);
-  const maxSp=Math.max(...spH,1);
-  const B=Math.min(14,A.times.length||1);
-  const bs=Math.max(1,Math.ceil(A.times.length/B));
+  const TA=aligned(tRD);
+  const PA=aligned(pRD);
+  const WA=aligned(wRD);
+
+  // ── TREND ANALYSIS ──────────────────────────
+  // Compare latest run (sel[0]) vs oldest run (sel[last]) at shared valid times
+  function trendAnalysis(A, rows, unit, label) {
+    const newest = rows[0]?.d;
+    const oldest = rows[rows.length-1]?.d;
+    if (!newest?.values.length || !oldest?.values.length) return null;
+
+    const newestMap = runMap(rows[0]);
+    const oldestMap = runMap(rows[rows.length-1]);
+    const sharedTs = [...newestMap.keys()].filter(t=>oldestMap.has(t));
+    if (sharedTs.length < 6) return null;
+
+    // Direction: is newest run warmer/wetter/windier than older run?
+    const diffs = sharedTs.slice(0,24).map(t=>(newestMap.get(t)||0)-(oldestMap.get(t)||0)).filter(v=>!isNaN(v));
+    if (!diffs.length) return null;
+    const meanDiff = diffs.reduce((a,b)=>a+b,0)/diffs.length;
+    const maxDiff  = Math.max(...diffs.map(Math.abs));
+
+    // Daily hi/lo shift
+    const newestStats = dailyStats(newest.times, newest.values);
+    const oldestStats = dailyStats(oldest.times, oldest.values);
+    const hiShift = newestStats[0] && oldestStats[0] ? newestStats[0].hi - oldestStats[0].hi : null;
+    const loShift = newestStats[0] && oldestStats[0] ? newestStats[0].lo - oldestStats[0].lo : null;
+
+    // Precip: total shift (only for precip)
+    return { meanDiff, maxDiff, hiShift, loShift, unit, label,
+      runA: rows[0].run, runB: rows[rows.length-1].run };
+  }
+
+  const tempTrend   = trendAnalysis(TA, tRD, '°F', 'Temperature');
+  const precipTrend = trendAnalysis(PA, pRD, 'in', 'Precipitation');
+  const windTrend   = trendAnalysis(WA, wRD, 'mph', 'Wind');
+
+  function trendArrow(v) {
+    if (v === null || Math.abs(v) < 0.2) return {icon:'→', color:'var(--ink3)', label:'UNCHANGED'};
+    return v > 0
+      ? {icon:'↑', color:'#fb923c', label:'TRENDING UP'}
+      : {icon:'↓', color:'#38bdf8', label:'TRENDING DOWN'};
+  }
+  function trendCard(t) {
+    if (!t) return '';
+    const arr = trendArrow(t.meanDiff);
+    const mag = Math.abs(t.meanDiff);
+    const intensity = mag < 0.5 ? 'MINIMAL' : mag < 1.5 ? 'SLIGHT' : mag < 3 ? 'MODERATE' : 'SIGNIFICANT';
+    const hiArr = t.hiShift != null ? trendArrow(t.hiShift) : null;
+    const loArr = t.loShift != null ? trendArrow(t.loShift) : null;
+    return `
+      <div style="background:rgba(255,255,255,.03);border:1px solid var(--rim);border-radius:var(--Rsm);padding:12px 14px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div style="font-family:'Outfit',sans-serif;font-weight:700;font-size:12px;letter-spacing:.5px;color:var(--white);">${t.label.toUpperCase()}</div>
+          <div style="font-family:'Outfit',sans-serif;font-weight:800;font-size:22px;color:${arr.color};line-height:1;">
+            ${arr.icon} ${intensity}
+          </div>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--ink3);line-height:2;">
+          ${t.runA} vs ${t.runB} &nbsp;·&nbsp;
+          avg shift <b style="color:${arr.color}">${t.meanDiff>=0?'+':''}${t.meanDiff.toFixed(1)}${t.unit}</b> &nbsp;·&nbsp;
+          max <b style="color:var(--white)">${t.maxDiff.toFixed(1)}${t.unit}</b>
+        </div>
+        ${hiArr && loArr ? `
+        <div style="display:flex;gap:12px;margin-top:8px;">
+          <div style="font-family:'DM Mono',monospace;font-size:10px;">
+            TODAY HIGH &nbsp;<span style="color:${hiArr.color};font-weight:700;">${hiArr.icon}${t.hiShift>=0?'+':''}${t.hiShift.toFixed(1)}°</span>
+          </div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;">
+            TODAY LOW &nbsp;<span style="color:${loArr.color};font-weight:700;">${loArr.icon}${t.loShift>=0?'+':''}${t.loShift.toFixed(1)}°</span>
+          </div>
+        </div>` : ''}
+      </div>`;
+  }
+
+  // Summary sentence
+  function summaryText() {
+    const lines = [];
+    if (tempTrend && Math.abs(tempTrend.meanDiff) > 0.5) {
+      const dir = tempTrend.meanDiff > 0 ? 'warmer' : 'cooler';
+      lines.push(`${mod.l} is trending <b style="color:${tempTrend.meanDiff>0?'#fb923c':'#38bdf8'}">${dir}</b> — ${Math.abs(tempTrend.meanDiff).toFixed(1)}°F avg shift from ${tempTrend.runB} → ${tempTrend.runA}.`);
+    }
+    if (precipTrend && Math.abs(precipTrend.meanDiff) > 0.002) {
+      const dir = precipTrend.meanDiff > 0 ? 'more precipitation' : 'less precipitation';
+      lines.push(`Model is showing <b style="color:${precipTrend.meanDiff>0?'#818cf8':'var(--ink3)'}">${dir}</b> in the latest run.`);
+    }
+    if (windTrend && Math.abs(windTrend.meanDiff) > 1) {
+      const dir = windTrend.meanDiff > 0 ? 'stronger winds' : 'lighter winds';
+      lines.push(`Wind trend: <b style="color:${windTrend.meanDiff>0?'#fb923c':'#34d399'}">${dir}</b> (${windTrend.meanDiff>=0?'+':''}${windTrend.meanDiff.toFixed(1)} mph avg).`);
+    }
+    if (!lines.length) lines.push('Runs are in close agreement — no significant trend shifts detected.');
+    return lines.join(' ');
+  }
+
+  // Spread heatmap for temp
+  const spH=TA.spread.filter(v=>v!==null);
+  const maxSpH=Math.max(...spH,1);
+  const B=Math.min(16,TA.times.length||1);
+  const bs=Math.max(1,Math.ceil(TA.times.length/B));
   const hmRows=Array.from({length:B},(_,b)=>{
-    const sl=A.spread.slice(b*bs,(b+1)*bs).filter(v=>v!==null);
+    const sl=TA.spread.slice(b*bs,(b+1)*bs).filter(v=>v!==null);
     if(!sl.length)return'';
     const avg=sl.reduce((a,v)=>a+v,0)/sl.length;
-    const t=A.times[b*bs];
-    const lbl=t?t.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'+'+b*bs+'h';
-    const p=avg/maxSp;
+    const t=TA.times[b*bs];
+    const lbl=t?t.toLocaleString([],{weekday:'short',hour:'numeric'}):'+'+b*bs+'h';
+    const p=avg/maxSpH;
     const r=Math.round(p*248+(1-p)*52);const g=Math.round(p*113+(1-p)*211);const bv=Math.round(p*113+(1-p)*153);
-    return`<div class="hrow"><div class="hlbl">${lbl}</div><div class="hcell" style="background:rgba(${r},${g},${bv},.6)">${avg.toFixed(1)}</div></div>`;
+    return`<div class="hrow"><div class="hlbl" style="font-size:8px;width:48px;">${lbl}</div><div class="hcell" style="background:rgba(${r},${g},${bv},.65);border-radius:3px;">${avg.toFixed(1)}°</div></div>`;
   }).join('');
 
   sc.innerHTML=`
     <div class="pad">
+
+      <!-- model + run selectors -->
       <div class="fu d1">
         <div class="slbl" style="margin-bottom:8px;">MODEL</div>
         <div style="display:flex;flex-wrap:wrap;gap:5px;">
@@ -1765,7 +1866,7 @@ async function rRuns(sc){
       </div>
 
       <div class="fu d1">
-        <div class="slbl" style="margin-bottom:8px;">RUNS — TAP TO TOGGLE (MAX 4)</div>
+        <div class="slbl" style="margin-bottom:8px;">RUNS — TAP TO COMPARE (MAX 4)</div>
         <div class="rcpills">
           ${runs.map((r,i)=>{
             const si=sel.indexOf(r);
@@ -1777,28 +1878,56 @@ async function rRuns(sc){
         </div>
       </div>
 
+      <!-- TREND ANALYSIS -->
       <div class="card fu d2">
         <div class="card-hd">
-          <div><div class="card-title">${vi.l} · RUN COMPARISON</div><div class="card-sub"><span class="sdot"></span>${mod.l} · ${sel.length} runs · newest = solid</div></div>
-          <div class="card-badge">${vi.u}</div>
+          <div>
+            <div class="card-title">RUN TREND ANALYSIS</div>
+            <div class="card-sub">${mod.l} · comparing ${sel[0]} (latest) vs ${sel[sel.length-1]} (oldest)</div>
+          </div>
         </div>
         <div class="card-body">
-          <div class="legend">${sel.map((r,i)=>`<div class="li"><div class="ll" style="background:${RC[i]}"></div>${r}</div>`).join('')}</div>
-          <div class="ch-wrap"><canvas id="ch-runs"></canvas></div>
+          <!-- summary sentence -->
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:15px;color:var(--lit);
+            line-height:1.7;margin-bottom:14px;padding:12px 14px;
+            background:rgba(56,189,248,.05);border-left:3px solid var(--sky);border-radius:0 6px 6px 0;">
+            ${summaryText()}
+          </div>
+          <!-- per-variable trend cards -->
+          ${trendCard(tempTrend)}
+          ${trendCard(precipTrend)}
+          ${trendCard(windTrend)}
         </div>
       </div>
 
+      <!-- TEMPERATURE FAN CHART across runs -->
       <div class="card fu d3">
         <div class="card-hd">
-          <div><div class="card-title">RUN DIVERGENCE</div><div class="card-sub">spread aligned by valid forecast time</div></div>
-          <div class="card-badge">${vi.u}</div>
+          <div><div class="card-title">TEMPERATURE · RUN SPAGHETTI</div>
+          <div class="card-sub"><span class="sdot"></span>${mod.l} · newest = solid + filled · older = dashed</div></div>
+          <div class="card-badge">°F</div>
+        </div>
+        <div class="card-body">
+          <div class="legend">${sel.map((r,i)=>`<div class="li"><div class="ll" style="background:${RC[i]}"></div>${r}</div>`).join('')}</div>
+          <div class="ch-wrap"><canvas id="ch-rt"></canvas></div>
+        </div>
+      </div>
+
+      <!-- TEMP DIVERGENCE HEATMAP -->
+      <div class="card fu d3">
+        <div class="card-hd">
+          <div><div class="card-title">TEMPERATURE DIVERGENCE</div>
+          <div class="card-sub">hourly spread between runs · green=agree · red=diverge</div></div>
+          <div class="card-badge">°F</div>
         </div>
         <div class="card-body">${hmRows||'<div class="es">Need ≥2 runs with overlapping valid times.</div>'}</div>
       </div>
 
-      <div class="card fu d3">
+      <!-- DAILY HIGH SHIFT -->
+      <div class="card fu d4">
         <div class="card-hd">
-          <div><div class="card-title">DAILY HIGH — RUN SHIFT</div><div class="card-sub">how each run's hi/lo forecast compares</div></div>
+          <div><div class="card-title">DAILY HIGH — HOW RUNS SHIFTED</div>
+          <div class="card-sub">each run's high temp forecast per day</div></div>
           <div class="card-badge">°F</div>
         </div>
         <div class="card-body">
@@ -1807,40 +1936,46 @@ async function rRuns(sc){
         </div>
       </div>
 
+      <!-- PRECIP SWIM LANES across runs -->
       <div class="card fu d4">
         <div class="card-hd">
-          <div><div class="card-title">PRECIP TIMING — RUN COMPARISON</div><div class="card-sub">where each run places the rain</div></div>
+          <div><div class="card-title">PRECIPITATION · RUN COMPARISON</div>
+          <div class="card-sub">timing and intensity per run</div></div>
           <div class="card-badge">in</div>
         </div>
         <div class="card-body">
           <div class="legend">${sel.map((r,i)=>`<div class="li"><div class="ll" style="background:${RC[i]}"></div>${r}</div>`).join('')}</div>
-          <div class="ch-wrap"><canvas id="ch-rprecip"></canvas></div>
+          <div class="ch-wrap"><canvas id="ch-rp"></canvas></div>
         </div>
       </div>
 
+      <!-- NOW VALUES -->
       <div class="fu d5">
-        <div class="slbl" style="margin-bottom:8px;">CURRENT HOUR · ${vi.l}</div>
+        <div class="slbl" style="margin-bottom:8px;">CURRENT HOUR · TEMPERATURE</div>
         <div class="cv-grid">
-          ${RD.slice(0,4).map((rd,i)=>{
+          ${tRD.slice(0,4).map((rd,i)=>{
             const v=currentValue(rd.d);
             return`<div class="cvt" style="--tc:${RC[i]}">
               <div class="cvt-l" style="color:${RC[i]}">${rd.run}</div>
-              <div class="cvt-v">${fmtVal(v,vi.u)}</div>
-              <div class="cvt-u">${vi.u}</div>
+              <div class="cvt-v" style="color:${tCol(v??82)}">${fmtVal(v,'°F')}</div>
+              <div class="cvt-u">°F</div>
             </div>`;
           }).join('')}
         </div>
       </div>
+
     </div>`;
 
   requestAnimationFrame(()=>{
-    mkChart('ch-runs',A.times,RD.map((rd,i)=>({
-      label:rd.run,data:A.valuesFor(i),
-      borderColor:RC[i],backgroundColor:i===0?RC[i]+'18':'transparent',
+    // temperature spaghetti
+    mkChart('ch-rt',TA.times,tRD.map((rd,i)=>({
+      label:rd.run,data:TA.valuesFor(i),
+      borderColor:RC[i],backgroundColor:i===0?RC[i]+'20':'transparent',
       borderWidth:i===0?2.5:1.2,borderDash:i===0?[]:[4,3],
-      pointRadius:0,pointHoverRadius:5,tension:.4,fill:i===0,spanGaps:true,order:RD.length-i,
-    })),vi.u,240);
+      pointRadius:0,pointHoverRadius:5,tension:.4,fill:i===0,spanGaps:true,order:tRD.length-i,
+    })),'°F',240);
 
+    // daily high bar
     const dayLabels=['TODAY','D+1','D+2','D+3','D+4','D+5','D+6'];
     mkChart('ch-rhilo',dayLabels,tRD.map((rd,i)=>{
       const stats=dailyStats(rd.d.times,rd.d.values);
@@ -1848,20 +1983,20 @@ async function rRuns(sc){
         backgroundColor:RC[i]+'99',borderColor:RC[i],borderWidth:1,borderRadius:4};
     }),'°F',190,true);
 
-    mkChart('ch-rprecip',PA.times,pRD.map((rd,i)=>({
+    // precip line
+    mkChart('ch-rp',PA.times,pRD.map((rd,i)=>({
       label:rd.run,data:PA.valuesFor(i),
-      borderColor:RC[i],backgroundColor:RC[i]+'25',
-      borderWidth:1.5,pointRadius:0,pointHoverRadius:4,tension:.4,fill:true,spanGaps:true,
+      borderColor:RC[i],backgroundColor:RC[i]+'22',
+      borderWidth:i===0?2:1.2,borderDash:i===0?[]:[4,3],
+      pointRadius:0,pointHoverRadius:4,tension:.4,fill:true,spanGaps:true,
     })),'in',190);
   });
 }
 
 
 /* ═══════════════════════════════════════════
-   MAP TAB — GRID OVERLAY
+   INIT
 ═══════════════════════════════════════════ */
-
-// Southeast US bounding box
 S.loc=PLACES['land o'];
 S.loaded=true;
 render();
