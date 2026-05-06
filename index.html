@@ -441,7 +441,19 @@ const ECMWF_VARS={
 // RRFS uses surface dataset (rrfs), not pressure level (rrfsprslev)
 
 const MODEL_IDS={hrrr:'hrrr',gfs:'gfs',nbm:'nbm',rap:'rap',ecmwf:'ifsoper',graphcast:'graphcast',rrfs:'rrfs'};
-const MODEL_HOURS={hrrr:48,gfs:168,nbm:168,rap:51,ecmwf:168,graphcast:168,rrfs:84};
+const MODEL_HOURS={hrrr:48,gfs:168,nbm:168,rap:51,ecmwf:144,graphcast:240,rrfs:60};
+// Data points per hour each model produces (affects completion % and day qualification)
+const MODEL_INTERVAL={hrrr:1,gfs:1,nbm:1,rap:1,ecmwf:3,graphcast:6,rrfs:1};
+// Expected data points for a full run
+function expectedPoints(mkey){
+  return Math.ceil((MODEL_HOURS[mkey]||48) / (MODEL_INTERVAL[mkey]||1));
+}
+// Minimum points to consider a day "complete enough" to show
+function minDayPoints(mkey){
+  const interval = MODEL_INTERVAL[mkey]||1;
+  // At least 50% of the day's expected points
+  return Math.max(1, Math.floor(24/interval * 0.5));
+}
 const CACHE={};
 
 function isoNoMs(d){return d.toISOString().replace('.000','');}
@@ -652,9 +664,38 @@ async function fetchBundle(mkey,vkeys,run,lat,lon){
   const results=await Promise.allSettled(vkeys.map(vk=>fetchGrib(mkey,vk,run,lat,lon)));
   const out={};
   vkeys.forEach((vk,i)=>{
-    out[vk]=results[i].status==='fulfilled'?results[i].value:null;
+    const raw=results[i].status==='fulfilled'?results[i].value:null;
+    out[vk]=raw?interpolateHourly(raw):null;
   });
   return out;
+}
+
+// Linearly interpolate sparse data to hourly resolution
+// Fills gaps between data points, doesn't extrapolate beyond last point
+function interpolateHourly(data) {
+  if (!data?.times?.length) return data;
+  const interval = data.times.length > 1
+    ? Math.round((data.times[1].getTime() - data.times[0].getTime()) / 3.6e6)
+    : 1;
+  if (interval <= 1) return data; // already hourly
+
+  const outTimes = [], outValues = [];
+  for (let i = 0; i < data.times.length - 1; i++) {
+    const t0 = data.times[i].getTime(), t1 = data.times[i+1].getTime();
+    const v0 = data.values[i], v1 = data.values[i+1];
+    const steps = Math.round((t1 - t0) / 3.6e6);
+    for (let s = 0; s < steps; s++) {
+      const t = new Date(t0 + s * 3.6e6);
+      const frac = s / steps;
+      const v = (v0 !== null && v1 !== null) ? v0 + (v1 - v0) * frac : (v0 ?? v1);
+      outTimes.push(t);
+      outValues.push(v !== null ? +v.toFixed(3) : null);
+    }
+  }
+  // Push last point
+  outTimes.push(data.times[data.times.length - 1]);
+  outValues.push(data.values[data.values.length - 1]);
+  return {times: outTimes, values: outValues};
 }
 
 function dailyStats(times,vals){
@@ -1030,15 +1071,21 @@ async function tabForecast(sc){
   // fall back to the previous run. We do this by fetching temp only first.
   async function getBestRun(mkey) {
     const runs = availableRuns(mkey);
-    const expected = MODEL_HOURS[mkey] || 48;
+    const expected = expectedPoints(mkey);
     for (let i = 0; i < Math.min(runs.length, 4); i++) {
       try {
         const d = await fetchGrib(mkey, 'temp', runs[i], lat, lon);
         const got = d.values.filter(v=>v!==null).length;
-        if (got / expected >= 0.7) return {run: runs[i], pct: Math.round(got/expected*100), got, expected};
+        if (got / expected >= 0.65) return {run: runs[i], pct: Math.round(got/expected*100), got, expected};
       } catch(e) { /* try next */ }
     }
-    return {run: availableRuns(mkey)[0], pct: 0, got: 0, expected};
+    // If nothing passes threshold, just use the latest and report what we got
+    try {
+      const d = await fetchGrib(mkey, 'temp', runs[0], lat, lon);
+      const got = d.values.filter(v=>v!==null).length;
+      return {run: runs[0], pct: Math.round(got/expected*100), got, expected};
+    } catch(e) {}
+    return {run: runs[0], pct: 0, got: 0, expected};
   }
 
   showLoading(sc,'FINDING BEST RUN PER MODEL...');
@@ -1075,14 +1122,14 @@ async function tabForecast(sc){
   const absLo=allLos.length?Math.min(...allLos):65;
   const fullR=absHi-absLo||1;
 
-  // Completion % helper
-  function completionPct(data, expectedHours) {
+  // Completion % — based on expected data points (interval-aware)
+  function completionPct(data, mkey) {
     if(!data?.times?.length)return 0;
     const count=data.times.filter(t=>t instanceof Date&&!isNaN(t)).length;
-    return Math.min(100,Math.round(count/expectedHours*100));
+    return Math.min(100,Math.round(count/expectedPoints(mkey)*100));
   }
 
-  // Build daily card row for one model — only show full days
+  // Build daily card row — only show days with enough points for this model's interval
   function modelDayRow(mkey, b, run, md) {
     const mod=MODELS[mkey];
     if(!b?.temp)return`<div style="color:var(--ink2);font-family:'DM Mono',monospace;font-size:9px;padding:10px 0;">NO DATA</div>`;
@@ -1090,16 +1137,13 @@ async function tabForecast(sc){
     const days=dailyStats(b.temp.times,b.temp.values);
     const nowT=currentValue(b.temp);
     const p24=(b.precip?.values||[]).slice(0,24).reduce((a,v)=>a+(v||0),0);
-    const expHours=md.expected||MODEL_HOURS[mkey]||48;
-    const pct=md.pct||completionPct(b.temp,expHours);
+    const pct=md.pct!=null?md.pct:completionPct(b.temp,md.mkey||mkey);
+    const threshold = minDayPoints(md.mkey||mkey);
 
-    // Only show a day if we have data for >75% of its hours (18 of 24)
-    function dayHourCount(d) {
-      return b.temp.times.filter(t=>{
-        return t instanceof Date && t.toDateString()===d.date.toDateString();
-      }).length;
+    function dayPointCount(d) {
+      return b.temp.times.filter(t=>t instanceof Date&&t.toDateString()===d.date.toDateString()).length;
     }
-    const fullDays=days.filter(d=>dayHourCount(d)>=18);
+    const fullDays=days.filter(d=>dayPointCount(d)>=threshold);
 
     return `
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;">
@@ -1160,7 +1204,7 @@ async function tabForecast(sc){
         ${modelData.filter(({b})=>b?.temp).slice(0,5).map(({key,mod,b,run})=>{
           const days=dailyStats(b.temp.times,b.temp.values);
           const hi=days[0]?.hi;const lo=days[0]?.lo;
-          const pct=completionPct(b.temp,MODEL_HOURS[key]||48);
+          const pct=completionPct(b.temp,key);
           return`<div class="hstat">
             <div class="hstat-v" style="font-size:14px;color:${mod.c}">${mod.l}</div>
             <div style="font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:${tCol(hi??82)}">${hi?Math.round(hi)+'°':'--'}</div>
@@ -1180,11 +1224,11 @@ async function tabForecast(sc){
               <div class="card-sub">${run} · ${mod.r}</div>
             </div>
             ${b?.temp?`<div class="card-badge" style="border-color:${mod.c}50;color:${mod.c}">
-              ${pct}% · ${got}/${expected}hrs
+              ${pct}% · ${got}/${expectedPoints(key)}pts
             </div>`:'<div class="card-badge" style="color:#f87171;border-color:#f8717150">NO DATA</div>'}
           </div>
           <div class="card-body">
-            ${modelDayRow(key,b,run,{pct,expected:MODEL_HOURS[key]||48})}
+            ${modelDayRow(key,b,run,{pct,mkey:key})}
           </div>
         </div>`).join('')}
     </div>`;
@@ -1530,7 +1574,10 @@ async function rCompare(sc){
 
   const results=await Promise.allSettled(sel.map(k=>fetchGrib(k,vkey,getCmpRun(k),lat,lon)));
   const allD={};
-  sel.forEach((k,i)=>{allD[k]=results[i].status==='fulfilled'?results[i].value:{times:[],values:[]};});
+  sel.forEach((k,i)=>{
+    const raw=results[i].status==='fulfilled'?results[i].value:{times:[],values:[]};
+    allD[k]=interpolateHourly(raw); // normalize all to hourly
+  });
 
   const refKey=sel.find(k=>allD[k].times.length)||sel[0];
   const ref=allD[refKey].times||[];
@@ -1933,9 +1980,9 @@ async function rRuns(sc){
     Promise.allSettled(sel.map(r=>fetchGrib(S.runModel,'wind',r,lat,lon))),
   ]);
 
-  const tRD=sel.map((r,i)=>({run:r,d:tR[i].status==='fulfilled'?tR[i].value:{times:[],values:[]}}));
-  const pRD=sel.map((r,i)=>({run:r,d:pR[i].status==='fulfilled'?pR[i].value:{times:[],values:[]}}));
-  const wRD=sel.map((r,i)=>({run:r,d:wR[i].status==='fulfilled'?wR[i].value:{times:[],values:[]}}));
+  const tRD=sel.map((r,i)=>({run:r,d:interpolateHourly(tR[i].status==='fulfilled'?tR[i].value:{times:[],values:[]})}));
+  const pRD=sel.map((r,i)=>({run:r,d:interpolateHourly(pR[i].status==='fulfilled'?pR[i].value:{times:[],values:[]})}));
+  const wRD=sel.map((r,i)=>({run:r,d:interpolateHourly(wR[i].status==='fulfilled'?wR[i].value:{times:[],values:[]})}));
 
   function runMap(rd){
     const m=new Map();
