@@ -450,8 +450,9 @@ function normalizeValue(gv, v, prevV){
 }
 
 // Models that support the /runs endpoint (cycle-specific)
-const RUNS_ENDPOINT = new Set(['hrrr','rap','rrfs','nbm','ecmwf','graphcast','gfs']);
-// All models use /runs — but with different cycle logic
+// /runs = cycle-pinned (HRRR, RAP, RRFS only)
+// /timeseries = best value per valid time (GFS, NBM, ECMWF, GraphCast)
+const RUNS_MODELS = new Set(['hrrr','rap','rrfs']);
 
 // Processing latency per model (hours after cycle init before data is available)
 const MODEL_LATENCY = {
@@ -472,8 +473,8 @@ function latestModelCycle(mkey, run) {
   // "Available now" = current UTC minus latency
   const availableAt = new Date(Date.now() - latency * 3.6e6);
 
-  if (mkey === 'ecmwf') {
-    // ECMWF: 00Z and 12Z only
+  if (mkey === 'ecmwf' || mkey === 'graphcast') {
+    // 00Z and 12Z only
     const h = availableAt.getUTCHours();
     const d = new Date(availableAt);
     d.setUTCMinutes(0,0,0);
@@ -527,7 +528,9 @@ async function fetchGrib(mkey, vkey, run, lat, lon) {
   const hours   = MODEL_HOURS[mkey] || 48;
 
   const isAccum = gv.name === 'APCP' || gv.name === 'ASNOW';
-  const cycle   = latestModelCycle(mkey, run);
+  const useRuns = RUNS_MODELS.has(mkey);
+  // For /runs models, honour the requested run. For /timeseries, always use auto-detected cycle.
+  const cycle    = useRuns ? latestModelCycle(mkey, run) : latestModelCycle(mkey, null);
   const cycleISO = isoNoMs(cycle);
   const cacheKey = `${mkey}|${vkey}|${cycleISO}|${lat.toFixed(4)}|${lon.toFixed(4)}`;
 
@@ -536,18 +539,31 @@ async function fetchGrib(mkey, vkey, run, lat, lon) {
 
   const promise = (async () => {
     let body, endpoint;
-    const cycle = latestModelCycle(mkey, run);
-    const cycleISO = isoNoMs(cycle);
 
-    endpoint = `${modelId}/runs`;
-    body = {
-      forecastedFrom:  cycleISO,
-      forecastedUntil: cycleISO,
-      minLeadTime: '0h',
-      maxLeadTime: `${hours}h`,
-      coordinates: [{lat, lon, name:'loc'}],
-      variables: [{name: gv.name, level: gv.level, info:''}],
-    };
+    if (RUNS_MODELS.has(mkey)) {
+      // /runs — pin to exact model cycle (HRRR, RAP, RRFS)
+      endpoint = `${modelId}/runs`;
+      body = {
+        forecastedFrom:  cycleISO,
+        forecastedUntil: cycleISO,
+        minLeadTime: '0h',
+        maxLeadTime: `${hours}h`,
+        coordinates: [{lat, lon, name:'loc'}],
+        variables: [{name: gv.name, level: gv.level, info:''}],
+      };
+    } else {
+      // /timeseries — best value per valid time (GFS, NBM, ECMWF, GraphCast)
+      // Start from the latest model cycle so times align with run start, not current hour
+      const cycleStart = latestModelCycle(mkey, null);
+      const until = new Date(cycleStart.getTime() + hours * 3.6e6);
+      endpoint = `${modelId}/timeseries`;
+      body = {
+        fromTime:  isoNoMs(cycleStart),
+        untilTime: isoNoMs(until),
+        coordinates: [{lat, lon, name:'loc'}],
+        variables: [{name: gv.name, level: gv.level, info:''}],
+      };
+    }
 
     const res = await _limitedFetch(`${WORKER}/${endpoint}`, {
       method: 'POST',
