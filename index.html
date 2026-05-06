@@ -440,7 +440,7 @@ const ECMWF_VARS={
 };
 // RRFS uses surface dataset (rrfs), not pressure level (rrfsprslev)
 
-const MODEL_IDS={hrrr:'hrrr',gfs:'gfs',nbm:'nbm',rap:'rap',ecmwf:'ifsoper',graphcast:'graphcast',rrfs:'rrfs'};
+const MODEL_IDS={hrrr:'hrrr',gfs:'gfs',nbm:'nbm',rap:'rap',ecmwf:'ifsoper',graphcast:'graphcast',rrfs:'rrfsprslev'};
 const MODEL_HOURS={hrrr:48,gfs:168,nbm:168,rap:51,ecmwf:144,graphcast:240,rrfs:60};
 // Data points per hour each model produces (affects completion % and day qualification)
 const MODEL_INTERVAL={hrrr:1,gfs:1,nbm:1,rap:1,ecmwf:3,graphcast:6,rrfs:1};
@@ -449,10 +449,9 @@ function expectedPoints(mkey){
   return Math.ceil((MODEL_HOURS[mkey]||48) / (MODEL_INTERVAL[mkey]||1));
 }
 // Minimum points to consider a day "complete enough" to show
+// Just need at least 2 points (for a hi and lo) regardless of interval
 function minDayPoints(mkey){
-  const interval = MODEL_INTERVAL[mkey]||1;
-  // At least 50% of the day's expected points
-  return Math.max(1, Math.floor(24/interval * 0.5));
+  return 2;
 }
 const CACHE={};
 
@@ -495,7 +494,7 @@ function normalizeValue(gv, v, prevV){
 // Models that support the /runs endpoint (cycle-specific)
 // /runs = cycle-pinned (HRRR, RAP, RRFS only)
 // /timeseries = best value per valid time (GFS, NBM, ECMWF, GraphCast)
-const RUNS_MODELS = new Set(['hrrr','rap','rrfs']);
+const RUNS_MODELS = new Set(['hrrr','rap']); // RRFS uses /timeseries
 
 // Processing latency per model (hours after cycle init before data is available)
 const MODEL_LATENCY = {
@@ -604,14 +603,15 @@ async function fetchGrib(mkey, vkey, run, lat, lon) {
         variables: [{name: gv.name, level: gv.level, info:''}],
       };
     } else {
-      // /timeseries — pin to latest cycle window, short lead time for consistency
-      const cycleStart = latestModelCycle(mkey, null);
-      const until = new Date(cycleStart.getTime() + hours * 3.6e6);
+      // /timeseries — start from NOW so all models align at the current hour
+      const now = new Date();
+      now.setUTCMinutes(0,0,0);
+      const until = new Date(now.getTime() + hours * 3.6e6);
       endpoint = `${modelId}/timeseries`;
       body = {
-        fromTime:    isoNoMs(cycleStart),
+        fromTime:    isoNoMs(now),
         untilTime:   isoNoMs(until),
-        minLeadTime: '0h',   // only use data from latest cycle, no stale runs
+        minLeadTime: '0h',
         maxLeadTime: `${hours}h`,
         coordinates: [{lat, lon, name:'loc'}],
         variables: [{name: gv.name, level: gv.level, info:''}],
@@ -959,7 +959,7 @@ function availableRuns(mkey) {
   const cutoffH = cutoff.getUTCHours();
 
   // For hourly models (HRRR etc), show last 7 available hours
-  if (['hrrr','rap','nbm','rrfs'].includes(mkey)) {
+  if (['hrrr','rap','nbm'].includes(mkey)) {
     return Array.from({length:7},(_,i)=>{
       const h = ((cutoffH - i) + 24) % 24;
       return `${String(h).padStart(2,'0')}Z`;
