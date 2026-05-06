@@ -446,29 +446,48 @@ function normalizeValue(gv, v, prevV){
 const RUNS_ENDPOINT = new Set(['hrrr','rap','rrfs','nbm','ecmwf','graphcast','gfs']);
 // All models use /runs — but with different cycle logic
 
-// Latest cycle time for models that run less frequently
+// Processing latency per model (hours after cycle init before data is available)
+const MODEL_LATENCY = {
+  hrrr: 1,       // ~45 min, round to 1hr
+  rap:  1,
+  nbm:  1,
+  rrfs: 1,
+  gfs:  4,       // GFS takes 3-5 hrs to process
+  ecmwf:6,       // ECMWF operational is delayed ~6hrs
+  graphcast:4,
+};
+
 function latestModelCycle(mkey, run) {
-  // For explicit run selection, honour it
+  // If an explicit run was requested (e.g. "06Z"), honour it
   if (run) return latestCycleTime(run);
-  // ECMWF: 00Z and 12Z only
-  if (mkey === 'ecmwf' || mkey === 'ifsoper') {
-    const d = new Date();
-    const h = d.getUTCHours();
+
+  const latency = MODEL_LATENCY[mkey] || 2;
+  // "Available now" = current UTC minus latency
+  const availableAt = new Date(Date.now() - latency * 3.6e6);
+
+  if (mkey === 'ecmwf') {
+    // ECMWF: 00Z and 12Z only
+    const h = availableAt.getUTCHours();
+    const d = new Date(availableAt);
     d.setUTCMinutes(0,0,0);
     d.setUTCHours(h >= 12 ? 12 : 0, 0, 0, 0);
-    if (d > new Date()) d.setUTCDate(d.getUTCDate() - 1);
     return d;
   }
-  // GFS: 00Z/06Z/12Z/18Z — pick most recent
+
   if (mkey === 'gfs') {
-    const d = new Date();
-    const h = d.getUTCHours();
+    // GFS: 00Z/06Z/12Z/18Z
+    const h = availableAt.getUTCHours();
     const cycle = h >= 18 ? 18 : h >= 12 ? 12 : h >= 6 ? 6 : 0;
+    const d = new Date(availableAt);
     d.setUTCHours(cycle, 0, 0, 0);
-    if (d > new Date()) d.setUTCDate(d.getUTCDate() - 1);
     return d;
   }
-  return latestCycleTime('12Z');
+
+  // HRRR, RAP, NBM, RRFS — run every hour or every few hours
+  // Just use the top of the most recent available hour
+  const d = new Date(availableAt);
+  d.setUTCMinutes(0, 0, 0);
+  return d;
 }
 
 // Simple concurrency limiter — max 2 at once to avoid 429
@@ -782,6 +801,7 @@ function setTab(t,el){
 }
 
 function modelRunHTML(mod,runs){
+  const available = availableRuns(S.model);
   return `
     <div class="mstrip fu d1">
       ${Object.entries(MODELS).map(([k,m])=>`
@@ -790,7 +810,7 @@ function modelRunHTML(mod,runs){
         </div>`).join('')}
     </div>
     <div class="rstrip fu d1">
-      ${runs.map((r,i)=>`
+      ${available.map((r,i)=>`
         <div class="rchip${S.run===r?' on':''}" onclick="selRun('${r}')">
           <span class="rchip-t">${r}</span>
           <span class="rchip-a">${i===0?'LATEST':i+'HR AGO'}</span>
@@ -813,9 +833,9 @@ function compareVarTabs(){
   return`<div class="vtabs fu d1">${allowed.map(v=>`<button class="vt${S.var===v?' on':''}" onclick="selVar('${v}')">${VARS[v].l}</button>`).join('')}</div>`;
 }
 function selVar(v){S.var=v;render();}
-function selModel(k){S.model=k;S.run=RUNS[k][0];render();}
+function selModel(k){S.model=k;S.run=availableRuns(k)[0];render();}
 function selRun(r){S.run=r;render();}
-function selRunMod(k){S.runModel=k;S.cmpRuns=RUNS[k].slice(0,3);render();}
+function selRunMod(k){S.runModel=k;S.cmpRuns=availableRuns(k).slice(0,3);render();}
 function togRunCmp(r){
   if(S.cmpRuns.includes(r)){if(S.cmpRuns.length>1)S.cmpRuns=S.cmpRuns.filter(x=>x!==r);}
   else if(S.cmpRuns.length<4)S.cmpRuns.push(r);
@@ -825,6 +845,23 @@ function togCmp(k){
   if(S.cmpModels.includes(k)){if(S.cmpModels.length>1)S.cmpModels=S.cmpModels.filter(m=>m!==k);}
   else if(S.cmpModels.length<6)S.cmpModels.push(k);
   render();
+}
+// Generate available run labels for a model (accounting for latency)
+function availableRuns(mkey) {
+  const base = RUNS[mkey] || ['12Z','06Z','00Z'];
+  const latency = MODEL_LATENCY[mkey] || 2;
+  const cutoff = new Date(Date.now() - latency * 3.6e6);
+  const cutoffH = cutoff.getUTCHours();
+
+  // For hourly models (HRRR etc), show last 7 available hours
+  if (['hrrr','rap','nbm','rrfs'].includes(mkey)) {
+    return Array.from({length:7},(_,i)=>{
+      const h = ((cutoffH - i) + 24) % 24;
+      return `${String(h).padStart(2,'0')}Z`;
+    });
+  }
+  // For 6-hourly models just return the base list
+  return base;
 }
 function spreadClass(spread,unit){
   const c1=unit==='°F'?2:unit==='in'?0.03:unit==='mph'?4:unit==='%'?10:30;
@@ -1999,6 +2036,8 @@ async function rRuns(sc){
 ═══════════════════════════════════════════ */
 S.loc=PLACES['land o'];
 S.loaded=true;
+S.run=availableRuns('hrrr')[0];
+S.cmpRuns=availableRuns('hrrr').slice(0,3);
 render();
 
 </script>
