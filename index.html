@@ -351,7 +351,6 @@ const MODELS={
   rap:     {l:'RAP',  n:'Rapid Refresh',           r:'13km·51hr',   c:'#a78bfa'},
   ecmwf:   {l:'ECMWF',n:'IFS Operational',        r:'0.25°·240hr', c:'#f472b6'},
   graphcast:{l:'GCAST',n:'GraphCast AI',           r:'0.25°·384hr', c:'#fbbf24'},
-  rrfs:    {l:'RRFS', n:'Rapid Refresh FS',        r:'3km·84hr',    c:'#2dd4bf'},
 };
 const RUNS={
   hrrr:['12Z','11Z','10Z','09Z','08Z','06Z','00Z'],
@@ -360,7 +359,6 @@ const RUNS={
   rap:['12Z','11Z','10Z','09Z'],
   ecmwf:['12Z','00Z'],
   graphcast:['12Z','06Z'],
-  rrfs:['12Z','11Z','10Z','09Z'],
 };
 const TABS={
   forecast:{primary:'temp'},
@@ -368,7 +366,6 @@ const TABS={
   precip:  {primary:'precip',vars:['precip','snow','preciprate']},
   wind:    {primary:'wind', vars:['wind','gust']},
   upper:   {primary:'h500', vars:['h500','rh700','t850']},
-  map:     {primary:'temp'},
 };
 const VARS={
   temp:      {l:'Temperature',u:'°F',  c:'#fb923c'},
@@ -440,13 +437,25 @@ const ECMWF_VARS={
 };
 // RRFS uses surface dataset (rrfs), not pressure level (rrfsprslev)
 
-const MODEL_IDS={hrrr:'hrrr',gfs:'gfs',nbm:'nbm',rap:'rap',ecmwf:'ifsoper',graphcast:'graphcast',rrfs:'rrfsprslev'};
-const MODEL_HOURS={hrrr:48,gfs:168,nbm:168,rap:51,ecmwf:144,graphcast:240,rrfs:60};
+const MODEL_IDS={hrrr:'hrrr',gfs:'gfs',nbm:'nbm',rap:'rap',ecmwf:'ifsoper',graphcast:'graphcast'};
+const MODEL_HOURS={hrrr:48,gfs:168,nbm:168,rap:51,ecmwf:144,graphcast:240};
 // Data points per hour each model produces (affects completion % and day qualification)
-const MODEL_INTERVAL={hrrr:1,gfs:1,nbm:1,rap:1,ecmwf:3,graphcast:6,rrfs:1};
+const MODEL_INTERVAL={hrrr:1,gfs:1,nbm:1,rap:1,ecmwf:3,graphcast:6};
 // Expected data points for a full run
-function expectedPoints(mkey){
-  return Math.ceil((MODEL_HOURS[mkey]||48) / (MODEL_INTERVAL[mkey]||1));
+function expectedPoints(mkey, run){
+  // Some models have shorter runs for non-00/06/12/18Z cycles
+  let hours = MODEL_HOURS[mkey] || 48;
+  if (mkey === 'hrrr' && run) {
+    // HRRR: 00/06/12/18Z go 48h, all others go 18h
+    const h = parseInt(run);
+    if (!isNaN(h) && h % 6 !== 0) hours = 18;
+  }
+  if (mkey === 'rap' && run) {
+    // RAP: 00/03/06/09/12/15/18/21Z go 51h, others go 21h  
+    const h = parseInt(run);
+    if (!isNaN(h) && h % 3 !== 0) hours = 21;
+  }
+  return Math.max(1, Math.ceil(hours / (MODEL_INTERVAL[mkey]||1)));
 }
 // Minimum points to consider a day "complete enough" to show
 // Just need at least 2 points (for a hi and lo) regardless of interval
@@ -501,7 +510,6 @@ const MODEL_LATENCY = {
   hrrr: 1,       // ~45 min, round to 1hr
   rap:  1,
   nbm:  1,
-  rrfs: 1,
   gfs:  4,       // GFS takes 3-5 hrs to process
   ecmwf:6,       // ECMWF operational is delayed ~6hrs
   graphcast:4,
@@ -989,13 +997,6 @@ function availableRuns(mkey) {
     const cycle = h >= 12 ? 12 : 0;
     return [`${String(cycle).padStart(2,'0')}Z`, cycle === 12 ? '00Z' : '12Z'];
   }
-  // RRFS: hourly like HRRR
-  if (mkey === 'rrfs') {
-    return Array.from({length:7},(_,i)=>{
-      const rh = ((h - i) + 24) % 24;
-      return `${String(rh).padStart(2,'0')}Z`;
-    });
-  }
   return RUNS[mkey] || ['12Z','06Z','00Z'];
 }
 function getCmpRun(mkey){
@@ -1100,23 +1101,27 @@ async function tabForecast(sc){
   // Strategy: try the latest available run, if it has <70% of expected hours,
   // fall back to the previous run. We do this by fetching temp only first.
   async function getBestRun(mkey) {
-    const useRuns = ['hrrr','rap'].includes(mkey); // only these use /runs with cycle pinning
-    const runs = useRuns ? availableRuns(mkey) : [null]; // timeseries models: try once with null
-    const expected = expectedPoints(mkey);
+    const useRuns = ['hrrr','rap'].includes(mkey);
+    const runs = useRuns ? availableRuns(mkey) : [null];
     for (let i = 0; i < Math.min(runs.length, 4); i++) {
       try {
-        const d = await fetchGrib(mkey, 'temp', runs[i], lat, lon);
+        const run = runs[i];
+        const d = await fetchGrib(mkey, 'temp', run, lat, lon);
         const got = d.values.filter(v=>v!==null).length;
-        if (got / expected >= 0.5) return {run: runs[i]||availableRuns(mkey)[0], pct: Math.round(got/expected*100), got, expected};
+        const expected = expectedPoints(mkey, run);
+        const pct = Math.min(100, Math.round(got/expected*100));
+        if (pct >= 50) return {run: run||availableRuns(mkey)[0], pct, got, expected};
       } catch(e) { if(!useRuns) break; }
     }
-    // fallback — use whatever we got
+    // fallback
     try {
-      const d = await fetchGrib(mkey, 'temp', runs[0], lat, lon);
+      const run = runs[0];
+      const d = await fetchGrib(mkey, 'temp', run, lat, lon);
       const got = d.values.filter(v=>v!==null).length;
-      return {run: availableRuns(mkey)[0], pct: Math.round(got/expected*100), got, expected};
+      const expected = expectedPoints(mkey, run);
+      return {run: availableRuns(mkey)[0], pct: Math.min(100,Math.round(got/expected*100)), got, expected};
     } catch(e) {}
-    return {run: availableRuns(mkey)[0], pct: 0, got: 0, expected};
+    return {run: availableRuns(mkey)[0], pct: 0, got: 0, expected: expectedPoints(mkey, null)};
   }
 
   showLoading(sc,'FINDING BEST RUN PER MODEL...');
@@ -1158,10 +1163,10 @@ async function tabForecast(sc){
   const fullR=absHi-absLo||1;
 
   // Completion % — based on expected data points (interval-aware)
-  function completionPct(data, mkey) {
+  function completionPct(data, mkey, run) {
     if(!data?.times?.length)return 0;
     const count=data.times.filter(t=>t instanceof Date&&!isNaN(t)).length;
-    return Math.min(100,Math.round(count/expectedPoints(mkey)*100));
+    return Math.min(100,Math.round(count/expectedPoints(mkey,run)*100));
   }
 
   // Build daily card row — only show days with enough points for this model's interval
@@ -1239,7 +1244,7 @@ async function tabForecast(sc){
         ${modelData.filter(({b})=>b?.temp).slice(0,5).map(({key,mod,b,run})=>{
           const days=dailyStats(b.temp.times,b.temp.values);
           const hi=days[0]?.hi;const lo=days[0]?.lo;
-          const pct=completionPct(b.temp,key);
+          const pct=completionPct(b.temp,key,run);
           return`<div class="hstat">
             <div class="hstat-v" style="font-size:14px;color:${mod.c}">${mod.l}</div>
             <div style="font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:${tCol(hi??82)}">${hi?Math.round(hi)+'°':'--'}</div>
@@ -1259,7 +1264,7 @@ async function tabForecast(sc){
               <div class="card-sub">${run} · ${mod.r}</div>
             </div>
             ${b?.temp?`<div class="card-badge" style="border-color:${mod.c}50;color:${mod.c}">
-              ${pct}% · ${got}/${expectedPoints(key)}pts
+              ${pct}% · ${got}/${expectedPoints(key,run)}pts
             </div>`:'<div class="card-badge" style="color:#f87171;border-color:#f8717150">NO DATA</div>'}
           </div>
           <div class="card-body">
