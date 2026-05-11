@@ -7,7 +7,9 @@
 <meta name="theme-color" content="#0d1829">
 <title>WXMODELS</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
 :root {
   --navy0:#080f1e; --navy1:#0d1829; --navy2:#111f35; --navy3:#162640; --navy4:#1c2f4e; --navy5:#243558;
@@ -290,6 +292,94 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
 .es{font-family:'DM Mono',monospace;font-size:10px;color:var(--ink1);text-align:center;line-height:2;}
 
 
+/* ── MAP TAB ── */
+#map-wrap{display:none;flex-direction:column;position:absolute;inset:0;z-index:100;}
+#map-wrap.active{display:flex;}
+#map-leaflet{position:absolute;inset:0;}
+.leaflet-container{background:#060e1a!important;}
+.leaflet-tile-pane{filter:brightness(.55) saturate(.5) hue-rotate(185deg);}
+
+/* compact top bar */
+#map-topbar{
+  position:absolute;top:8px;left:8px;right:8px;z-index:500;
+  display:flex;align-items:center;gap:8px;
+  background:rgba(8,15,30,.95);backdrop-filter:blur(16px);
+  border:1px solid rgba(255,255,255,.1);border-radius:12px;
+  padding:8px 10px;box-shadow:0 4px 20px rgba(0,0,0,.6);
+}
+#map-topbar .mc-pills{display:flex;gap:4px;}
+#map-topbar .mc-pills::-webkit-scrollbar{display:none;}
+#map-settings-btn{
+  flex-shrink:0;width:32px;height:32px;border-radius:8px;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);
+  color:rgba(255,255,255,.6);font-size:15px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .15s;
+}
+#map-settings-btn.open{background:rgba(56,189,248,.15);border-color:rgba(56,189,248,.4);color:var(--sky);}
+
+/* dropdown settings panel */
+#map-settings{
+  position:absolute;top:56px;right:8px;z-index:501;
+  background:rgba(8,15,30,.98);backdrop-filter:blur(20px);
+  border:1px solid rgba(255,255,255,.12);border-radius:12px;
+  padding:14px 14px;box-shadow:0 8px 32px rgba(0,0,0,.8);
+  min-width:240px;
+}
+#map-settings.hidden{display:none;}
+.mc-grp{display:flex;flex-direction:column;gap:4px;}
+.mc-lbl{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1.5px;color:rgba(255,255,255,.3);}
+.mc-pills{display:flex;gap:4px;flex-wrap:wrap;}
+.mc-pill{font-family:'Outfit',sans-serif;font-size:11px;font-weight:600;padding:5px 11px;
+  border-radius:20px;cursor:pointer;border:1px solid rgba(255,255,255,.12);
+  color:rgba(255,255,255,.4);transition:all .15s;white-space:nowrap;user-select:none;}
+.mc-pill.on{background:var(--sky);border-color:var(--sky);color:#000;}
+.mc-pill.run-pill.on{background:var(--ember);border-color:var(--ember);color:#000;}
+.mc-pill:active{transform:scale(.93);}
+
+/* bottom slider */
+#map-slider-panel{
+  position:absolute;bottom:calc(var(--BOT)+8px);left:8px;right:8px;z-index:500;
+  background:rgba(8,15,30,.95);backdrop-filter:blur(16px);
+  border:1px solid rgba(255,255,255,.1);border-radius:12px;
+  padding:10px 14px;display:flex;align-items:center;gap:8px;
+  box-shadow:0 -4px 24px rgba(0,0,0,.5);
+}
+#map-time-lbl{font-family:'DM Mono',monospace;font-size:9px;color:var(--sky);
+  white-space:nowrap;min-width:110px;line-height:1.4;}
+#map-slider{flex:1;-webkit-appearance:none;height:4px;border-radius:2px;
+  background:rgba(255,255,255,.15);outline:none;cursor:pointer;}
+#map-slider::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;
+  border-radius:50%;background:var(--sky);cursor:pointer;box-shadow:0 0 8px rgba(56,189,248,.5);}
+#map-prev,#map-next{flex-shrink:0;background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.6);
+  border-radius:8px;width:28px;height:28px;font-size:10px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;}
+#map-play{flex-shrink:0;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);
+  color:var(--sky);border-radius:20px;padding:6px 12px;font-family:'Outfit',sans-serif;
+  font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.5px;}
+#map-play.playing{background:rgba(248,113,113,.15);border-color:#f87171;color:#f87171;}
+
+/* legend */
+#map-legend{
+  position:absolute;bottom:calc(var(--BOT)+72px);left:50%;transform:translateX(-50%);z-index:500;
+  background:rgba(8,15,30,.9);border:1px solid rgba(255,255,255,.1);
+  border-radius:8px;padding:7px 12px;display:flex;flex-direction:column;gap:3px;align-items:center;
+}
+#map-leg-canvas{border-radius:3px;}
+#map-leg-labels{display:flex;justify-content:space-between;width:160px;
+  font-family:'DM Mono',monospace;font-size:8px;color:rgba(255,255,255,.4);}
+
+/* status overlay */
+#map-status{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:502;
+  background:rgba(8,15,30,.92);border:1px solid rgba(255,255,255,.12);
+  border-radius:20px;padding:8px 18px;font-family:'DM Mono',monospace;
+  font-size:10px;color:var(--sky);white-space:nowrap;pointer-events:none;
+  transition:opacity .4s;opacity:0;
+}
+#map-status.visible{opacity:1;}
+
 /* ── ANIMATIONS ── */
 @keyframes fu{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
 .fu{animation:fu .25s ease forwards;}
@@ -332,12 +422,68 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
     </div>
   </div>
 
+  <!-- MAP OVERLAY TAB -->
+  <div id="map-wrap">
+    <div id="map-leaflet"></div>
+
+    <!-- compact top bar: layer pills + settings button -->
+    <div id="map-topbar">
+      <div class="mc-pills" id="mp-var" style="flex:1;overflow-x:auto;scrollbar-width:none;">
+        <div class="mc-pill on" onclick="mapSetVar('temp',this)">TEMP</div>
+        <div class="mc-pill"   onclick="mapSetVar('precip',this)">PRECIP</div>
+        <div class="mc-pill"   onclick="mapSetVar('wind',this)">WIND</div>
+        <div class="mc-pill"   onclick="mapSetVar('cape',this)">CAPE</div>
+        <div class="mc-pill"   onclick="mapSetVar('dewpoint',this)">DEW</div>
+      </div>
+      <button id="map-settings-btn" onclick="mapToggleSettings()" title="Model & Run">⚙</button>
+    </div>
+
+    <!-- dropdown settings panel -->
+    <div id="map-settings" class="hidden">
+      <div class="mc-grp">
+        <div class="mc-lbl">MODEL</div>
+        <div class="mc-pills" id="mp-model">
+          <div class="mc-pill on" onclick="mapSetModel('hrrr',this)">HRRR</div>
+          <div class="mc-pill"   onclick="mapSetModel('gfs',this)">GFS</div>
+          <div class="mc-pill"   onclick="mapSetModel('nbm',this)">NBM</div>
+          <div class="mc-pill"   onclick="mapSetModel('ecmwf',this)">EURO</div>
+          <div class="mc-pill"   onclick="mapSetModel('graphcast',this)">GCAST</div>
+        </div>
+      </div>
+      <div class="mc-grp" style="margin-top:8px;">
+        <div class="mc-lbl">RUN</div>
+        <div class="mc-pills" id="mp-run"></div>
+      </div>
+    </div>
+
+    <!-- bottom slider panel -->
+    <div id="map-slider-panel">
+      <div id="map-time-lbl">NOW</div>
+      <div style="display:flex;align-items:center;gap:8px;flex:1">
+        <button id="map-prev" onclick="mapStep(-1)">◀</button>
+        <input type="range" id="map-slider" min="0" max="0" value="0" oninput="mapSeek(this.value)">
+        <button id="map-next" onclick="mapStep(1)">▶</button>
+      </div>
+      <button id="map-play" onclick="mapTogglePlay()">▶</button>
+    </div>
+
+    <!-- legend -->
+    <div id="map-legend">
+      <canvas id="map-leg-canvas" width="160" height="12"></canvas>
+      <div id="map-leg-labels"></div>
+    </div>
+
+    <!-- status -->
+    <div id="map-status"></div>
+  </div>
+
   <nav class="bot">
     <button class="nb on"  onclick="setTab('forecast',this)"><span class="ni">📈</span><span class="nl">FCST</span></button>
     <button class="nb"     onclick="setTab('temp',this)"><span class="ni">🌡</span><span class="nl">TEMP</span></button>
     <button class="nb"     onclick="setTab('precip',this)"><span class="ni">🌧</span><span class="nl">PRECIP</span></button>
     <button class="nb"     onclick="setTab('wind',this)"><span class="ni">💨</span><span class="nl">WIND</span></button>
     <button class="nb"     onclick="setTab('upper',this)"><span class="ni">🔼</span><span class="nl">UPPER</span></button>
+    <button class="nb"     onclick="setTab('map',this)"><span class="ni">🗺️</span><span class="nl">MAP</span></button>
   </nav>
 </div>
 
@@ -989,7 +1135,21 @@ function setTab(t,el){
   if(TABS[t]?.primary)S.var=TABS[t].primary;
   document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
   el.classList.add('on');
-  render();
+  const mapWrap=document.getElementById('map-wrap');
+  const scroll=document.getElementById('scroll');
+  const ctrl=document.querySelector('.ctrl');
+  if(t==='map'){
+    scroll.style.display='none';
+    ctrl.style.display='none';
+    mapWrap.classList.add('active');
+    mapInit();
+  } else {
+    scroll.style.display='';
+    ctrl.style.display='';
+    mapWrap.classList.remove('active');
+    if(MAP.playTimer){clearInterval(MAP.playTimer);MAP.playTimer=null;}
+    render();
+  }
 }
 
 function modelRunHTML(mod,runs){
@@ -2427,6 +2587,372 @@ async function rRuns(sc){
 /* ═══════════════════════════════════════════
    INIT
 ═══════════════════════════════════════════ */
+/* ═══════════════════════════════════════════
+   MAP OVERLAY
+═══════════════════════════════════════════ */
+
+// SE US bounds
+const MAP_BOUNDS = {minLat:24.0,maxLat:37.5,minLon:-92.0,maxLon:-75.0};
+const MAP_STEP = 0.25;
+
+// Variable configs
+const MAP_VARS = {
+  temp:     {label:'TEMP °F',    grib:'TMP', level:'2 m above ground',
+    scale:[-20,20,40,55,65,75,85,95,105], skipZero:false,
+    colors:['#1e3a8a','#1d4ed8','#38bdf8','#34d399','#84cc16','#fbbf24','#f97316','#ef4444','#7f1d1d']},
+  precip:   {label:'PRECIP in',  grib:'APCP',level:'surface',
+    scale:[0,.001,.01,.05,.15,.3,.6,1.5], skipZero:true,
+    colors:['#00000000','#bfdbfe','#38bdf8','#6366f1','#a855f7','#ec4899','#be123c','#7f1d1d']},
+  wind:     {label:'WIND mph',   grib:'WIND',level:'10 m above ground',
+    scale:[0,5,10,20,30,45,60], skipZero:false,
+    colors:['#1e293b','#34d399','#38bdf8','#fbbf24','#f97316','#ef4444','#7f1d1d']},
+  cape:     {label:'CAPE J/kg',  grib:'CAPE',level:'surface',
+    scale:[0,100,500,1000,2000,3000,4500], skipZero:true,
+    colors:['#00000000','#fef9c3','#fbbf24','#f97316','#ef4444','#9b1c1c','#4c0519']},
+  dewpoint: {label:'DEW °F',     grib:'DPT', level:'2 m above ground',
+    scale:[10,30,45,55,60,65,68,72], skipZero:false,
+    colors:['#fef3c7','#d9f99d','#34d399','#38bdf8','#818cf8','#a78bfa','#7c3aed','#4c1d95']},
+};
+
+// Map state
+const MAP = {
+  var:'temp', model:'hrrr', run:null,
+  slots:[], hourIdx:0,
+  overlay:null, playing:false, playTimer:null,
+  leaflet:null,
+};
+
+// Interpolate color — returns [r,g,b,a] 0-255
+function mapLerp(colors, scale, v) {
+  if(v===null||isNaN(v))return null;
+  const n=scale.length;
+  if(v<=scale[0])return hexToRgba(colors[0]);
+  if(v>=scale[n-1])return hexToRgba(colors[n-1]);
+  for(let i=0;i<n-1;i++){
+    if(v>=scale[i]&&v<=scale[i+1]){
+      const t=(v-scale[i])/(scale[i+1]-scale[i]);
+      const a=hexToRgba(colors[i]), b=hexToRgba(colors[i+1]);
+      return[Math.round(a[0]+(b[0]-a[0])*t),Math.round(a[1]+(b[1]-a[1])*t),
+             Math.round(a[2]+(b[2]-a[2])*t),Math.round(a[3]+(b[3]-a[3])*t)];
+    }
+  }
+  return hexToRgba(colors[n-1]);
+}
+function hexToRgba(h){
+  if(!h||h==='transparent'||h==='#00000000')return[0,0,0,0];
+  h=h.replace('#','');
+  if(h.length===8)return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16),parseInt(h.slice(6,8),16)];
+  return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16),255];
+}
+
+function mapNorm(grib, v) {
+  if(!validNum(v))return null;
+  if((grib==='TMP'||grib==='DPT')&&v>200)v=(v-273.15)*9/5+32;
+  if(grib==='WIND')v=v*2.23694;
+  if(grib==='APCP')v=v*0.0393701;
+  return +v.toFixed(3);
+}
+
+function mapStatus(msg, autohide=false){
+  const el=document.getElementById('map-status');
+  if(!el)return;
+  el.textContent=msg;
+  el.classList.add('visible');
+  if(autohide)setTimeout(()=>el.classList.remove('visible'),2000);
+}
+
+function mapDrawLegend(){
+  const mv=MAP_VARS[MAP.var];
+  const canvas=document.getElementById('map-leg-canvas');
+  const labEl=document.getElementById('map-leg-labels');
+  if(!canvas||!labEl)return;
+  const ctx=canvas.getContext('2d');
+  const w=canvas.width, h=canvas.height;
+  const grad=ctx.createLinearGradient(0,0,w,0);
+  mv.colors.forEach((col,i)=>{
+    const stop=i/(mv.colors.length-1);
+    grad.addColorStop(stop,col==='#00000000'?'transparent':col);
+  });
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle=grad;
+  ctx.fillRect(0,0,w,h);
+  // labels at each step
+  labEl.innerHTML=mv.scale.map(v=>`<span>${v}</span>`).join('');
+}
+
+function mapUpdateRunPills(){
+  const el=document.getElementById('mp-run');
+  if(!el)return;
+  const runs=availableRuns(MAP.model).slice(0,6);
+  if(!MAP.run||!runs.includes(MAP.run))MAP.run=runs[0];
+  el.innerHTML=runs.map(r=>`<div class="mc-pill run-pill${r===MAP.run?' on':''}"
+    onclick="mapSetRun('${r}',this)">${r}</div>`).join('');
+}
+
+function mapRenderOverlay(){
+  if(!MAP.leaflet||!MAP.slots.length)return;
+  const slot=MAP.slots[MAP.hourIdx];
+  if(!slot||!slot.points.length)return;
+  const mv=MAP_VARS[MAP.var];
+
+  if(MAP.overlay){MAP.leaflet.removeLayer(MAP.overlay);MAP.overlay=null;}
+
+  const bounds=[[MAP_BOUNDS.minLat,MAP_BOUNDS.minLon],[MAP_BOUNDS.maxLat,MAP_BOUNDS.maxLon]];
+  const latSet=new Set(), lonSet=new Set();
+  slot.points.forEach(p=>{latSet.add(+(+p.lat).toFixed(2));lonSet.add(+(+p.lon).toFixed(2));});
+  const lats=[...latSet].sort((a,b)=>b-a);
+  const lons=[...lonSet].sort((a,b)=>a-b);
+  const nLat=lats.length, nLon=lons.length;
+  if(!nLat||!nLon)return;
+
+  const grid=Array.from({length:nLat},()=>new Float32Array(nLon).fill(NaN));
+  const latIdx=new Map(lats.map((v,i)=>[v,i]));
+  const lonIdx=new Map(lons.map((v,i)=>[v,i]));
+  slot.points.forEach(p=>{
+    const ri=latIdx.get(+(+p.lat).toFixed(2));
+    const ci=lonIdx.get(+(+p.lon).toFixed(2));
+    if(ri!==undefined&&ci!==undefined&&p.v!==null)grid[ri][ci]=p.v;
+  });
+
+  const SCALE=4;
+  const cw=(nLon-1)*SCALE+1, ch=(nLat-1)*SCALE+1;
+  const canvas=document.createElement('canvas');
+  canvas.width=cw; canvas.height=ch;
+  const ctx=canvas.getContext('2d');
+  const img=ctx.createImageData(cw,ch);
+  const d=img.data;
+
+  for(let py=0;py<ch;py++){
+    for(let px=0;px<cw;px++){
+      const r=py/SCALE, c=px/SCALE;
+      const r0=Math.floor(r), r1=Math.min(r0+1,nLat-1);
+      const c0=Math.floor(c), c1=Math.min(c0+1,nLon-1);
+      const tr=r-r0, tc=c-c0;
+      let v00=grid[r0][c0],v01=grid[r0][c1],v10=grid[r1][c0],v11=grid[r1][c1];
+      const valid=[v00,v01,v10,v11].filter(x=>!isNaN(x));
+      if(!valid.length)continue;
+      const avg=valid.reduce((a,b)=>a+b,0)/valid.length;
+      v00=isNaN(v00)?avg:v00; v01=isNaN(v01)?avg:v01;
+      v10=isNaN(v10)?avg:v10; v11=isNaN(v11)?avg:v11;
+      const val=v00*(1-tr)*(1-tc)+v01*(1-tr)*tc+v10*tr*(1-tc)+v11*tr*tc;
+      if(mv.skipZero&&val<mv.scale[1]*0.5)continue;
+      const col=mapLerp(mv.colors,mv.scale,val);
+      if(!col||col[3]<10)continue;
+      const idx=(py*cw+px)*4;
+      d[idx]=col[0];d[idx+1]=col[1];d[idx+2]=col[2];d[idx+3]=col[3];
+    }
+  }
+  ctx.putImageData(img,0,0);
+
+  MAP.overlay=L.imageOverlay(canvas.toDataURL(),bounds,{opacity:.76,interactive:false}).addTo(MAP.leaflet);
+
+  // Update time label
+  const lbl=document.getElementById('map-time-lbl');
+  if(lbl){
+    const t=slot.time;
+    const diffH=Math.round((t-new Date())/3.6e6);
+    const local=t.toLocaleString([],{weekday:'short',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    lbl.textContent=diffH<=0?`NOW · ${local}`:`+${diffH}H · ${local}`;
+  }
+}
+
+async function mapFetch(){
+  const mv=MAP_VARS[MAP.var];
+  const modelId=MODEL_IDS[MAP.model];
+  const useRuns=RUNS_MODELS.has(MAP.model);
+  const hours=Math.min(MODEL_HOURS[MAP.model]||48,48); // cap at 48 for grid (cost)
+  const isAccum=mv.grib==='APCP'||mv.grib==='ASNOW';
+
+  mapStatus(`FETCHING ${mv.label} · ${MAP.model.toUpperCase()} GRID...`);
+
+  let body, endpoint;
+  if(useRuns){
+    const cycle=latestModelCycle(MAP.model, MAP.run);
+    const cycleISO=isoNoMs(cycle);
+    endpoint=`${modelId}/runs`;
+    body={forecastedFrom:cycleISO,forecastedUntil:cycleISO,
+      minLeadTime:'0h',maxLeadTime:`${hours}h`,
+      grid:{minLatitude:MAP_BOUNDS.minLat,maxLatitude:MAP_BOUNDS.maxLat,
+            minLongitude:MAP_BOUNDS.minLon,maxLongitude:MAP_BOUNDS.maxLon,step:MAP_STEP},
+      variables:[{name:mv.grib,level:mv.level,info:''}]};
+  } else {
+    const now=new Date(); now.setUTCMinutes(0,0,0);
+    const until=new Date(now.getTime()+hours*3.6e6);
+    endpoint=`${modelId}/timeseries`;
+    body={fromTime:isoNoMs(now),untilTime:isoNoMs(until),
+      minLeadTime:'0h',maxLeadTime:`${hours}h`,
+      grid:{minLatitude:MAP_BOUNDS.minLat,maxLatitude:MAP_BOUNDS.maxLat,
+            minLongitude:MAP_BOUNDS.minLon,maxLongitude:MAP_BOUNDS.maxLon,step:MAP_STEP},
+      variables:[{name:mv.grib,level:mv.level,info:''}]};
+  }
+
+  const res=await _limitedFetch(`${WORKER}/${endpoint}`,{
+    method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},
+    body:JSON.stringify(body),
+  });
+  const raw=await res.text();
+  if(!res.ok)throw new Error(`Grid HTTP ${res.status}`);
+
+  let rows;
+  try{const j=JSON.parse(raw);rows=Array.isArray(j)?j:(j.data||j.results||[]);}
+  catch(e){throw new Error('Grid bad JSON');}
+  if(!rows.length)throw new Error('Grid empty');
+
+  const gribKey=`${mv.grib}|${mv.level}|`;
+  const isAccumVar=mv.grib==='APCP'||mv.grib==='ASNOW';
+
+  // Group by lat/lon first for accum diff, then by time
+  const byPoint=new Map();
+  rows.forEach(r=>{
+    const pk=`${(+r.lat).toFixed(2)},${(+r.lon).toFixed(2)}`;
+    if(!byPoint.has(pk))byPoint.set(pk,[]);
+    byPoint.get(pk).push({t:new Date(r.forecasted_time||r.time),raw:r[gribKey],lat:r.lat,lon:r.lon});
+  });
+
+  const byTime=new Map();
+  byPoint.forEach((series)=>{
+    series.sort((a,b)=>a.t-b.t);
+    series.forEach((item,i)=>{
+      const tk=Math.round(item.t.getTime()/3.6e6)*3.6e6;
+      if(!byTime.has(tk))byTime.set(tk,new Map());
+      let v=mapNorm(mv.grib, item.raw);
+      if(isAccumVar&&i>0&&validNum(series[i-1].raw)){
+        const prev=mapNorm(mv.grib,series[i-1].raw);
+        v=prev!=null?Math.max(0,v-prev):v;
+      }
+      if(v!==null)byTime.get(tk).set(`${(+item.lat).toFixed(2)},${(+item.lon).toFixed(2)}`,{lat:item.lat,lon:item.lon,v});
+    });
+  });
+
+  const sortedTimes=[...byTime.keys()].sort((a,b)=>a-b).slice(0,48);
+  MAP.slots=sortedTimes.map(tk=>({time:new Date(tk),points:[...byTime.get(tk).values()]}));
+  MAP.hourIdx=0;
+
+  const slider=document.getElementById('map-slider');
+  if(slider){slider.max=Math.max(0,MAP.slots.length-1);slider.value=0;}
+
+  mapStatus(`${mv.label} · ${MAP.slots.length} FRAMES`,true);
+  trackCredits(rows.length,1);
+  saveCache();
+}
+
+async function mapLoad(){
+  if(MAP.playing)mapTogglePlay();
+  MAP.slots=[];
+  if(MAP.overlay){MAP.leaflet.removeLayer(MAP.overlay);MAP.overlay=null;}
+  try{
+    await mapFetch();
+    mapRenderOverlay();
+    mapDrawLegend();
+  } catch(e){
+    mapStatus(`ERROR: ${e.message}`,true);
+  }
+}
+
+function mapToggleSettings(){
+  const panel=document.getElementById('map-settings');
+  const btn=document.getElementById('map-settings-btn');
+  if(!panel||!btn)return;
+  const isOpen=!panel.classList.contains('hidden');
+  panel.classList.toggle('hidden');
+  btn.classList.toggle('open',!isOpen);
+}
+
+function mapCloseSettings(){
+  const panel=document.getElementById('map-settings');
+  const btn=document.getElementById('map-settings-btn');
+  if(panel)panel.classList.add('hidden');
+  if(btn)btn.classList.remove('open');
+}
+
+function mapSetVar(v,el){
+  MAP.var=v;
+  document.querySelectorAll('#mp-var .mc-pill').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');
+  mapLoad();
+}
+
+function mapSetModel(m,el){
+  MAP.model=m;
+  document.querySelectorAll('#mp-model .mc-pill').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');
+  mapUpdateRunPills();
+  mapCloseSettings();
+  mapLoad();
+}
+
+function mapSetRun(r,el){
+  MAP.run=r;
+  document.querySelectorAll('.run-pill').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');
+  mapCloseSettings();
+  mapLoad();
+}
+
+function mapSeek(val){
+  MAP.hourIdx=parseInt(val);
+  mapRenderOverlay();
+}
+
+function mapStep(dir){
+  const n=MAP.slots.length;
+  if(!n)return;
+  MAP.hourIdx=(MAP.hourIdx+dir+n)%n;
+  const slider=document.getElementById('map-slider');
+  if(slider)slider.value=MAP.hourIdx;
+  mapRenderOverlay();
+}
+
+function mapTogglePlay(){
+  const btn=document.getElementById('map-play');
+  if(MAP.playing){
+    clearInterval(MAP.playTimer);MAP.playTimer=null;MAP.playing=false;
+    if(btn){btn.textContent='▶ PLAY';btn.classList.remove('playing');}
+  } else {
+    MAP.playing=true;
+    if(btn){btn.textContent='⏹ STOP';btn.classList.add('playing');}
+    MAP.playTimer=setInterval(()=>{
+      mapStep(1);
+    },800);
+  }
+}
+
+function mapInit(){
+  if(MAP.leaflet){
+    MAP.leaflet.invalidateSize();
+    if(!MAP.slots.length)mapLoad();
+    return;
+  }
+  const el=document.getElementById('map-leaflet');
+  MAP.leaflet=L.map(el,{center:[30.5,-83.5],zoom:6,zoomControl:true,attributionControl:false});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,opacity:1}).addTo(MAP.leaflet);
+
+  // tap on map → show point value
+  MAP.leaflet.on('click',e=>{
+    mapCloseSettings();
+    const {lat,lng:lon}=e.latlng;
+    if(!MAP.slots.length)return;
+    const slot=MAP.slots[MAP.hourIdx];
+    // find nearest point
+    let best=null, bestD=Infinity;
+    slot.points.forEach(p=>{
+      const d=Math.abs(p.lat-lat)+Math.abs(p.lon-lon);
+      if(d<bestD){bestD=d;best=p;}
+    });
+    if(best&&bestD<1){
+      const mv=MAP_VARS[MAP.var];
+      L.popup({closeButton:true,className:'map-popup'})
+        .setLatLng([lat,lon])
+        .setContent(`<div style="font-family:'DM Mono',monospace;font-size:11px;color:#7dd3fc;padding:4px 8px;">
+          ${mv.label}: <b style="color:#fff">${best.v}</b></div>`)
+        .openOn(MAP.leaflet);
+    }
+  });
+
+  mapUpdateRunPills();
+  setTimeout(()=>{MAP.leaflet.invalidateSize();mapLoad();},200);
+}
+
 S.loc=PLACES['land o'];
 S.loaded=true;
 S.run=availableRuns('hrrr')[0];
