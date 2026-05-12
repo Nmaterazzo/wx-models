@@ -2578,7 +2578,7 @@ async function rRuns(sc){
 
 // SE US bounds
 const MAP_BOUNDS = {minLat:24.0,maxLat:37.5,minLon:-92.0,maxLon:-75.0};
-const MAP_STEP = 0.25;
+const MAP_STEP = 0.1; // ~11km grid — much smoother than 0.25°
 
 // Variable configs
 const MAP_VARS = {
@@ -2684,7 +2684,7 @@ function mapRenderOverlay(){
 
   const bounds=[[MAP_BOUNDS.minLat,MAP_BOUNDS.minLon],[MAP_BOUNDS.maxLat,MAP_BOUNDS.maxLon]];
   const latSet=new Set(), lonSet=new Set();
-  slot.points.forEach(p=>{latSet.add(+(+p.lat).toFixed(2));lonSet.add(+(+p.lon).toFixed(2));});
+  slot.points.forEach(p=>{latSet.add(+(+p.lat).toFixed(1));lonSet.add(+(+p.lon).toFixed(1));});
   const lats=[...latSet].sort((a,b)=>b-a);
   const lons=[...lonSet].sort((a,b)=>a-b);
   const nLat=lats.length, nLon=lons.length;
@@ -2694,12 +2694,12 @@ function mapRenderOverlay(){
   const latIdx=new Map(lats.map((v,i)=>[v,i]));
   const lonIdx=new Map(lons.map((v,i)=>[v,i]));
   slot.points.forEach(p=>{
-    const ri=latIdx.get(+(+p.lat).toFixed(2));
-    const ci=lonIdx.get(+(+p.lon).toFixed(2));
+    const ri=latIdx.get(+(+p.lat).toFixed(1));
+    const ci=lonIdx.get(+(+p.lon).toFixed(1));
     if(ri!==undefined&&ci!==undefined&&p.v!==null)grid[ri][ci]=p.v;
   });
 
-  const SCALE=4;
+  const SCALE=3; // 3px per grid cell at 0.1° = decent resolution
   const cw=(nLon-1)*SCALE+1, ch=(nLat-1)*SCALE+1;
   const canvas=document.createElement('canvas');
   canvas.width=cw; canvas.height=ch;
@@ -2729,7 +2729,19 @@ function mapRenderOverlay(){
   }
   ctx.putImageData(img,0,0);
 
-  MAP.overlay=L.imageOverlay(canvas.toDataURL(),bounds,{opacity:.76,interactive:false}).addTo(MAP.leaflet);
+  // Gaussian blur pass using a second canvas — eliminates remaining block edges
+  const blurRadius = mv.skipZero ? 3 : 2; // more blur on precip/cape, less on temp
+  const blurred = document.createElement('canvas');
+  blurred.width=cw; blurred.height=ch;
+  const bctx=blurred.getContext('2d');
+  bctx.filter=`blur(${blurRadius}px)`;
+  bctx.drawImage(canvas,0,0);
+  bctx.filter='none';
+
+  MAP.overlay=L.imageOverlay(blurred.toDataURL(),bounds,{opacity:.82,interactive:false}).addTo(MAP.leaflet);
+  // Additional CSS blur for very smooth appearance at any zoom level
+  const overlayEl=MAP.overlay.getElement();
+  if(overlayEl)overlayEl.style.filter=`blur(${blurRadius}px)`;
 
   // Update time label
   const lbl=document.getElementById('map-time-lbl');
@@ -2789,7 +2801,7 @@ async function mapFetch(){
   // Group by lat/lon first for accum diff, then by time
   const byPoint=new Map();
   rows.forEach(r=>{
-    const pk=`${(+r.lat).toFixed(2)},${(+r.lon).toFixed(2)}`;
+    const pk=`${(+r.lat).toFixed(1)},${(+r.lon).toFixed(1)}`;
     if(!byPoint.has(pk))byPoint.set(pk,[]);
     byPoint.get(pk).push({t:new Date(r.forecasted_time||r.time),raw:r[gribKey],lat:r.lat,lon:r.lon});
   });
@@ -2805,7 +2817,7 @@ async function mapFetch(){
         const prev=mapNorm(mv.grib,series[i-1].raw);
         v=prev!=null?Math.max(0,v-prev):v;
       }
-      if(v!==null)byTime.get(tk).set(`${(+item.lat).toFixed(2)},${(+item.lon).toFixed(2)}`,{lat:item.lat,lon:item.lon,v});
+      if(v!==null)byTime.get(tk).set(`${(+item.lat).toFixed(1)},${(+item.lon).toFixed(1)}`,{lat:item.lat,lon:item.lon,v});
     });
   });
 
